@@ -2,169 +2,188 @@
   <img src="docs/logo.png" alt="HA Percyta Logo" width="200">
 </p>
 
-# HA Percyta 
-  Home Assistant Permissions, Privacy & Data Scanner
+<h1 align="center">HA Percyta</h1>
 
-🌐 **Sprache / Language:** **Deutsch** · [English](README.en.md)
+<p align="center">Home Assistant Permissions, Privacy &amp; Data Scanner</p>
 
-**Integration für Home Assistant** – scannt **lokal** alle Integrationen, Apps,
-Custom-Cards, Blueprints, Benutzer, Tokens sowie gespeicherte API-Keys/Secrets und
-bewertet die System-Zugriffe (GPS, Kamera, Root/Supervisor …). Seit **v1.1.x** werden
-zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
+<p align="center">
+  <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
+  <a href="docs/README_de.md"><img src="https://img.shields.io/badge/Sprache-Deutsch-red.svg" alt="Deutsch"></a>
+  <a href="README.md"><img src="https://img.shields.io/badge/language-English-blue.svg" alt="English"></a>
+</p>
 
-> Läuft vollständig **innerhalb** von Home Assistant und liest alle Daten direkt über
-> das interne `hass`-Objekt. **Es wird kein Token und keine URL benötigt.**
-> Es werden ausschließlich Daten **gelesen** – nichts wird verändert.
+**Home Assistant integration** – scans **locally** all integrations, apps,
+custom cards, blueprints, users, tokens and stored API keys/secrets, and evaluates
+system access (GPS, camera, root/supervisor …). Since **v1.1.x** it also captures
+**disk space, CPU and RAM usage**.
+
+> Runs entirely **inside** Home Assistant and reads all data directly via the internal
+> `hass` object. **No token and no URL required.**
+> Data is **read only** – nothing is changed.
 
 ## Features
 
-- **Integrationen** – alle Config-Entries mit Zustand, Quelle, Custom-Flag, IoT-Klasse,
-  Abhängigkeiten, Entitäten- und Geräte-Anzahl. Ein Klick auf die Entitäten-/Geräte-Zahl
-  führt direkt zur passenden gefilterten Ansicht in Home Assistant.
-- **API-Keys & Secrets** – erkennt in den Integrationsdaten hinterlegte Keys/Tokens/
-  Passwörter (maskiert oder – auf Wunsch – im Klartext). Gemeint sind die Zugangsdaten, die
-  Integrationen bei der Einrichtung in ihrer Konfiguration ablegen (auch verschachtelt, z. B.
-  OAuth-Tokens) – nicht die Datei `secrets.yaml`. Über den Button **„Anzeigen“** in der
-  Tabellenzeile lässt sich ein einzelner Wert bei Bedarf vollständig einblenden (nur für
-  Administratoren; der Klartext wird erst auf Klick geladen und landet nicht im HTML-Download).
-- **Apps** – über die Supervisor-API: welche Apps haben `full_access`,
-  `privileged`, Host-Netzwerk, Docker-API, GPIO/USB, Supervisor-Rolle usw. – inkl.
-  Laufzeit-Ressourcen (CPU/RAM je App) und **Daten-Größe je App** (App-Daten +
-  App-Konfiguration laut Supervisor, ohne das Docker-Image).
-- **System-Zugriff-Analyse** – braucht eine Integration/App GPS, Kamera, Netzwerk,
-  Datenbank oder gar Root-/Systemrechte?
-- **💾 Speicher & System** – Gesamtspeicher (belegt/frei), RAM- und Swap-Nutzung,
-  CPU-Auslastung + Load Average, **Systemspeicher nach Kategorie** (System, Apps,
-  Medien, Backups … via Supervisor, inkl. Summe aller Custom Cards) sowie eine Aufschlüsselung der größten
-  Speicher-Verbraucher unter `/config` (Recorder-Datenbank, Backups, Custom Components,
-  Medien, www …) inkl. Speicherbedarf je Custom-Integration.
-- **📊 Bestand & Zustand** – Anzahl der Automationen, Skripte, Szenen, Helfer, Bereiche,
-  Etagen und Labels, nicht verfügbare/deaktivierte/versteckte Entitäten (inkl. Aufschlüsselung
-  der nicht verfügbaren Entitäten nach Integration), **verfügbare Updates** mit installierter
-  und neuer Version, **deaktivierte Entitäten nach Integration** (aufklappbar) sowie die
-  Entitäten nach Domain. Die Übersichtskarten führen per Klick direkt zur passenden Seite in
-  Home Assistant (Automationen, Skripte, Szenen, Helfer, Bereiche, Entitäten, Updates).
-- **🗄️ Datenbank (Recorder)** – welche Entitäten die Datenbank am stärksten füllen: Anzahl der
-  Einträge je Entität (Zustände) und je Statistik (Langzeit-/Kurzzeitstatistik) inkl.
-  Gesamtzahlen. Aufgelistet werden jeweils die 30 größten; ein Klick öffnet den Verlauf. Die Auswertung wird höchstens einmal pro Stunde neu berechnet.
-- **💾 Letztes HA-Backup** – Zeitpunkt, Alter, Größe und Name des jüngsten Backups direkt unter
-  der Versionszeile (Klick öffnet die Backup-Seite; älter als 7 Tage wird farblich markiert).
-- **Custom Cards** – alle Lovelace-Ressourcen (Custom-Card-URLs) inkl. Speichergröße
-  (über den Dateipfad ermittelt; bei HACS-Karten die Ordnergröße).
-- **Blueprints** – alle registrierten Automation-/Script-Blueprints inkl. Dateigröße.
-  Custom Cards und Blueprints stehen als aufklappbare Tabellen in der Box „Speicher & System“.
-- **Benutzer & Tokens** – Owner/Admin, Gruppen, Long-Lived-Tokens inkl. letzter Nutzung.
-- **Risikobewertung** – automatische Einstufung 🟢 Low / 🟡 Medium / 🔴 High, inkl.
-  ausklappbarer Erklär-Card („Warum?“), die die aktuelle Verteilung datenbasiert begründet.
-  Die Einstufung lässt sich pro Integration **manuell überschreiben** (Auswahl „Anpassen“
-  in der Integrationen-Tabelle, z. B. wenn ein Wetterdienst nur wegen einer Kamera-Entität
-  fälschlich als High gilt).
-- **Sensoren & Button** – Kennzahlen als Sensoren (inkl. CPU-, RAM- und
-  Speicher-Auslastung), manueller Scan per Button.
-- **Report-Panel** – umschaltbar zwischen voller Bildschirmbreite (mehrspaltiges
-  Kachel-Layout) und schmaler Ansicht, sortierbare Tabellen, globale Suche über alle
-  Tabellen sowie Umschalter für Einzel-/Akkordeon-Modus und „Alle ein-/ausklappen“.
-  Oberfläche **mehrsprachig (DE/EN)** – folgt automatisch der HA-Sprache.
-- **Neu seit letztem Scan** – neue Integrationen/Apps/Custom-Cards/Blueprints/Benutzer
-  werden markiert (Badge/„NEU“). Der Hinweis im Kopf nennt, **was** neu ist (z. B.
-  „1 Integration, 1 Custom Card“) und listet die Namen auf; ein Klick auf die Art springt zur
-  passenden Box. Sensor **„Neue Funde“** und Event `ha_percyta_new_findings` (inkl. Art und
-  Namen) ermöglichen Automationen. Aktualisierte Custom Cards gelten nicht als neu.
-- **Auto-Scan** – optional in konfigurierbarem Intervall.
-- **Markdown-Report** – optionaler Datei-Export je Scan.
+- **Integrations** – all config entries with state, source, custom flag, IoT class,
+  dependencies, entity and device counts. Clicking the entity/device count jumps straight
+  to the matching filtered view in Home Assistant.
+- **API keys & secrets** – detects keys/tokens/passwords stored in integration data
+  (masked or, on request, in plain text). This means the credentials integrations store in
+  their configuration during setup (including nested ones such as OAuth tokens) – not the
+  `secrets.yaml` file. The **“Show”** button in a table row reveals a single value in full
+  when needed (admins only; the plain text is only loaded on click and is never part of the
+  HTML download).
+- **Apps** – via the Supervisor API: which apps have `full_access`,
+  `privileged`, host network, Docker API, GPIO/USB, supervisor role, etc. – including
+  runtime resources (CPU/RAM per app) and the **data size per app** (app data + app
+  configuration as reported by the Supervisor, without the Docker image).
+- **System access analysis** – does an integration/app need GPS, camera, network,
+  database or even root/system rights?
+- **💾 Storage & System** – total disk (used/free), RAM and swap usage, CPU load +
+  load average, **system storage by category** (system, apps, media, backups … via
+  Supervisor, incl. the total of all custom cards) plus a breakdown of the largest storage consumers under `/config`
+  (recorder database, backups, custom components, media, www …) including the disk
+  footprint of each custom integration.
+- **📊 Inventory & Health** – number of automations, scripts, scenes, helpers, areas, floors
+  and labels, unavailable/disabled/hidden entities (incl. a breakdown of unavailable entities
+  by integration), **available updates** with installed and new version, **disabled entities
+  by integration** (collapsible), plus entities by domain. The overview cards link straight to
+  the matching page in Home Assistant (automations, scripts, scenes, helpers, areas, entities,
+  updates).
+- **🗄️ Database (Recorder)** – which entities fill the database the most: number of rows per
+  entity (states) and per statistic (long-term/short-term statistics) incl. totals. The top 30
+  of each are listed; a click opens the history. The
+  analysis is recalculated at most once per hour.
+- **💾 Last HA backup** – time, age, size and name of the most recent backup right below the
+  version line (click opens the backup page; older than 7 days is highlighted).
+- **Custom cards** – all Lovelace resources (custom card URLs) incl. storage size
+  (resolved via the file path; for HACS cards the folder size); the total is also shown
+  under system storage by category.
+- **Blueprints** – all registered automation/script blueprints incl. file size.
+  Custom cards and blueprints are shown as collapsible tables inside the “Storage & System” box.
+- **Users & tokens** – owner/admin, groups, long-lived tokens incl. last usage.
+- **Risk rating** – automatic classification 🟢 Low / 🟡 Medium / 🔴 High, incl. a
+  collapsible “Why?” explanation card that justifies the current distribution from the data.
+  The level can be **overridden manually per integration** (the “Adjust” selector in the
+  integrations table, e.g. when a weather service is flagged High only because of a camera
+  entity).
+- **Sensors & button** – key figures as sensors (incl. CPU, RAM and disk usage),
+  manual scan via button.
+- **Report panel** – switchable between full screen width (multi-column tile layout) and
+  a narrow view, sortable tables, a global search across all tables, plus toggles for
+  single/accordion mode and “expand/collapse all”. UI is **bilingual (DE/EN)** – follows
+  the HA language automatically.
+- **New since last scan** – new integrations/apps/custom cards/blueprints/users are
+  flagged (“NEW” badge). The note in the header states **what** is new (e.g. “1 integration,
+  1 custom card”) and lists the names; clicking a type jumps to the matching section. A
+  **“New findings”** sensor and the `ha_percyta_new_findings` event (incl. type and names)
+  enable automations. Updated custom cards are not counted as new.
+- **Auto scan** – optional at a configurable interval.
+- **Markdown report** – optional file export per scan.
 
-> **Logo/Branding:** Die Integration bringt ihre eigenen Brand-Bilder mit (`custom_components/ha_percyta/brand/`). Lokale Brand-Bilder für Custom-Integrationen werden von Home Assistant ab **2026.3** unterstützt – in älteren Versionen erscheint das Logo in der Oberfläche nicht.
+> **Logo/branding:** The integration ships its own brand images (`custom_components/ha_percyta/brand/`). Home Assistant supports local brand images for custom integrations from **2026.3** – on older versions the logo will not show in the UI.
 
 ## Installation
 
-1. Ordner `custom_components/ha_percyta` nach `/config/custom_components/` kopieren:
+### HACS (recommended)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jayjojayson&repository=HA_Percyta&category=integration)
+
+Or add `https://github.com/jayjojayson/HA_Percyta` manually in HACS as a custom repository (category *Integration*), install **HA Percyta** and restart Home Assistant.
+
+### Manual
+
+1. Copy the folder `custom_components/ha_percyta` to `/config/custom_components/`:
    ```bash
    cp -r custom_components/ha_percyta /config/custom_components/
    ```
-2. Home Assistant **neu starten**.
-3. **Einstellungen → Geräte & Dienste → + Integration hinzufügen → HA Percyta**.
-4. Optionen wählen (alle mit sinnvollen Vorgaben) und speichern.
+2. **Restart** Home Assistant.
+3. **Settings → Devices & Services → + Add Integration → HA Percyta**.
+4. Choose options (all with sensible defaults) and save.
 
-> **Hinweis:** HA Percyta benötigt keine zusätzlichen Python-Pakete. Für exakte CPU-/RAM-
-> Werte wird `psutil` genutzt, falls es bereits im HA-System vorhanden ist – andernfalls
-> greift ein integrierter Fallback (`/proc`, `shutil`).
+> **Alternative (ZIP):** Every GitHub release automatically includes the file `ha_percyta.zip`.
+> Extract its contents directly into `/config/custom_components/ha_percyta/` (the
+> `manifest.json` sits at the top level of the ZIP) and restart Home Assistant.
 
-## Optionen
+> **Note:** HA Percyta requires no additional Python packages. For exact CPU/RAM values it
+> uses `psutil` if already present in the HA system – otherwise a built-in fallback
+> (`/proc`, `shutil`) is used.
 
-| Option | Bedeutung | Standard |
+## Options
+
+| Option | Meaning | Default |
 |---|---|---|
-| Apps einbeziehen | Apps via Supervisor scannen (nur bei HA OS/Supervised) | ✅ |
-| API-Keys erkennen | Secrets in Integrationsdaten aufspüren | ✅ |
-| Fehler aus System-Log | Wichtige Fehler (keine Warnungen) aufnehmen | ✅ |
-| Speicher, CPU & RAM analysieren | System-/Speicher-Auslastung erfassen | ✅ |
-| Secrets maskieren | Nur erste/letzte 4 Zeichen zeigen | ✅ |
-| Report schreiben | Markdown-Report je Scan speichern | ✅ |
-| Ausgabeverzeichnis | Ziel der Report-Dateien | `custom_components/ha_percyta/output` |
-| Auto-Scan | Regelmäßig automatisch scannen | ❌ |
-| Intervall | Sekunden zwischen Auto-Scans (min. 300) | 3600 |
+| Include apps | Scan apps via Supervisor (HA OS/Supervised only) | ✅ |
+| Detect API keys | Find secrets in integration data | ✅ |
+| Errors from system log | Include important errors (no warnings) | ✅ |
+| Analyse storage, CPU & RAM | Capture system/storage usage | ✅ |
+| Mask secrets | Only show first/last 4 characters | ✅ |
+| Write report | Save a Markdown report per scan | ✅ |
+| Output directory | Destination of report files | `custom_components/ha_percyta/output` |
+| Auto scan | Scan automatically on a schedule | ❌ |
+| Interval | Seconds between auto scans (min. 300) | 3600 |
 
-Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ändern.
+Options can be changed at any time via **Configure** on the integration.
 
-## Verwendung
+## Usage
 
-- **Report direkt in HA:** In der Seitenleiste erscheint der Eintrag **„HA Percyta“** –
-  dort wird der Bericht in einer modernen Ansicht über die **volle Bildschirmbreite** mit
-  Stat-Karten, Risiko-Verteilung und einklappbaren Abschnitten angezeigt (keine MD-Datei
-  nötig). Auf großen Bildschirmen werden die Boxen **mehrspaltig** gekachelt; eine geöffnete
-  Box nimmt automatisch die volle Breite ein.
-  - **Ansicht-Umschalter:** *Einzeln* (mehrere Boxen offen), *Akkordeon* (Öffnen schließt
-    die vorherige Box), *Breit/Schmal* (volle Breite ↔ zentrierte schmale Ansicht) und
-    *Alle ein-/ausklappen*. Die Auswahl wird gemerkt.
-  - **Globale Suche:** Das Suchfeld filtert über alle Tabellen; Boxen mit Treffern öffnen
-    sich automatisch, leere werden ausgeblendet.
-  - **Sortierbare Tabellen:** Klick auf einen Spaltenkopf sortiert auf-/absteigend.
-  - Buttons für *Neu scannen* und **Download als MD/HTML** sowie ein Button rechts im
-    Header zum Ein-/Ausblenden der HA-Seitenleiste sind eingebaut.
-  - **Ansicht bleibt erhalten:** Wird im Hintergrund neu gescannt, aktualisiert das Panel nur
-    die Daten – geöffnete Boxen, Sortierung und Scroll-Position bleiben, wie sie sind. Die
-    zuletzt eingestellte Ansicht (offene Boxen, Sortierung) wird im Browser gemerkt und gilt
-    auch wieder, wenn man das Panel verlässt und später zurückkehrt.
-  - **Automatischer Scan beim Öffnen:** Beim Aufruf des Panels über die Seitenleiste wird
-    automatisch ein frischer Scan ausgeführt; danach greift man bei Bedarf manuell über
-    *Neu scannen* ein.
-- **💾 Speicher & System:** eigener Abschnitt mit Karten für Speicher-Belegung, freien
-  Speicher, RAM und CPU, dem Systemspeicher nach Kategorie sowie der Aufschlüsselung der
-  größten Verbraucher.
-- **Cloud-Datenfluss:** eigener Abschnitt, welche Integrationen Daten an externe/Cloud-Dienste
-  senden.
-- **Token-Hygiene:** Long-Lived-Tokens, die nie oder lange (> 90 Tage) nicht genutzt wurden,
-  werden markiert (Kandidaten zum Widerrufen) – inkl. Sensor *„Ungenutzte Tokens“*.
-- **Scan-Intervall am Gerät:** Auf der Geräteseite gibt es das Auswahlfeld
-  **„HA Percyta Scan-Intervall“** mit *Manuell / Stündlich / Täglich / Wöchentlich / Monatlich*.
-  Die Sensoren **„Letzter Scan“** und **„Nächster Scan“** zeigen transparent, wann der
-  nächste automatische Lauf ansteht.
-- **Button „HA Percyta Scan starten“** löst einen Scan sofort aus.
-- **Sensoren:** Sicherheitsfunde, Integrationen, Apps, API-Keys & Secrets,
-  CPU-Auslastung, RAM-Auslastung, Speicher-Belegung und freier Speicher
-  (mit Detail-Attributen wie High-Risk-Domains, Root-Apps oder Gesamt-/Frei-GiB).
+- **Report directly in HA:** the sidebar shows an entry **“HA Percyta”** – the report
+  is rendered in a modern view across the **full screen width** with stat cards, risk
+  distribution and collapsible sections (no MD file needed). On large screens the boxes are
+  **tiled in multiple columns**; an opened box automatically takes the full width.
+  - **View toggles:** *Single* (multiple boxes open), *Accordion* (opening one closes the
+    previous), *Wide/Narrow* (full width ↔ centered narrow view) and *Expand/collapse all*.
+    The choice is remembered.
+  - **Global search:** the search box filters across all tables; boxes with matches open
+    automatically, empty ones are hidden.
+  - **Sortable tables:** click a column header to sort ascending/descending.
+  - Buttons for *Rescan* and **Download as MD/HTML**, plus a button on the right of the
+    header to show/hide the HA sidebar, are built in.
+  - **View is preserved:** when a scan runs in the background the panel only refreshes the
+    data – open boxes, sorting and scroll position stay as they are. The last view (open boxes,
+    sorting) is remembered in the browser and applies again when you leave the panel and come
+    back later.
+  - **Automatic scan on open:** opening the panel from the sidebar runs a fresh scan
+    automatically; after that you can trigger one manually via *Rescan*.
+- **💾 Storage & System:** dedicated section with cards for disk usage, free space, RAM and
+  CPU, the system storage by category, and the breakdown of the largest consumers.
+- **Cloud data flow:** dedicated section showing which integrations send data to
+  external/cloud services.
+- **Token hygiene:** long-lived tokens never used or unused for a long time (> 90 days) are
+  flagged (candidates for revocation) – incl. the *“Unused tokens”* sensor.
+- **Scan interval on the device:** the device page offers the select **“HA Percyta scan
+  interval”** with *Manual / Hourly / Daily / Weekly / Monthly*. The sensors **“Last scan”**
+  and **“Next scan”** transparently show when the next automatic run is due.
+- **Button “HA Percyta start scan”** triggers a scan immediately.
+- **Sensors:** security findings, integrations, apps, API keys & secrets, CPU usage,
+  RAM usage, disk usage and free disk space (with detail attributes such as high-risk
+  domains, root apps or total/free GiB).
 - **Services:**
-  | Service | Beschreibung |
+  | Service | Description |
   |---|---|
-  | `ha_percyta.scan` | Scan ausführen, liefert Kennzahlen + Report-Pfad als Response |
-  | `ha_percyta.export` | Aktuellen Report als Markdown-Text (Response) zurückgeben |
+  | `ha_percyta.scan` | Run a scan, returns key figures + report path as response |
+  | `ha_percyta.export` | Return the current report as Markdown text (response) |
 
-### Secrets im Klartext auslesen
+### Reading secrets in plain text
 
-Deaktiviere **„Secrets maskieren“** in den Optionen und rufe anschließend `ha_percyta.scan`
-bzw. `ha_percyta.export` in den **Entwicklerwerkzeugen → Aktionen** auf – die Response
-enthält den vollständigen Report. Aus Datenschutzgründen werden Klartext-Secrets **nicht**
-in Entity-Attributen abgelegt (die würde der Recorder speichern), sondern nur im Report.
+Disable **“Mask secrets”** in the options, then call `ha_percyta.scan` or `ha_percyta.export`
+in **Developer Tools → Actions** – the response contains the full report. For privacy,
+plain-text secrets are **not** stored in entity attributes (the recorder would keep them),
+only in the report.
 
-## Risikoklassifizierung
+## Risk classification
 
-| Stufe | Bedeutung |
+| Level | Meaning |
 |---|---|
-| 🟢 Low | Keine externen Zugriffe, keine sensiblen Daten |
-| 🟡 Medium | Externer/Cloud-Zugriff, gespeicherte Secrets oder Systembezug |
-| 🔴 High | GPS, Kamera oder Root-/System-/Supervisor-Zugriff |
+| 🟢 Low | No external access, no sensitive data |
+| 🟡 Medium | External/cloud access, stored secrets or system relation |
+| 🔴 High | GPS, camera or root/system/supervisor access |
 
-## Hinweis
+## Note
 
-HA Percyta **liest** ausschließlich – es verändert nichts an deiner Installation.
-Reports werden lokal im gewählten Ausgabeverzeichnis gespeichert.
+HA Percyta only **reads** – it does not change anything in your installation. Reports are
+stored locally in the chosen output directory.
 

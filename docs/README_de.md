@@ -1,6 +1,20 @@
-# 🛡️ HA Percyta – Home Assistant Permissions, Privacy & Data Scanner
+<p align="center">
+  <img src="logo.png" alt="HA Percyta Logo" width="200">
+</p>
 
-🌐 **Sprache / Language:** **Deutsch** · [English](README.en.md)
+<h1 align="center">HA Percyta</h1>
+
+<p align="center">Home Assistant Permissions, Privacy &amp; Data Scanner</p>
+
+<p align="center">
+  <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
+  <a href="README_de.md"><img src="https://img.shields.io/badge/Sprache-Deutsch-red.svg" alt="Deutsch"></a>
+  <a href="../README.md"><img src="https://img.shields.io/badge/language-English-blue.svg" alt="English"></a>
+</p>
 
 **Integration für Home Assistant** – scannt **lokal** alle Integrationen, Apps,
 Custom-Cards, Blueprints, Benutzer, Tokens sowie gespeicherte API-Keys/Secrets und
@@ -50,6 +64,14 @@ zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
 - **Markdown-Report** – optionaler Datei-Export je Scan.
 
 ## Installation
+
+### HACS (empfohlen)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jayjojayson&repository=HA_Percyta&category=integration)
+
+Oder `https://github.com/jayjojayson/HA_Percyta` in HACS manuell als benutzerdefiniertes Repository (Kategorie *Integration*) hinzufügen, **HA Percyta** installieren und Home Assistant neu starten.
+
+### Manuell
 
 1. Ordner `custom_components/ha_percyta` nach `/config/custom_components/` kopieren:
    ```bash
@@ -138,6 +160,3 @@ in Entity-Attributen abgelegt (die würde der Recorder speichern), sondern nur i
 HA Percyta **liest** ausschließlich – es verändert nichts an deiner Installation.
 Reports werden lokal im gewählten Ausgabeverzeichnis gespeichert.
 
----
-
-**Erstellt von Wally 🍷**
