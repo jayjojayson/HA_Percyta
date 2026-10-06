@@ -2,7 +2,8 @@
   <img src="docs/logo.png" alt="HA Percyta Logo" width="200">
 </p>
 
-# 🛡️ HA Percyta – Home Assistant Permissions, Privacy & Data Scanner
+# HA Percyta 
+  Home Assistant Permissions, Privacy & Data Scanner
 
 🌐 **Sprache / Language:** **Deutsch** · [English](README.en.md)
 
@@ -167,6 +168,3 @@ in Entity-Attributen abgelegt (die würde der Recorder speichern), sondern nur i
 HA Percyta **liest** ausschließlich – es verändert nichts an deiner Installation.
 Reports werden lokal im gewählten Ausgabeverzeichnis gespeichert.
 
----
-
-**Erstellt von Wally 🍷**
