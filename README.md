@@ -25,6 +25,22 @@ system access (GPS, camera, root/supervisor …). Since **v1.1.x** it also captu
 > `hass` object. **No token and no URL required.**
 > Data is **read only** – nothing is changed.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/example.png" alt="Overview: key figures, risk distribution and all sections at a glance" width="100%">
+  <br><sub>Overview: key figures, risk distribution and all sections at a glance</sub>
+  <br><br>
+  <img src="docs/example2.png" alt="Storage &amp; System: disk, RAM, CPU and the largest storage consumers" width="100%">
+  <br><sub>Storage &amp; System: disk, RAM, CPU and the largest storage consumers</sub>
+  <br><br>
+  <img src="docs/example3.png" alt="Global search across all tables and sections" width="100%">
+  <br><sub>Global search across all tables and sections</sub>
+  <br><br>
+  <img src="docs/example4.png" alt="Inventory &amp; integrations with risk rating and manual override" width="100%">
+  <br><sub>Inventory &amp; integrations with risk rating and manual override</sub>
+</p>
+
 ## Features
 
 - **Integrations** – all config entries with state, source, custom flag, IoT class,

@@ -25,6 +25,22 @@ zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
 > das interne `hass`-Objekt. **Es wird kein Token und keine URL benötigt.**
 > Es werden ausschließlich Daten **gelesen** – nichts wird verändert.
 
+## Screenshots
+
+<p align="center">
+  <img src="example.png" alt="Übersicht: Kennzahlen, Risiko-Verteilung und alle Bereiche auf einen Blick" width="100%">
+  <br><sub>Übersicht: Kennzahlen, Risiko-Verteilung und alle Bereiche auf einen Blick</sub>
+  <br><br>
+  <img src="example2.png" alt="Speicher &amp; System: Festplatte, RAM, CPU und die größten Speicher-Verbraucher" width="100%">
+  <br><sub>Speicher &amp; System: Festplatte, RAM, CPU und die größten Speicher-Verbraucher</sub>
+  <br><br>
+  <img src="example3.png" alt="Globale Suche über alle Tabellen und Bereiche" width="100%">
+  <br><sub>Globale Suche über alle Tabellen und Bereiche</sub>
+  <br><br>
+  <img src="example4.png" alt="Bestand &amp; Integrationen mit Risikobewertung und manueller Anpassung" width="100%">
+  <br><sub>Bestand &amp; Integrationen mit Risikobewertung und manueller Anpassung</sub>
+</p>
+
 ## Features
 
 - **Integrationen** – alle Config-Entries mit Zustand, Quelle, Custom-Flag, IoT-Klasse,
