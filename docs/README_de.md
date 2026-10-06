@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/logo.png" alt="HA Percyta Logo" width="200">
-</p>
-
 # 🛡️ HA Percyta – Home Assistant Permissions, Privacy & Data Scanner
 
 🌐 **Sprache / Language:** **Deutsch** · [English](README.en.md)
@@ -21,15 +17,10 @@ zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
   Abhängigkeiten, Entitäten- und Geräte-Anzahl. Ein Klick auf die Entitäten-/Geräte-Zahl
   führt direkt zur passenden gefilterten Ansicht in Home Assistant.
 - **API-Keys & Secrets** – erkennt in den Integrationsdaten hinterlegte Keys/Tokens/
-  Passwörter (maskiert oder – auf Wunsch – im Klartext). Gemeint sind die Zugangsdaten, die
-  Integrationen bei der Einrichtung in ihrer Konfiguration ablegen (auch verschachtelt, z. B.
-  OAuth-Tokens) – nicht die Datei `secrets.yaml`. Über den Button **„Anzeigen“** in der
-  Tabellenzeile lässt sich ein einzelner Wert bei Bedarf vollständig einblenden (nur für
-  Administratoren; der Klartext wird erst auf Klick geladen und landet nicht im HTML-Download).
+  Passwörter (maskiert oder – auf Wunsch – im Klartext).
 - **Apps** – über die Supervisor-API: welche Apps haben `full_access`,
   `privileged`, Host-Netzwerk, Docker-API, GPIO/USB, Supervisor-Rolle usw. – inkl.
-  Laufzeit-Ressourcen (CPU/RAM je App) und **Daten-Größe je App** (App-Daten +
-  App-Konfiguration laut Supervisor, ohne das Docker-Image).
+  Laufzeit-Ressourcen (CPU/RAM je App).
 - **System-Zugriff-Analyse** – braucht eine Integration/App GPS, Kamera, Netzwerk,
   Datenbank oder gar Root-/Systemrechte?
 - **💾 Speicher & System** – Gesamtspeicher (belegt/frei), RAM- und Swap-Nutzung,
@@ -37,21 +28,9 @@ zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
   Medien, Backups … via Supervisor, inkl. Summe aller Custom Cards) sowie eine Aufschlüsselung der größten
   Speicher-Verbraucher unter `/config` (Recorder-Datenbank, Backups, Custom Components,
   Medien, www …) inkl. Speicherbedarf je Custom-Integration.
-- **📊 Bestand & Zustand** – Anzahl der Automationen, Skripte, Szenen, Helfer, Bereiche,
-  Etagen und Labels, nicht verfügbare/deaktivierte/versteckte Entitäten (inkl. Aufschlüsselung
-  der nicht verfügbaren Entitäten nach Integration), **verfügbare Updates** mit installierter
-  und neuer Version, **deaktivierte Entitäten nach Integration** (aufklappbar) sowie die
-  Entitäten nach Domain. Die Übersichtskarten führen per Klick direkt zur passenden Seite in
-  Home Assistant (Automationen, Skripte, Szenen, Helfer, Bereiche, Entitäten, Updates).
-- **🗄️ Datenbank (Recorder)** – welche Entitäten die Datenbank am stärksten füllen: Anzahl der
-  Einträge je Entität (Zustände) und je Statistik (Langzeit-/Kurzzeitstatistik) inkl.
-  Gesamtzahlen. Aufgelistet werden jeweils die 30 größten; ein Klick öffnet den Verlauf. Die Auswertung wird höchstens einmal pro Stunde neu berechnet.
-- **💾 Letztes HA-Backup** – Zeitpunkt, Alter, Größe und Name des jüngsten Backups direkt unter
-  der Versionszeile (Klick öffnet die Backup-Seite; älter als 7 Tage wird farblich markiert).
 - **Custom Cards** – alle Lovelace-Ressourcen (Custom-Card-URLs) inkl. Speichergröße
   (über den Dateipfad ermittelt; bei HACS-Karten die Ordnergröße).
 - **Blueprints** – alle registrierten Automation-/Script-Blueprints inkl. Dateigröße.
-  Custom Cards und Blueprints stehen als aufklappbare Tabellen in der Box „Speicher & System“.
 - **Benutzer & Tokens** – Owner/Admin, Gruppen, Long-Lived-Tokens inkl. letzter Nutzung.
 - **Risikobewertung** – automatische Einstufung 🟢 Low / 🟡 Medium / 🔴 High, inkl.
   ausklappbarer Erklär-Card („Warum?“), die die aktuelle Verteilung datenbasiert begründet.
@@ -65,14 +44,10 @@ zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
   Tabellen sowie Umschalter für Einzel-/Akkordeon-Modus und „Alle ein-/ausklappen“.
   Oberfläche **mehrsprachig (DE/EN)** – folgt automatisch der HA-Sprache.
 - **Neu seit letztem Scan** – neue Integrationen/Apps/Custom-Cards/Blueprints/Benutzer
-  werden markiert (Badge/„NEU“). Der Hinweis im Kopf nennt, **was** neu ist (z. B.
-  „1 Integration, 1 Custom Card“) und listet die Namen auf; ein Klick auf die Art springt zur
-  passenden Box. Sensor **„Neue Funde“** und Event `ha_percyta_new_findings` (inkl. Art und
-  Namen) ermöglichen Automationen. Aktualisierte Custom Cards gelten nicht als neu.
+  werden markiert (Badge/„NEU“). Sensor **„Neue Funde“** und Event
+  `ha_percyta_new_findings` ermöglichen Automationen.
 - **Auto-Scan** – optional in konfigurierbarem Intervall.
 - **Markdown-Report** – optionaler Datei-Export je Scan.
-
-> **Logo/Branding:** Die Integration bringt ihre eigenen Brand-Bilder mit (`custom_components/ha_percyta/brand/`). Lokale Brand-Bilder für Custom-Integrationen werden von Home Assistant ab **2026.3** unterstützt – in älteren Versionen erscheint das Logo in der Oberfläche nicht.
 
 ## Installation
 
@@ -119,10 +94,6 @@ Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ä
   - **Sortierbare Tabellen:** Klick auf einen Spaltenkopf sortiert auf-/absteigend.
   - Buttons für *Neu scannen* und **Download als MD/HTML** sowie ein Button rechts im
     Header zum Ein-/Ausblenden der HA-Seitenleiste sind eingebaut.
-  - **Ansicht bleibt erhalten:** Wird im Hintergrund neu gescannt, aktualisiert das Panel nur
-    die Daten – geöffnete Boxen, Sortierung und Scroll-Position bleiben, wie sie sind. Die
-    zuletzt eingestellte Ansicht (offene Boxen, Sortierung) wird im Browser gemerkt und gilt
-    auch wieder, wenn man das Panel verlässt und später zurückkehrt.
   - **Automatischer Scan beim Öffnen:** Beim Aufruf des Panels über die Seitenleiste wird
     automatisch ein frischer Scan ausgeführt; danach greift man bei Bedarf manuell über
     *Neu scannen* ein.

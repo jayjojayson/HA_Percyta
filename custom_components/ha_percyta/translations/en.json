@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up HA Percyta",
+        "description": "HA Percyta locally scans your integrations, apps, custom cards, blueprints, users, tokens, stored API keys as well as disk, CPU and RAM usage. No token required.",
+        "data": {
+          "include_addons": "Include apps (Supervisor only)",
+          "include_secrets": "Detect stored API keys / secrets",
+          "include_errors": "Include important errors from the HA system log (no warnings)",
+          "include_storage": "Analyse storage, CPU & RAM",
+          "mask_secrets": "Mask secrets (recommended)",
+          "write_report": "Write Markdown report to file",
+          "output_dir": "Output directory for reports",
+          "scan_auto_enabled": "Enable automatic scan",
+          "scan_auto_interval": "Interval for automatic scans (seconds)"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "HA Percyta is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA Percyta settings",
+        "data": {
+          "include_addons": "Include apps (Supervisor only)",
+          "include_secrets": "Detect stored API keys / secrets",
+          "include_errors": "Include important errors from the HA system log (no warnings)",
+          "include_storage": "Analyse storage, CPU & RAM",
+          "mask_secrets": "Mask secrets (recommended)",
+          "write_report": "Write Markdown report to file",
+          "output_dir": "Output directory for reports",
+          "scan_auto_enabled": "Enable automatic scan",
+          "scan_auto_interval": "Interval for automatic scans (seconds)"
+        }
+      }
+    }
+  },
+  "services": {
+    "scan": {
+      "name": "Run scan",
+      "description": "Runs a full permissions & privacy scan."
+    },
+    "export": {
+      "name": "Export report",
+      "description": "Returns the current report as Markdown and the file path."
+    }
+  }
+}

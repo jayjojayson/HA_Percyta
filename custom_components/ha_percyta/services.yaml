@@ -1,0 +1,12 @@
+scan:
+  name: Scan ausführen
+  description: >-
+    Führt einen vollständigen Permissions- & Datenschutz-Scan aus
+    (Integrationen, Apps, Custom-Cards, Blueprints, Benutzer, Tokens, Secrets,
+    Speicher/CPU/RAM).
+
+export:
+  name: Report exportieren
+  description: >-
+    Gibt den aktuellen Report als Markdown zurück (Response) und liefert den
+    Dateipfad des zuletzt geschriebenen Reports.

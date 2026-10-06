@@ -1,0 +1,49 @@
+name: Release ZIP
+
+# Hängt bei jedem veröffentlichten GitHub-Release automatisch ha_percyta.zip an.
+# HACS lädt bei "zip_release" genau dieses Asset herunter – dadurch zählt
+# GitHub (und HACS) die Downloads pro Release.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    env:
+      DOMAIN: ha_percyta
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check tag against manifest version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          MANIFEST_VERSION=$(python3 -c "import json; print(json.load(open('custom_components/${DOMAIN}/manifest.json'))['version'])")
+          TAG_VERSION="${TAG#v}"
+          echo "Release-Tag: ${TAG} | manifest.json: ${MANIFEST_VERSION}"
+          if [ "${TAG_VERSION}" != "${MANIFEST_VERSION}" ]; then
+            echo "::error::Release-Tag (${TAG}) passt nicht zur Version in manifest.json (${MANIFEST_VERSION})."
+            exit 1
+          fi
+
+      - name: Build ZIP
+        run: |
+          cd "custom_components/${DOMAIN}"
+          zip -r "../../${DOMAIN}.zip" . \
+            -x "output/*" \
+            -x "*/__pycache__/*" "__pycache__/*" \
+            -x "*.pyc" ".DS_Store" "*/.DS_Store"
+          cd ../..
+          unzip -l "${DOMAIN}.zip"
+
+      - name: Upload ZIP to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "${TAG}" "${DOMAIN}.zip" --clobber

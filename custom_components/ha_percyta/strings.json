@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Percyta einrichten",
+        "description": "HA Percyta scannt lokal deine Integrationen, Apps, Custom-Cards, Blueprints, Benutzer, Tokens, gespeicherte API-Keys sowie Speicher-, CPU- und RAM-Auslastung. Es wird kein Token benötigt.",
+        "data": {
+          "include_addons": "Apps einbeziehen (nur mit Supervisor)",
+          "include_secrets": "Gespeicherte API-Keys / Secrets erkennen",
+          "include_errors": "Wichtige Fehler aus dem HA-System-Log aufnehmen (keine Warnungen)",
+          "include_storage": "Speicher, CPU & RAM analysieren",
+          "mask_secrets": "Secrets maskieren (empfohlen)",
+          "write_report": "Markdown-Report in Datei schreiben",
+          "output_dir": "Ausgabeverzeichnis für Reports",
+          "scan_auto_enabled": "Automatischen Scan aktivieren",
+          "scan_auto_interval": "Intervall für automatische Scans (Sekunden)"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "HA Percyta ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA Percyta-Einstellungen",
+        "data": {
+          "include_addons": "Apps einbeziehen (nur mit Supervisor)",
+          "include_secrets": "Gespeicherte API-Keys / Secrets erkennen",
+          "include_errors": "Wichtige Fehler aus dem HA-System-Log aufnehmen (keine Warnungen)",
+          "include_storage": "Speicher, CPU & RAM analysieren",
+          "mask_secrets": "Secrets maskieren (empfohlen)",
+          "write_report": "Markdown-Report in Datei schreiben",
+          "output_dir": "Ausgabeverzeichnis für Reports",
+          "scan_auto_enabled": "Automatischen Scan aktivieren",
+          "scan_auto_interval": "Intervall für automatische Scans (Sekunden)"
+        }
+      }
+    }
+  },
+  "services": {
+    "scan": {
+      "name": "Scan ausführen",
+      "description": "Führt einen vollständigen Permissions- & Datenschutz-Scan aus."
+    },
+    "export": {
+      "name": "Report exportieren",
+      "description": "Gibt den aktuellen Report als Markdown zurück und liefert den Dateipfad."
+    }
+  }
+}
