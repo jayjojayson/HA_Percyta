@@ -205,6 +205,21 @@ SENSORS: tuple[HAPercytaSensorDescription, ...] = (
             ],
         },
     ),
+    HAPercytaSensorDescription(
+        key="open_findings",
+        name="HA Percyta Offene Befunde",
+        icon="mdi:clipboard-alert-outline",
+        native_unit_of_measurement="Befunde",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.get("counts", {}).get("findings_open", 0),
+        attr_fn=lambda d: {
+            "high": d.get("counts", {}).get("findings_high", 0),
+            "allowed": d.get("counts", {}).get("findings_known", 0),
+            "snoozed": d.get("counts", {}).get("findings_snoozed", 0),
+            "hidden": d.get("counts", {}).get("findings_hidden", 0),
+            "by_category": d.get("counts", {}).get("findings_by_category", {}),
+        },
+    ),
     # ----------------------------------------------------------------- #
     # System / Speicher (neu ab v1.1.1)
     # ----------------------------------------------------------------- #

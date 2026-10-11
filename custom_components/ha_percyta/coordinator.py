@@ -33,9 +33,15 @@ from .const import (
     DEFAULT_WRITE_REPORT,
     DOMAIN,
     EVENT_NEW_FINDINGS,
+    FINDING_STATUSES,
+    FINDINGS_STORAGE_KEY,
+    FINDINGS_STORAGE_VERSION,
+    MAX_RESOLVED,
     OVERRIDES_STORAGE_KEY,
     OVERRIDES_STORAGE_VERSION,
+    RESOLVED_KEEP_DAYS,
     RISK_LEVELS,
+    SNOOZE_MAX_DAYS,
     SNAPSHOT_STORAGE_KEY,
     SNAPSHOT_STORAGE_VERSION,
 )
@@ -63,6 +69,14 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass, SNAPSHOT_STORAGE_VERSION, SNAPSHOT_STORAGE_KEY
         )
         self._baseline: dict | None = None
+
+        # Status der Befunde (bekannt/zurückgestellt/ausgeblendet), Erstbeobachtung
+        # und zuletzt behobene Befunde.
+        self._findings_store: Store = Store(
+            hass, FINDINGS_STORAGE_VERSION, FINDINGS_STORAGE_KEY
+        )
+        self.finding_states: dict[str, dict[str, Any]] = {}
+        self.resolved_findings: list[dict[str, Any]] = []
 
         auto_enabled = options.get(CONF_SCAN_AUTO_ENABLED, DEFAULT_SCAN_AUTO_ENABLED)
         interval = options.get(CONF_SCAN_AUTO_INTERVAL, DEFAULT_SCAN_AUTO_INTERVAL)
@@ -232,6 +246,175 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self.async_refresh()
         return {"success": True, "entry_id": entry_id, "level": level or "auto"}
 
+    # ------------------------------------------------------------------ #
+    # Befunde: Status verwalten
+    # ------------------------------------------------------------------ #
+    async def async_load_finding_states(self) -> None:
+        """Gespeicherten Befund-Status laden."""
+        try:
+            data = await self._findings_store.async_load()
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Befund-Status konnte nicht geladen werden: %s", err)
+            data = None
+        if not isinstance(data, dict):
+            return
+        states = data.get("states")
+        if isinstance(states, dict):
+            self.finding_states = {
+                str(k): v for k, v in states.items() if isinstance(v, dict)
+            }
+        resolved = data.get("resolved")
+        if isinstance(resolved, list):
+            self.resolved_findings = [r for r in resolved if isinstance(r, dict)]
+
+    async def _save_finding_states(self) -> None:
+        try:
+            await self._findings_store.async_save(
+                {"states": self.finding_states, "resolved": self.resolved_findings}
+            )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Befund-Status konnte nicht gespeichert werden: %s", err)
+
+    @staticmethod
+    def _parse_dt(value: Any) -> datetime | None:
+        try:
+            parsed = datetime.fromisoformat(str(value))
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+    def _apply_finding_states(self, data: dict[str, Any], *, track: bool) -> bool:
+        """Legt Status/Erstbeobachtung auf die Befunde und aktualisiert die Zähler.
+
+        ``track=True`` (nur nach einem Scan): verschwundene Befunde werden als
+        "behoben" vermerkt. Gibt zurück, ob sich gespeicherte Daten geändert haben.
+        """
+        findings: list[dict[str, Any]] = data.get("findings") or []
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        changed = False
+        current = set()
+
+        for finding in findings:
+            fid = finding["id"]
+            current.add(fid)
+            state = self.finding_states.get(fid)
+            if state is None:
+                state = {"first_seen": now_iso}
+                self.finding_states[fid] = state
+                changed = True
+            status = state.get("status", "open")
+            if status not in FINDING_STATUSES:
+                status = "open"
+            until = self._parse_dt(state.get("until"))
+            if status == "snoozed" and until is not None and until <= now:
+                # Rückstellung abgelaufen → wieder offen.
+                for key in ("status", "until", "note"):
+                    state.pop(key, None)
+                status, until = "open", None
+                changed = True
+            finding["status"] = status
+            finding["until"] = until.isoformat() if until else None
+            finding["note"] = state.get("note")
+            finding["first_seen"] = state.get("first_seen") or now_iso
+
+        if track:
+            evaluated = set(data.get("findings_evaluated") or [])
+            by_id = {f["id"]: f for f in findings}
+            for fid in list(self.finding_states):
+                if fid in by_id:
+                    continue
+                ftype = fid.split(":", 1)[0]
+                if ftype not in evaluated:
+                    continue  # Quelle in diesem Scan nicht auswertbar → nichts ableiten
+                self.finding_states.pop(fid, None)
+                self.resolved_findings.append(
+                    {"id": fid, "type": ftype, "resolved_at": now_iso}
+                )
+                changed = True
+            # Namen für "zuletzt behoben" aus dem vorigen Datenstand übernehmen.
+            previous = {f["id"]: f for f in (getattr(self, "data", None) or {}).get("findings", [])}
+            for entry in self.resolved_findings:
+                prev = previous.get(entry["id"])
+                if prev and "subject" not in entry:
+                    entry.update(
+                        subject=prev.get("subject"),
+                        subject_type=prev.get("subject_type"),
+                        severity=prev.get("severity"),
+                        category=prev.get("category"),
+                    )
+
+        # "Zuletzt behoben": nur die letzten Tage, höchstens MAX_RESOLVED.
+        cutoff = now - timedelta(days=RESOLVED_KEEP_DAYS)
+        kept = [
+            r for r in self.resolved_findings
+            if (self._parse_dt(r.get("resolved_at")) or now) >= cutoff
+        ]
+        kept = kept[-MAX_RESOLVED:]
+        if len(kept) != len(self.resolved_findings):
+            changed = True
+        self.resolved_findings = kept
+        data["findings_resolved"] = list(reversed(kept))
+
+        counts = data.setdefault("counts", {})
+        open_f = [f for f in findings if f["status"] == "open"]
+        counts["findings_open"] = len(open_f)
+        counts["findings_high"] = sum(1 for f in open_f if f["severity"] == "high")
+        counts["findings_known"] = sum(1 for f in findings if f["status"] == "known")
+        counts["findings_snoozed"] = sum(1 for f in findings if f["status"] == "snoozed")
+        counts["findings_hidden"] = sum(1 for f in findings if f["status"] == "hidden")
+        by_cat: dict[str, int] = {}
+        for f in open_f:
+            by_cat[f["category"]] = by_cat.get(f["category"], 0) + 1
+        counts["findings_by_category"] = by_cat
+        return changed
+
+    async def async_set_finding_state(
+        self,
+        ids: list[str],
+        status: str,
+        days: int | None = None,
+        note: str | None = None,
+    ) -> dict:
+        """Setzt den Status eines oder mehrerer Befunde (nur Percytas eigene Liste)."""
+        if status not in FINDING_STATUSES:
+            return {"error": f"Ungültiger Status: {status}"}
+        data = self.data
+        if not data:
+            return {"error": "Noch kein Scan-Ergebnis vorhanden."}
+        known_ids = {f["id"] for f in data.get("findings", [])}
+        now = datetime.now(timezone.utc)
+        until_iso = None
+        if status == "snoozed":
+            span = max(1, min(int(days or 30), SNOOZE_MAX_DAYS))
+            until_iso = (now + timedelta(days=span)).isoformat()
+
+        updated = 0
+        for fid in ids:
+            if fid not in known_ids:
+                continue
+            state = self.finding_states.setdefault(fid, {"first_seen": now.isoformat()})
+            if status == "open":
+                for key in ("status", "until", "note"):
+                    state.pop(key, None)
+            else:
+                state["status"] = status
+                state["changed_at"] = now.isoformat()
+                if until_iso:
+                    state["until"] = until_iso
+                else:
+                    state.pop("until", None)
+                if note:
+                    state["note"] = str(note)[:200]
+                else:
+                    state.pop("note", None)
+            updated += 1
+
+        self._apply_finding_states(data, track=False)
+        await self._save_finding_states()
+        self.async_set_updated_data(data)
+        return {"success": True, "updated": updated, "status": status}
+
     async def _async_update_data(self) -> dict[str, Any]:
         options = self.entry.options
         scanner = HAPercytaScanner(
@@ -265,6 +448,10 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # "Neu seit letztem Scan" markieren (nach jedem Scan wird der Stand fortgeschrieben).
         await self._apply_new_since(data)
+
+        # Befund-Status (bekannt/zurückgestellt/ausgeblendet) auflegen, Behobenes vermerken.
+        if self._apply_finding_states(data, track=True):
+            await self._save_finding_states()
 
         if self._write_report:
             try:

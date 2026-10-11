@@ -21,6 +21,7 @@ from .const import (
     VERSION,
     WS_TYPE_REPORT,
     WS_TYPE_REVEAL_SECRET,
+    WS_TYPE_SET_FINDING_STATE,
     WS_TYPE_SET_OVERRIDE,
 )
 from .coordinator import HAPercytaCoordinator
@@ -113,7 +114,32 @@ def _register_ws(hass: HomeAssistant) -> None:
             return
         connection.send_result(msg["id"], {"value": value})
 
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): WS_TYPE_SET_FINDING_STATE,
+            vol.Required("ids"): vol.All([str], vol.Length(min=1, max=500)),
+            vol.Required("status"): vol.In(["open", "known", "snoozed", "hidden"]),
+            vol.Optional("days"): vol.All(int, vol.Range(min=1, max=365)),
+            vol.Optional("note"): vol.All(str, vol.Length(max=200)),
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_set_finding_state(hass, connection, msg):
+        """Status von Befunden ändern (betrifft nur Percytas eigene Liste, nicht HA)."""
+        coordinator = _get_coordinator(hass)
+        if coordinator is None:
+            connection.send_error(
+                msg["id"], "not_ready", "HA Percyta ist nicht eingerichtet."
+            )
+            return
+        result = await coordinator.async_set_finding_state(
+            msg["ids"], msg["status"], msg.get("days"), msg.get("note")
+        )
+        connection.send_result(msg["id"], result)
+
     websocket_api.async_register_command(hass, ws_get_report)
+    websocket_api.async_register_command(hass, ws_set_finding_state)
     websocket_api.async_register_command(hass, ws_reveal_secret)
     websocket_api.async_register_command(hass, ws_set_override)
     hass.data.setdefault(DOMAIN, {})[_WS_FLAG] = True

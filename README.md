@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -42,6 +42,24 @@ system access (GPS, camera, root/supervisor …). Since **v1.1.x** it also captu
 </p>
 
 ## Features
+
+- **🧭 Reports** – turns the scan into a to-do list: every finding comes with an
+  **observation, possible cause, impact and step-by-step instructions**, plus a button that
+  jumps to the right place in Home Assistant. Clicking a finding opens a **detail view**
+  (diagnosis, affected objects, technical data, previous/next finding). Findings are
+  grouped by common cause (e.g. an integration that is not running instead of dozens of
+  single unavailable entities) and sorted by severity. Covered:
+  - **Security & privacy** – unused long-lived tokens, integrations rated high risk, apps with
+    far-reaching rights, stored credentials (notice), backup missing/outdated.
+  - **Broken references** – automations/scripts that point to entities which do not exist
+    (with the exact location in the configuration), integrations that are not running.
+  - **Unused & orphaned** – automations/scripts not triggered for 90+ days, unavailable
+    entities per integration, orphaned entities (still registered, no longer provided).
+  - **Storage & upkeep** – storage almost full, database hotspots, updates available.
+  - **Manage:** mark as *allowed*, *snooze* (7/30/90 days), *hide* or *reopen* – for single
+    findings or a whole selection, with an optional note. Status is stored **only in
+    HA Percyta**; nothing is changed in Home Assistant. A list **“Recently resolved”** shows what
+    disappeared in the last 30 days.
 
 - **Integrations** – all config entries with state, source, custom flag, IoT class,
   dependencies, entity and device counts. Clicking the entity/device count jumps straight
@@ -164,6 +182,16 @@ Options can be changed at any time via **Configure** on the integration.
     back later.
   - **Automatic scan on open:** opening the panel from the sidebar runs a fresh scan
     automatically; after that you can trigger one manually via *Rescan*.
+- **🧭 Reports:** the third box of the report (after *Storage & System* and *Inventory & Health*). The category tiles filter the list, the tabs
+  switch between *Open / Allowed / Snoozed / Hidden*. Tick findings (or *Select page*) and use the
+  buttons above the list for bulk actions. A click on a finding opens its detail view with
+  *Esc* or the back button returning you to exactly the place you left (open boxes, scroll position).
+  **Limits and assumptions:** broken references are checked for automations and scripts
+  (entity IDs under `entity_id`, incl. blueprint inputs) – not for scenes, dashboards or templates.
+  Thresholds: 90 days without trigger, token never used (14 days grace), backup older than 7 days,
+  storage ≥ 85 %, a database entity with ≥ 10 % of all state rows (min. 50,000). Findings are only
+  shown when their data source could be read in the scan; the reference check is skipped while Home
+  Assistant is still starting.
 - **💾 Storage & System:** dedicated section with cards for disk usage, free space, RAM and
   CPU, the system storage by category, and the breakdown of the largest consumers.
 - **Cloud data flow:** dedicated section showing which integrations send data to
@@ -174,7 +202,7 @@ Options can be changed at any time via **Configure** on the integration.
   interval”** with *Manual / Hourly / Daily / Weekly / Monthly*. The sensors **“Last scan”**
   and **“Next scan”** transparently show when the next automatic run is due.
 - **Button “HA Percyta start scan”** triggers a scan immediately.
-- **Sensors:** security findings, integrations, apps, API keys & secrets, CPU usage,
+- **Sensors:** security findings, **open findings**, integrations, apps, API keys & secrets, CPU usage,
   RAM usage, disk usage and free disk space (with detail attributes such as high-risk
   domains, root apps or total/free GiB).
 - **Services:**
@@ -200,6 +228,8 @@ only in the report.
 
 ## Note
 
-HA Percyta only **reads** – it does not change anything in your installation. Reports are
+HA Percyta only **reads** – it does not change anything in your installation. The only
+things it stores are its own settings (risk overrides, finding status such as allowed/snoozed/hidden,
+comparison data for “new since last scan”). Reports are
 stored locally in the chosen output directory.
 

@@ -183,6 +183,444 @@ const STR = {
   },
 };
 
+// ---------- Befunde: Konstanten und Texte ----------
+const SEV_ORDER = { high: 0, medium: 1, low: 2, info: 3 };
+const CATEGORIES = ["security", "integrity", "orphans", "storage"];
+const CAT_ICON = { security: "🛡️", integrity: "🔗", orphans: "🧹", storage: "💾" };
+const TYPE_ICON = {
+  broken_reference: "🔗", integration_not_loaded: "🔌", unavailable_entities: "📡", orphaned_entities: "👻",
+  unused_automation: "💤", unused_script: "💤", stale_token: "🗝️", high_risk_integration: "⚠️",
+  privileged_app: "🧩", secrets_stored: "🔐", backup_old: "💾", backup_missing: "💾",
+  disk_high: "🖴", db_hotspot: "🗄️", updates_available: "⬆️",
+};
+const STATUSES = ["open", "known", "snoozed", "hidden"];
+const SNOOZE_DAYS = [7, 30, 90];
+const FINDINGS_ORANGE_FROM = 5; // ab so vielen offenen Befunden wird die Kachel orange (1-4 gelb)
+const FINDINGS_RED_FROM = 20; // ab so vielen offenen Befunden wird die Kachel rot (5-19 orange)
+
+const FSTR = {
+  de: {
+    sec_findings: "🧭 Reports", k_findings: "Offene Befunde",
+    f_all: "Alle", cat_security: "Sicherheit & Datenschutz", cat_integrity: "Defekte Verweise",
+    cat_orphans: "Ungenutzt & verwaist", cat_storage: "Speicher & Wartung",
+    sev_high: "Hoch", sev_medium: "Mittel", sev_low: "Niedrig", sev_info: "Hinweis",
+    sev_all: "Alle Schweregrade",
+    st_open: "Offen", st_known: "Erlaubt", st_snoozed: "Zurückgestellt", st_hidden: "Ausgeblendet",
+    st_open_t: "Wieder offen", st_known_t: "Als erlaubt markieren", st_snoozed_t: "Zurückstellen", st_hidden_t: "Ausblenden",
+    snooze_for: "für {n} Tage", snooze_until: "bis {d}",
+    f_select_page: "Seite auswählen", f_clear_sel: "Auswahl leeren", f_selected: "{n} ausgewählt",
+    f_reopen: "Wieder öffnen", f_th_sev: "Schwere", f_th_finding: "Befund", f_th_cat: "Kategorie",
+    f_th_affected: "Betroffen", f_th_since: "Seit",
+    f_empty_open: "Keine offenen Befunde – alles in Ordnung. 🎉", f_empty_other: "Hier ist nichts eingetragen.",
+    f_empty_filter: "Kein Befund passt zu den gewählten Filtern.",
+    f_resolved: "Zuletzt behoben (letzte 30 Tage)", f_resolved_when: "behoben {a}",
+    f_hint: "Erlaubt, zurückgestellt und ausgeblendet gilt nur in HA Percyta – in Home Assistant wird nichts geändert.",
+    f_open_ha: "In Home Assistant öffnen", f_open: "Öffnen", f_back: "← Zur Übersicht", f_prev: "Vorheriger Befund", f_next: "Nächster Befund",
+    f_gone_title: "Dieser Befund ist nicht mehr vorhanden", f_gone_text: "Er wurde vermutlich behoben. Beim nächsten Scan erscheint er unter „Zuletzt behoben“, falls er in der Liste verschwunden ist.",
+    fd_tab_diag: "Diagnose", fd_tab_items: "Betroffene Objekte", fd_tab_tech: "Technische Daten",
+    fd_found: "Beobachtung", fd_cause: "Mögliche Ursache", fd_impact: "Auswirkung", fd_fix: "So gehst du vor",
+    fd_glance: "Auf einen Blick", fd_sev: "Schwere", fd_conf: "Gewissheit", fd_conf_t: "Wie sicher Percyta bei diesem Befund ist",
+    fd_cat: "Kategorie", fd_since: "Erstmals beobachtet", fd_affected: "Betroffene Objekte", fd_status: "Status",
+    fd_manage: "Status verwalten", fd_note_ph: "Notiz (optional), z. B. Grund",
+    fd_note_label: "Notiz", fd_th_name: "Name", fd_th_id: "ID", fd_th_where: "Fundstelle", fd_th_version: "Version", fd_th_count: "Anzahl",
+    fd_more: "… und {n} weitere (Liste auf {m} Einträge begrenzt)",
+    fd_status_known_hint: "Bleibt in der Liste „Erlaubt“, wird nicht mehr als offen gezählt.",
+    fd_k_entity_id: "Entität", fd_k_domain: "Domain", fd_k_referenced_by: "Verwendet in", fd_k_entry_id: "Entry-ID",
+    fd_k_state: "Zustand", fd_k_reason: "Grund", fd_k_unavailable: "Nicht verfügbar", fd_k_orphaned: "Verwaist",
+    fd_k_last_triggered: "Zuletzt ausgelöst", fd_k_created_at: "Angelegt", fd_k_threshold_days: "Schwelle (Tage)",
+    fd_k_user: "Benutzer", fd_k_client_name: "Name", fd_k_last_used_at: "Zuletzt verwendet", fd_k_last_used_ip: "Letzte IP",
+    fd_k_iot_class: "IoT-Klasse", fd_k_custom: "Custom-Integration", fd_k_system_access: "Systemzugriffe", fd_k_data_flow: "Datenfluss",
+    fd_k_slug: "Slug", fd_k_version: "Version", fd_k_access: "Rechte", fd_k_values: "Werte", fd_k_integrations: "Integrationen",
+    fd_k_last_backup: "Letztes Backup", fd_k_name: "Name", fd_k_size: "Größe", fd_k_source: "Quelle",
+    fd_k_percent: "Belegt (%)", fd_k_used: "Belegt", fd_k_total: "Gesamt", fd_k_free: "Frei",
+    fd_k_rows: "Zeilen", fd_k_share_percent: "Anteil (%)", fd_k_states_total: "Zustände gesamt", fd_k_count: "Anzahl",
+    r_gps: "Standortzugriff", r_camera: "Kamera", r_system: "System-/Root-Zugriff",
+    p_full_access: "Vollzugriff (Root)", p_host_network: "Host-Netzwerk", p_role: "Supervisor-Rolle {r}", yes: "ja", no: "nein",
+    jump_findings: "Zu den Befunden",
+  },
+  en: {
+    sec_findings: "🧭 Reports", k_findings: "Open findings",
+    f_all: "All", cat_security: "Security & privacy", cat_integrity: "Broken references",
+    cat_orphans: "Unused & orphaned", cat_storage: "Storage & upkeep",
+    sev_high: "High", sev_medium: "Medium", sev_low: "Low", sev_info: "Notice",
+    sev_all: "All severities",
+    st_open: "Open", st_known: "Allowed", st_snoozed: "Snoozed", st_hidden: "Hidden",
+    st_open_t: "Reopen", st_known_t: "Mark as allowed", st_snoozed_t: "Snooze", st_hidden_t: "Hide",
+    snooze_for: "for {n} days", snooze_until: "until {d}",
+    f_select_page: "Select page", f_clear_sel: "Clear selection", f_selected: "{n} selected",
+    f_reopen: "Reopen", f_th_sev: "Severity", f_th_finding: "Finding", f_th_cat: "Category",
+    f_th_affected: "Affected", f_th_since: "Since",
+    f_empty_open: "No open findings – all good. 🎉", f_empty_other: "Nothing here.",
+    f_empty_filter: "No finding matches the selected filters.",
+    f_resolved: "Recently resolved (last 30 days)", f_resolved_when: "resolved {a}",
+    f_hint: "Allowed, snoozed and hidden only apply inside HA Percyta – nothing is changed in Home Assistant.",
+    f_open_ha: "Open in Home Assistant", f_open: "Open", f_back: "← Back to overview", f_prev: "Previous finding", f_next: "Next finding",
+    f_gone_title: "This finding no longer exists", f_gone_text: "It has probably been resolved. If it disappeared from the list it will show up under “Recently resolved” after the next scan.",
+    fd_tab_diag: "Diagnosis", fd_tab_items: "Affected objects", fd_tab_tech: "Technical data",
+    fd_found: "Observation", fd_cause: "Possible cause", fd_impact: "Impact", fd_fix: "What to do",
+    fd_glance: "At a glance", fd_sev: "Severity", fd_conf: "Certainty", fd_conf_t: "How sure Percyta is about this finding",
+    fd_cat: "Category", fd_since: "First observed", fd_affected: "Affected objects", fd_status: "Status",
+    fd_manage: "Manage status", fd_note_ph: "Note (optional), e.g. reason",
+    fd_note_label: "Note", fd_th_name: "Name", fd_th_id: "ID", fd_th_where: "Location", fd_th_version: "Version", fd_th_count: "Count",
+    fd_more: "… and {n} more (list limited to {m} entries)",
+    fd_status_known_hint: "Stays in the “Allowed” list and is no longer counted as open.",
+    fd_k_entity_id: "Entity", fd_k_domain: "Domain", fd_k_referenced_by: "Used in", fd_k_entry_id: "Entry ID",
+    fd_k_state: "State", fd_k_reason: "Reason", fd_k_unavailable: "Unavailable", fd_k_orphaned: "Orphaned",
+    fd_k_last_triggered: "Last triggered", fd_k_created_at: "Created", fd_k_threshold_days: "Threshold (days)",
+    fd_k_user: "User", fd_k_client_name: "Name", fd_k_last_used_at: "Last used", fd_k_last_used_ip: "Last IP",
+    fd_k_iot_class: "IoT class", fd_k_custom: "Custom integration", fd_k_system_access: "System access", fd_k_data_flow: "Data flow",
+    fd_k_slug: "Slug", fd_k_version: "Version", fd_k_access: "Permissions", fd_k_values: "Values", fd_k_integrations: "Integrations",
+    fd_k_last_backup: "Last backup", fd_k_name: "Name", fd_k_size: "Size", fd_k_source: "Source",
+    fd_k_percent: "Used (%)", fd_k_used: "Used", fd_k_total: "Total", fd_k_free: "Free",
+    fd_k_rows: "Rows", fd_k_share_percent: "Share (%)", fd_k_states_total: "States total", fd_k_count: "Count",
+    r_gps: "location access", r_camera: "camera", r_system: "system/root access",
+    p_full_access: "full access (root)", p_host_network: "host network", p_role: "supervisor role {r}", yes: "yes", no: "no",
+    jump_findings: "Go to findings",
+  },
+};
+Object.assign(STR.de, FSTR.de);
+Object.assign(STR.en, FSTR.en);
+
+// Diagnose-Texte je Befundtyp (Variablen in {…} werden aus den Befunddaten gefüllt).
+const FDOC = {
+  de: {
+    broken_reference: {
+      title: "Defekte Referenz",
+      what: "Die Entität {subject} existiert nicht, wird aber in {count} Automation(en) oder Skript(en) verwendet.",
+      cause: "Die Entität wurde gelöscht oder umbenannt, oder ihre Integration bzw. ihr Gerät wurde entfernt. Die Konfiguration verweist noch auf die alte ID.",
+      impact: "An diesen Stellen läuft der Verweis ins Leere: Trigger lösen nie aus, Bedingungen sind nie erfüllt, Aktionen schlagen fehl oder werden übersprungen.",
+      steps: [
+        "Prüfe in der Entitätenliste, ob die Entität umbenannt wurde und wie sie jetzt heißt.",
+        "Öffne unter „Betroffene Objekte“ die jeweilige Automation bzw. das Skript und ersetze die alte ID durch die neue – oder entferne den Verweis.",
+        "Starte danach einen neuen Scan: Der Befund verschwindet und erscheint unter „Zuletzt behoben“.",
+      ],
+    },
+    integration_not_loaded: {
+      title: "Integration läuft nicht",
+      what: "{subject} ist nicht geladen (Status: {state}). {count} Entität(en) sind dadurch nicht verfügbar.",
+      cause: "Die Integration konnte nicht starten oder erreicht ihr Gerät bzw. ihren Dienst nicht (z. B. Gerät offline, Zugangsdaten abgelaufen, Netzwerkproblem).",
+      impact: "Alle Entitäten dieser Integration fehlen; Automationen und Dashboards, die sie nutzen, funktionieren nicht wie gewünscht.",
+      steps: [
+        "Öffne die Integration und lies die Fehlermeldung am Eintrag.",
+        "Prüfe Gerät, Netzwerk und Zugangsdaten; lade die Integration neu oder melde dich erneut an.",
+        "Wird die Integration nicht mehr gebraucht, lösche den Eintrag.",
+      ],
+    },
+    unavailable_entities: {
+      title: "Nicht verfügbare Entitäten",
+      what: "{count} Entität(en) von {subject} sind aktuell nicht verfügbar.",
+      cause: "Das dahinterliegende Gerät oder der Dienst antwortet nicht (Batterie leer, außer Reichweite, offline) oder meldet die Entität nicht mehr.",
+      impact: "Zustände fehlen; Automationen und Dashboards, die diese Entitäten nutzen, zeigen nichts an oder reagieren nicht.",
+      steps: [
+        "Prüfe die betroffenen Geräte (Strom, Batterie, Funkverbindung).",
+        "Starte die Integration neu, wenn mehrere Geräte gleichzeitig betroffen sind.",
+        "Dauerhaft entfernte Geräte in Home Assistant löschen, damit keine Karteileichen bleiben.",
+      ],
+    },
+    orphaned_entities: {
+      title: "Verwaiste Entitäten",
+      what: "{count} Entität(en) von {subject} sind noch registriert, werden aber von keiner Integration mehr bereitgestellt.",
+      cause: "Das Gerät oder die Integration wurde entfernt oder die Entität umbenannt; ihr Eintrag in der Entitäten-Registry ist übrig geblieben.",
+      impact: "Sie belegen Namen und Registry-Einträge, liefern keine Werte und können Verweise in Automationen vortäuschen.",
+      steps: [
+        "Öffne die Entitätenliste, suche die unter „Betroffene Objekte“ genannten Einträge und lösche sie.",
+        "Prüfe vorher, ob noch Automationen oder Dashboards auf sie verweisen.",
+      ],
+    },
+    unused_automation: {
+      title: "Lange nicht ausgelöst",
+      what: "Die Automation wurde seit {days} Tagen nicht ausgelöst.",
+      what_never: "Die Automation wurde seit ihrer Anlage (vor {days} Tagen) noch nie ausgelöst.",
+      cause: "Die Trigger-Bedingungen treffen nie zu, der Auslöser existiert nicht mehr oder die Automation wird schlicht nicht mehr gebraucht.",
+      impact: "Kein akuter Fehler, aber toter Ballast: Die Konfiguration wird unübersichtlicher und vermittelt falsche Sicherheit.",
+      steps: [
+        "Prüfe den Trigger: Gibt es das auslösende Ereignis (Entität, Zeit, Zustand) noch?",
+        "Wird die Automation noch gebraucht (z. B. saisonal), markiere den Befund als „Erlaubt“.",
+        "Sonst schalte sie aus und lösche sie nach einiger Zeit – oder blende den Befund hier aus.",
+      ],
+    },
+    unused_script: {
+      title: "Skript lange nicht ausgeführt",
+      what: "Das Skript wurde seit {days} Tagen nicht ausgeführt.",
+      what_never: "Das Skript wurde seit seiner Anlage (vor {days} Tagen) noch nie ausgeführt.",
+      cause: "Kein Dashboard, keine Automation und niemand ruft das Skript noch auf.",
+      impact: "Kein akuter Fehler, aber toter Ballast in der Konfiguration.",
+      steps: [
+        "Prüfe, ob Dashboards, Automationen oder Sprachassistenten das Skript noch aufrufen.",
+        "Wird es nur selten gebraucht, markiere den Befund als „Erlaubt“.",
+        "Sonst Skript löschen oder den Befund ausblenden.",
+      ],
+    },
+    stale_token: {
+      title: "Ungenutzter Zugriffstoken",
+      what: "Der Langzeit-Token „{subject}“ von {user} wurde seit {days} Tagen nicht verwendet.",
+      what_never: "Der Langzeit-Token „{subject}“ von {user} wurde noch nie verwendet.",
+      cause: "Ein Langzeit-Token wurde für eine App, ein Skript oder einen Dienst angelegt, der ihn nicht (mehr) nutzt.",
+      impact: "Ein gültiger, vergessener Token bleibt dauerhaft ein Zugang zu deinem Home Assistant – wer ihn kennt, braucht kein Passwort.",
+      steps: [
+        "Öffne die Sicherheitsseite des Benutzerprofils und prüfe, ob der Token noch gebraucht wird (Tokens anderer Benutzer sind nur in deren eigenem Profil sichtbar).",
+        "Nicht mehr benötigt: Token widerrufen.",
+        "Wird er nur selten gebraucht (z. B. Backup-Skript), markiere den Befund als „Erlaubt“.",
+      ],
+    },
+    high_risk_integration: {
+      title: "Integration mit hohem Risiko",
+      what: "{subject} wurde als hohes Risiko eingestuft ({reasons}).",
+      cause: "Die Integration greift auf besonders sensible Daten oder Systembereiche zu (Standort, Kamera, Root-/System-Rechte).",
+      impact: "Das ist kein Fehler, aber ein erhöhtes Datenschutz- und Sicherheitsrisiko, falls die Integration kompromittiert wird oder Daten weitergibt.",
+      steps: [
+        "Prüfe, ob du die Integration wirklich brauchst und ob sie aus einer vertrauenswürdigen Quelle stammt.",
+        "Beschränke Zugriffe, wo möglich (z. B. Kamera- oder Standort-Entitäten deaktivieren).",
+        "Ist das Risiko für dich akzeptabel, ändere die Risikostufe im Bereich „Installierte Integrationen“ (Spalte „Anpassen“) oder markiere den Befund als „Erlaubt“.",
+      ],
+    },
+    privileged_app: {
+      title: "App mit weitreichenden Rechten",
+      what: "{subject} hat erweiterte Rechte ({rights}).",
+      cause: "Die App benötigt laut Konfiguration weitreichende Systemrechte, z. B. für Hardware-, Netzwerk- oder Supervisor-Zugriff.",
+      impact: "Eine kompromittierte oder fehlerhafte App mit solchen Rechten kann das gesamte System beeinflussen.",
+      steps: [
+        "Prüfe, ob die App aus einer vertrauenswürdigen Quelle stammt und aktuell ist.",
+        "Nicht mehr benötigte Apps stoppen und deinstallieren.",
+        "Gehören die Rechte zum Zweck der App, markiere den Befund als „Erlaubt“.",
+      ],
+    },
+    secrets_stored: {
+      title: "Gespeicherte Zugangsdaten",
+      what: "In {integrations} Integration(en) wurden {count} gespeicherte Zugangsdaten (Passwörter, Tokens, API-Keys) gefunden.",
+      cause: "Integrationen speichern ihre Zugangsdaten bei der Einrichtung in der Konfiguration von Home Assistant – das ist normal.",
+      impact: "Ein Hinweis, kein Fehler: Die Werte liegen unverschlüsselt in der Konfiguration und damit auch in Backups. Wer Zugriff darauf hat, kann sie lesen.",
+      steps: [
+        "Gib Backups und den Konfigurationsordner nur an vertrauenswürdige Stellen weiter.",
+        "Verschlüssele Backups, wenn möglich.",
+        "Im Bereich „API-Keys, Tokens & Secrets“ siehst du, welche Felder betroffen sind.",
+      ],
+    },
+    backup_old: {
+      title: "Backup ist veraltet",
+      what: "Das letzte Backup ist {days} Tage alt.",
+      cause: "Es läuft keine (oder keine erfolgreiche) automatische Sicherung.",
+      impact: "Bei einem Defekt oder Fehler gehen alle Änderungen seit dem letzten Backup verloren.",
+      steps: [
+        "Öffne die Backup-Seite und erstelle jetzt ein Backup.",
+        "Richte automatische Backups ein und prüfe, ob sie wirklich laufen.",
+        "Bewahre mindestens eine Kopie außerhalb des Geräts auf.",
+      ],
+    },
+    backup_missing: {
+      title: "Kein Backup gefunden",
+      what: "Es wurde kein Home-Assistant-Backup gefunden.",
+      cause: "Backups wurden nie eingerichtet oder gelöscht – oder HA Percyta kann die Backup-Quelle auf diesem System nicht lesen.",
+      impact: "Ohne Backup lässt sich die Installation nach einem Defekt nicht wiederherstellen.",
+      steps: [
+        "Öffne die Backup-Seite und prüfe, ob dort Backups vorhanden sind.",
+        "Falls nicht: Erstelle ein Backup und richte automatische Backups ein.",
+      ],
+    },
+    disk_high: {
+      title: "Speicherplatz wird knapp",
+      what: "Der Systemspeicher ist zu {percent} % belegt.",
+      cause: "Datenbank, Backups, Medien oder Logs haben viel Platz belegt.",
+      impact: "Ist der Speicher voll, können Datenbank, Backups und Updates fehlschlagen – im Extremfall läuft Home Assistant nicht mehr sauber.",
+      steps: [
+        "Sieh im Bereich „Speicher & System“ nach den größten Verbrauchern.",
+        "Lösche alte Backups und Medien; verkürze die Aufbewahrung des Recorders oder schließe große Entitäten aus.",
+        "Verwende bei Bedarf einen größeren Datenträger.",
+      ],
+    },
+    db_hotspot: {
+      title: "Datenbank-Hotspot",
+      what: "{subject} verursacht {share} % aller Zustandseinträge ({rows} Zeilen).",
+      cause: "Die Entität ändert sich sehr oft (z. B. Leistungsmesser oder Messwerte im Sekundentakt).",
+      impact: "Sie bläht die Datenbank auf, verlangsamt Verlauf und Logbuch und vergrößert Backups.",
+      steps: [
+        "Prüfe, ob die Aufzeichnung dieser Entität nötig ist.",
+        "Schließe sie im Recorder aus oder reduziere die Aktualisierungsrate an der Quelle.",
+        "Optional: Verkürze die Aufbewahrungsdauer des Recorders.",
+      ],
+    },
+    updates_available: {
+      title: "Updates verfügbar",
+      what: "{count} Update(s) warten auf die Installation.",
+      cause: "Neue Versionen von Home Assistant, Apps, Integrationen oder Geräten wurden veröffentlicht.",
+      impact: "Updates enthalten oft Fehlerbehebungen und Sicherheitskorrekturen; veraltete Software bleibt angreifbar.",
+      steps: [
+        "Lies die Release-Notes (Link unter „Betroffene Objekte“).",
+        "Erstelle ein Backup und installiere die Updates.",
+        "Nicht gewünschte Updates kannst du im Update-Dialog überspringen.",
+      ],
+    },
+  },
+  en: {
+    broken_reference: {
+      title: "Broken reference",
+      what: "The entity {subject} does not exist but is used in {count} automation(s) or script(s).",
+      cause: "The entity was deleted or renamed, or its integration or device was removed. The configuration still points to the old ID.",
+      impact: "These references lead nowhere: triggers never fire, conditions are never met, actions fail or are skipped.",
+      steps: [
+        "Check the entity list to see whether the entity was renamed and what it is called now.",
+        "Under “Affected objects” open each automation or script and replace the old ID with the new one – or remove the reference.",
+        "Then run a new scan: the finding disappears and shows up under “Recently resolved”.",
+      ],
+    },
+    integration_not_loaded: {
+      title: "Integration not running",
+      what: "{subject} is not loaded (status: {state}). {count} entity(ies) are unavailable because of this.",
+      cause: "The integration could not start or cannot reach its device or service (e.g. device offline, expired credentials, network problem).",
+      impact: "All entities of this integration are missing; automations and dashboards that use them do not work as intended.",
+      steps: [
+        "Open the integration and read the error message on the entry.",
+        "Check the device, network and credentials; reload the integration or sign in again.",
+        "If the integration is no longer needed, delete the entry.",
+      ],
+    },
+    unavailable_entities: {
+      title: "Unavailable entities",
+      what: "{count} entity(ies) of {subject} are currently unavailable.",
+      cause: "The device or service behind them does not respond (battery empty, out of range, offline) or no longer reports the entity.",
+      impact: "States are missing; automations and dashboards using these entities show nothing or do not react.",
+      steps: [
+        "Check the affected devices (power, battery, radio link).",
+        "Restart the integration if several devices are affected at once.",
+        "Delete permanently removed devices in Home Assistant so no leftovers remain.",
+      ],
+    },
+    orphaned_entities: {
+      title: "Orphaned entities",
+      what: "{count} entity(ies) of {subject} are still registered but no longer provided by any integration.",
+      cause: "The device or integration was removed or the entity was renamed; its entry in the entity registry was left behind.",
+      impact: "They occupy names and registry entries, deliver no values and can fake references in automations.",
+      steps: [
+        "Open the entity list, find the entries named under “Affected objects” and delete them.",
+        "Before that, check whether automations or dashboards still refer to them.",
+      ],
+    },
+    unused_automation: {
+      title: "Not triggered for a long time",
+      what: "The automation has not been triggered for {days} days.",
+      what_never: "The automation has never been triggered since it was created {days} days ago.",
+      cause: "Its trigger conditions never match, the trigger no longer exists, or the automation is simply no longer needed.",
+      impact: "Not an acute error, but dead weight: the configuration gets harder to oversee and gives a false sense of security.",
+      steps: [
+        "Check the trigger: does the triggering event (entity, time, state) still exist?",
+        "If it is still needed (e.g. seasonal), mark the finding as “Allowed”.",
+        "Otherwise turn it off and delete it after a while – or hide the finding here.",
+      ],
+    },
+    unused_script: {
+      title: "Script not run for a long time",
+      what: "The script has not been run for {days} days.",
+      what_never: "The script has never been run since it was created {days} days ago.",
+      cause: "No dashboard, automation or person calls the script any more.",
+      impact: "Not an acute error, but dead weight in the configuration.",
+      steps: [
+        "Check whether dashboards, automations or voice assistants still call the script.",
+        "If it is only needed rarely, mark the finding as “Allowed”.",
+        "Otherwise delete the script or hide the finding.",
+      ],
+    },
+    stale_token: {
+      title: "Unused access token",
+      what: "The long-lived token “{subject}” of {user} has not been used for {days} days.",
+      what_never: "The long-lived token “{subject}” of {user} has never been used.",
+      cause: "A long-lived token was created for an app, script or service that does not (or no longer) use it.",
+      impact: "A valid, forgotten token remains a permanent way into your Home Assistant – whoever knows it needs no password.",
+      steps: [
+        "Open the security page of the user profile and check whether the token is still needed (tokens of other users are only visible in their own profile).",
+        "No longer needed: revoke the token.",
+        "If it is only used rarely (e.g. a backup script), mark the finding as “Allowed”.",
+      ],
+    },
+    high_risk_integration: {
+      title: "High-risk integration",
+      what: "{subject} was rated high risk ({reasons}).",
+      cause: "The integration accesses particularly sensitive data or system areas (location, camera, root/system rights).",
+      impact: "This is not an error, but an increased privacy and security risk if the integration is compromised or passes data on.",
+      steps: [
+        "Check whether you really need the integration and whether it comes from a trusted source.",
+        "Limit access where possible (e.g. disable camera or location entities).",
+        "If the risk is acceptable for you, change the risk level in “Installed integrations” (column “Adjust”) or mark the finding as “Allowed”.",
+      ],
+    },
+    privileged_app: {
+      title: "App with far-reaching rights",
+      what: "{subject} has extended rights ({rights}).",
+      cause: "According to its configuration the app needs far-reaching system rights, e.g. for hardware, network or Supervisor access.",
+      impact: "A compromised or faulty app with such rights can affect the entire system.",
+      steps: [
+        "Check whether the app comes from a trusted source and is up to date.",
+        "Stop and uninstall apps you no longer need.",
+        "If the rights belong to the purpose of the app, mark the finding as “Allowed”.",
+      ],
+    },
+    secrets_stored: {
+      title: "Stored credentials",
+      what: "{count} stored credential(s) (passwords, tokens, API keys) were found in {integrations} integration(s).",
+      cause: "Integrations store their credentials in the Home Assistant configuration during setup – this is normal.",
+      impact: "A notice, not an error: the values sit unencrypted in the configuration and therefore also in backups. Anyone with access to them can read them.",
+      steps: [
+        "Only hand out backups and the configuration folder to trusted places.",
+        "Encrypt backups if possible.",
+        "The “API keys, tokens & secrets” section shows which fields are affected.",
+      ],
+    },
+    backup_old: {
+      title: "Backup is outdated",
+      what: "The last backup is {days} days old.",
+      cause: "No (or no successful) automatic backup is running.",
+      impact: "After a failure or mistake, all changes since the last backup are lost.",
+      steps: [
+        "Open the backup page and create a backup now.",
+        "Set up automatic backups and check that they really run.",
+        "Keep at least one copy outside the device.",
+      ],
+    },
+    backup_missing: {
+      title: "No backup found",
+      what: "No Home Assistant backup was found.",
+      cause: "Backups were never set up or were deleted – or HA Percyta cannot read the backup source on this system.",
+      impact: "Without a backup the installation cannot be restored after a failure.",
+      steps: [
+        "Open the backup page and check whether backups exist there.",
+        "If not: create a backup and set up automatic backups.",
+      ],
+    },
+    disk_high: {
+      title: "Storage is running low",
+      what: "The system storage is {percent} % full.",
+      cause: "Database, backups, media or logs use a lot of space.",
+      impact: "If the storage is full, the database, backups and updates can fail – in the worst case Home Assistant no longer runs properly.",
+      steps: [
+        "Check “Storage & system” for the largest consumers.",
+        "Delete old backups and media; shorten the recorder retention or exclude large entities.",
+        "Use a larger drive if needed.",
+      ],
+    },
+    db_hotspot: {
+      title: "Database hotspot",
+      what: "{subject} causes {share} % of all state rows ({rows} rows).",
+      cause: "The entity changes very often (e.g. power meters or readings every second).",
+      impact: "It bloats the database, slows down history and logbook and makes backups larger.",
+      steps: [
+        "Check whether recording this entity is necessary.",
+        "Exclude it in the recorder or reduce the update rate at the source.",
+        "Optionally: shorten the recorder retention period.",
+      ],
+    },
+    updates_available: {
+      title: "Updates available",
+      what: "{count} update(s) are waiting to be installed.",
+      cause: "New versions of Home Assistant, apps, integrations or devices were released.",
+      impact: "Updates often contain bug fixes and security fixes; outdated software stays vulnerable.",
+      steps: [
+        "Read the release notes (link under “Affected objects”).",
+        "Create a backup and install the updates.",
+        "You can skip unwanted updates in the update dialog.",
+      ],
+    },
+  },
+};
+
 class HaPercytaPanel extends HTMLElement {
   constructor() {
     super();
@@ -279,6 +717,13 @@ class HaPercytaPanel extends HTMLElement {
     this._loadLogo();
     window.addEventListener("scroll", this._scrollHandler, true);
     window.addEventListener("resize", this._scrollHandler);
+    this._keyHandler = this._keyHandler || ((e) => {
+      if (e.key !== "Escape" || !this._detailId) return;
+      const t = e.composedPath && e.composedPath()[0];
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "")) return;
+      this._closeDetail();
+    });
+    window.addEventListener("keydown", this._keyHandler);
     this._autoScanPending = true;
     this._maybeAutoScan();
   }
@@ -289,6 +734,7 @@ class HaPercytaPanel extends HTMLElement {
     if (this._built) this._saveView();
     window.removeEventListener("scroll", this._scrollHandler, true);
     window.removeEventListener("resize", this._scrollHandler);
+    if (this._keyHandler) window.removeEventListener("keydown", this._keyHandler);
   }
 
   _maybeAutoScan() {
@@ -528,7 +974,8 @@ class HaPercytaPanel extends HTMLElement {
     const base = headers.join("|");
     this._tableSeq = this._tableSeq || {};
     this._tableSeq[base] = (this._tableSeq[base] || 0) + 1;
-    const memKey = base + "#" + this._tableSeq[base];
+    const memKey = opts.memKey || base + "#" + this._tableSeq[base];
+    const cols = opts.cols || [];
     this._sortMem = this._sortMem || {};
     const state = this._sortMem[memKey] || { idx: opts.sortIdx != null ? opts.sortIdx : -1, dir: opts.sortDir || "asc" };
     const tbody = document.createElement("tbody");
@@ -551,26 +998,34 @@ class HaPercytaPanel extends HTMLElement {
       tbody.innerHTML = "";
       for (const cells of data) {
         const tr = document.createElement("tr");
-        for (const cell of cells) tr.appendChild(this._cellNode(cell));
+        cells.forEach((cell, ci) => {
+          const td = this._cellNode(cell);
+          if (cols[ci] && cols[ci].cls) td.classList.add(cols[ci].cls);
+          tr.appendChild(td);
+        });
         tr.hidden = !this._rowMatches(tr);
         tbody.appendChild(tr);
       }
     };
 
-    const ths = headers.map((h, i) =>
-      this._el("th", { class: "sortable", attrs: { "data-idx": String(i) } }, [
+    const ths = headers.map((h, i) => {
+      const col = cols[i] || {};
+      if (col.nosort) return this._el("th", { class: col.cls || "", attrs: { "data-idx": String(i) } }, [this._el("span", { text: h })]);
+      return this._el("th", { class: "sortable" + (col.cls ? " " + col.cls : ""), attrs: { "data-idx": String(i) } }, [
         this._el("span", { text: h }),
         this._el("span", { class: "sort-ind", text: "" }),
-      ])
-    );
+      ]);
+    });
     const updateIndicators = () => {
       ths.forEach((th, i) => {
         const ind = th.querySelector(".sort-ind");
+        if (!ind) return;
         ind.textContent = state.idx === i ? (state.dir === "asc" ? " ▲" : " ▼") : "";
         th.classList.toggle("active", state.idx === i);
       });
     };
-    ths.forEach((th, i) =>
+    ths.forEach((th, i) => {
+      if ((cols[i] || {}).nosort) return;
       th.addEventListener("click", () => {
         if (state.idx === i) state.dir = state.dir === "asc" ? "desc" : "asc";
         else {
@@ -581,8 +1036,8 @@ class HaPercytaPanel extends HTMLElement {
         this._queueSaveView();
         updateIndicators();
         renderBody();
-      })
-    );
+      });
+    });
 
     const thead = this._el("thead", {}, [this._el("tr", {}, ths)]);
     updateIndicators();
@@ -646,16 +1101,17 @@ class HaPercytaPanel extends HTMLElement {
 
       .stat-grid { display:grid; gap:14px; margin-bottom:14px; }
       .grid-inv { grid-template-columns:repeat(4, 1fr); }
-      .grid-sec { grid-template-columns:repeat(6, 1fr); }
+      .grid-sec { grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); }
       @media (min-width:1500px) { .grid-inv { grid-template-columns:repeat(8, 1fr); } }
-      @media (max-width:1100px) { .grid-inv { grid-template-columns:repeat(2, 1fr); } .grid-sec { grid-template-columns:repeat(3, 1fr); } }
-      @media (max-width:560px) { .grid-inv, .grid-sec { grid-template-columns:repeat(2, 1fr); } }
+      @media (max-width:1100px) { .grid-inv { grid-template-columns:repeat(2, 1fr); } }
+      @media (max-width:560px) { .grid-inv { grid-template-columns:repeat(2, 1fr); } }
       .stat { display:flex; align-items:center; gap:13px; padding:15px 18px; border-radius:16px;
         background:var(--card-background-color,#1c1c1c); box-shadow:var(--ha-card-box-shadow, 0 2px 8px rgba(0,0,0,.20));
         border:1px solid var(--divider-color); transition:transform .12s ease, box-shadow .12s ease; }
       .stat:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.24); }
       .stat.accent-red { background:rgba(219,68,55,.16); border-color:rgba(219,68,55,.34); }
       .stat.accent-amber { background:rgba(255,166,0,.16); border-color:rgba(255,166,0,.34); }
+      .stat.accent-orange { background:rgba(255,112,67,.17); border-color:rgba(255,112,67,.36); }
       .stat.accent-green { background:rgba(67,160,71,.15); border-color:rgba(67,160,71,.30); }
       .stat.clickable { cursor:pointer; }
       .stat.clickable:hover { border-color:var(--primary-color,#3f9dff); }
@@ -773,6 +1229,117 @@ class HaPercytaPanel extends HTMLElement {
       .swap-expl { padding:0 14px 8px; font-size:12px; line-height:1.45; color:var(--secondary-text-color); font-style:italic; }
       .bar-cell { min-width:120px; }
 
+      /* ----- Befunde ----- */
+      .sev { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; padding:3px 10px 3px 8px;
+        border-radius:999px; white-space:nowrap; letter-spacing:.02em; }
+      .sev-dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
+      .sev-high { background:rgba(219,68,55,.16); color:var(--error-color,#db4437); }
+      .sev-medium { background:rgba(255,166,0,.16); color:var(--warning-color,#ffa600); }
+      .sev-low { background:rgba(63,157,255,.16); color:var(--info-color,#3f9dff); }
+      .sev-info { background:rgba(127,127,127,.18); color:var(--secondary-text-color,#9aa0aa); }
+      .small { font-size:12px; }
+
+      .f-cats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; padding:4px 12px 10px; }
+      .f-cat { position:relative; overflow:hidden; cursor:pointer; user-select:none; padding:10px 12px 10px 16px; border-radius:12px;
+        background:var(--secondary-background-color,#2b2b2b); border:1px solid var(--divider-color); transition:border-color .12s, transform .12s; }
+      .f-cat::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--divider-color); }
+      .f-cat.fc-high::before { background:var(--error-color,#db4437); }
+      .f-cat.fc-high .f-cat-n { color:var(--error-color,#db4437); }
+      .f-cat.fc-medium::before { background:var(--warning-color,#ffa600); }
+      .f-cat.fc-medium .f-cat-n { color:var(--warning-color,#ffa600); }
+      .f-cat.fc-low::before { background:var(--info-color,#3f9dff); }
+      .f-cat.fc-low .f-cat-n { color:var(--info-color,#3f9dff); }
+      .f-cat.fc-info::before { background:var(--secondary-text-color,#9aa0aa); }
+      .f-cat.fc-info .f-cat-n { color:var(--secondary-text-color,#9aa0aa); }
+      .f-cat:hover { transform:translateY(-1px); border-color:var(--primary-color,#3f9dff); }
+      .f-cat.active { border-color:var(--primary-color,#3f9dff); box-shadow:inset 0 0 0 1px var(--primary-color,#3f9dff); }
+      .f-cat-top { display:flex; align-items:center; justify-content:space-between; }
+      .f-cat-icon { font-size:19px; }
+      .f-cat-n { font-size:22px; font-weight:700; }
+      .f-cat-label { font-size:12.5px; color:var(--secondary-text-color); margin-top:2px; }
+
+      .f-tools { padding:2px 12px 8px; display:flex; flex-direction:column; gap:8px; }
+      .f-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      .f-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
+      .f-sel-info { font-size:13px; min-width:90px; }
+      .vb-btn[disabled], .ov-select[disabled] { opacity:.45; cursor:default; }
+      .vb-btn.small { padding:4px 10px; font-size:12.5px; }
+      .f-list .table-wrap { padding-top:2px; }
+      th.f-check, td.f-check { width:34px; padding-right:0; }
+      th.f-go, td.f-go { width:34px; text-align:right; }
+      .f-cb { width:16px; height:16px; cursor:pointer; accent-color:var(--primary-color,#3f9dff); }
+      .f-title { font-weight:600; cursor:pointer; }
+      .f-title:hover { color:var(--primary-color,#3f9dff); text-decoration:underline; }
+      .f-sub { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:2px; font-size:12.5px; color:var(--secondary-text-color); }
+      .f-subject { color:var(--primary-text-color); opacity:.85; }
+      .f-go-btn { cursor:pointer; font-size:20px; line-height:1; color:var(--secondary-text-color); padding:2px 8px; border-radius:8px; }
+      .f-go-btn:hover { background:var(--divider-color); color:var(--primary-text-color); }
+      .f-resolved { padding:2px 14px 12px; }
+      .f-res-row { display:flex; align-items:baseline; gap:10px; padding:6px 0; border-bottom:1px solid var(--divider-color); flex-wrap:wrap; }
+      .f-res-ico { color:var(--success-color,#43a047); font-weight:700; }
+      .f-res-title { font-weight:600; }
+      .f-res-when { margin-left:auto; font-size:12.5px; }
+      .f-resolved-box { margin:6px 12px 10px; box-shadow:none; background:var(--secondary-background-color,#2b2b2b); }
+      .f-resolved-box .sec-summary { padding:11px 14px; font-size:14px; }
+
+      .fd { max-width:1280px; margin:0 auto; }
+      .fd-top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+      .fd-crumb { font-size:13px; }
+      .fd-nav { margin-left:auto; display:flex; align-items:center; gap:8px; }
+      .fd-hero { position:relative; overflow:hidden; display:flex; align-items:center; gap:18px; padding:20px 22px 20px 28px;
+        border-radius:16px; margin-bottom:16px; background:var(--card-background-color,#1c1c1c); border:1px solid var(--divider-color);
+        box-shadow:var(--ha-card-box-shadow,0 2px 8px rgba(0,0,0,.2)); }
+      .fd-hero::before { content:""; position:absolute; left:0; top:0; bottom:0; width:7px; background:var(--sev); }
+      .fd-ico { flex:none; width:60px; height:60px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:30px;
+        background:color-mix(in srgb, var(--sev) 16%, transparent); }
+      .fd-hero-main { flex:1; min-width:0; }
+      .fd-badges { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+      .fd-title { margin:0 0 4px; font-size:23px; font-weight:700; }
+      .fd-open { flex:none; cursor:pointer; border:none; border-radius:12px; padding:10px 18px; font-size:14px; font-weight:600;
+        background:var(--primary-color,#3f9dff); color:#fff; }
+      .fd-open:hover { filter:brightness(1.1); }
+      .fd-grid { display:grid; grid-template-columns:minmax(0, 2fr) minmax(280px, 1fr); gap:16px; align-items:start; }
+      @media (max-width:980px) { .fd-grid { grid-template-columns:1fr; } .fd-hero { flex-wrap:wrap; } }
+      .fd-card { background:var(--card-background-color,#1c1c1c); border:1px solid var(--divider-color); border-radius:14px;
+        padding:16px 18px; box-shadow:var(--ha-card-box-shadow,0 2px 6px rgba(0,0,0,.2)); }
+      .fd-card h3 { margin:0 0 12px; font-size:15px; }
+      .fd-side { display:flex; flex-direction:column; gap:16px; }
+      .fd-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--divider-color); }
+      .fd-tab { cursor:pointer; border:1px solid var(--divider-color); background:transparent; color:var(--primary-text-color);
+        border-radius:999px; padding:6px 14px; font-size:13.5px; transition:background .12s; }
+      .fd-tab:hover { background:var(--divider-color); }
+      .fd-tab.active { background:var(--primary-color,#3f9dff); border-color:transparent; color:#fff; font-weight:600; }
+      .fd-panel[hidden] { display:none; }
+      .fd-steps { list-style:none; margin:0; padding:0; }
+      .fd-step { display:grid; grid-template-columns:36px 1fr; gap:14px; position:relative; padding-bottom:20px; }
+      .fd-step:last-child { padding-bottom:0; }
+      .fd-step:not(:last-child)::before { content:""; position:absolute; left:17px; top:38px; bottom:2px; width:2px; background:var(--divider-color); }
+      .fd-node { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px;
+        background:var(--secondary-background-color,#2b2b2b); border:2px solid var(--divider-color); }
+      .fd-step.fix .fd-node { border-color:var(--success-color,#43a047); }
+      .fd-step-body h4 { margin:3px 0 4px; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--secondary-text-color); }
+      .fd-step-body p { margin:0; line-height:1.6; font-size:14px; }
+      .fd-fixlist { margin:2px 0 0; padding-left:20px; line-height:1.65; font-size:14px; }
+      .fd-fixlist li { margin-bottom:5px; }
+      .fd-kv th.fd-k { width:34%; text-transform:none; letter-spacing:0; font-size:13px; }
+      .fd-fact { display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px solid var(--divider-color); font-size:13.5px; }
+      .fd-fact:last-child { border-bottom:none; }
+      .fd-fact-l { color:var(--secondary-text-color); }
+      .fd-fact-v { text-align:right; }
+      .fd-conf { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
+      .fd-conf-bar { width:90px; height:7px; border-radius:6px; background:var(--divider-color); overflow:hidden; }
+      .fd-conf-bar > span { display:block; height:100%; background:var(--primary-color,#3f9dff); }
+      .fd-status-seg { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+      .fd-st { cursor:pointer; padding:9px 10px; font-size:13px; border-radius:10px; border:1px solid var(--divider-color);
+        background:var(--secondary-background-color,#2b2b2b); color:var(--primary-text-color); transition:background .12s; }
+      .fd-st:hover { background:var(--divider-color); }
+      .fd-st.active { background:var(--primary-color,#3f9dff); color:#fff; border-color:transparent; font-weight:600; }
+      .fd-manage-row { margin:10px 0 8px; }
+      .fd-note { width:100%; box-sizing:border-box; padding:8px 10px; border-radius:10px; border:1px solid var(--divider-color);
+        background:var(--secondary-background-color,#2b2b2b); color:var(--primary-text-color); font-size:13px; }
+      .fd-gone { text-align:center; padding:40px 20px; }
+      .fd-gone-ico { font-size:38px; color:var(--success-color,#43a047); }
+
       .to-top { position:fixed; right:26px; bottom:26px; z-index:9999; width:46px; height:46px; border-radius:50%;
         border:none; cursor:pointer; background:var(--primary-color,#3f9dff); color:#fff; font-size:22px; line-height:1;
         box-shadow:0 4px 16px rgba(0,0,0,.38); opacity:0; transform:translateY(14px); pointer-events:none;
@@ -883,7 +1450,7 @@ class HaPercytaPanel extends HTMLElement {
     } else {
       const styleText = this.shadowRoot.querySelector("style").textContent;
       const clone = this.shadowRoot.getElementById("content").cloneNode(true);
-      clone.querySelectorAll(".filter, .viewbar, .reveal-btn").forEach((n) => n.remove());
+      clone.querySelectorAll(".filter, .viewbar, .reveal-btn, .f-tools, .f-check, .f-go").forEach((n) => n.remove());
       clone.querySelectorAll(".secret-val[data-masked]").forEach((n) => (n.textContent = n.getAttribute("data-masked")));
       clone.querySelectorAll("[hidden]").forEach((el) => el.removeAttribute("hidden"));
       clone.querySelectorAll("details").forEach((d) => d.setAttribute("open", ""));
@@ -1153,6 +1720,7 @@ class HaPercytaPanel extends HTMLElement {
     content.appendChild(this._el("div", { attrs: { id: "top-anchor" }, style: "position:absolute;top:0;height:1px;width:1px" }));
 
     if (!d) {
+      this._detailId = null;
       content.appendChild(
         this._el("div", { class: "empty" }, [
           this._el("div", { style: "font-size:40px;margin-bottom:10px", text: "🛡️" }),
@@ -1160,6 +1728,15 @@ class HaPercytaPanel extends HTMLElement {
           this._el("div", { class: "muted", style: "margin-top:6px", text: this._t("press_rescan") }),
         ])
       );
+      return;
+    }
+
+    // Detailansicht eines Befunds ersetzt den Bericht (Ansicht des Berichts bleibt gemerkt).
+    const dlHtml = this.shadowRoot.getElementById("dl-html");
+    if (dlHtml) dlHtml.hidden = !!this._detailId;
+    if (this._detailId) {
+      const found = (d.findings || []).find((x) => x.id === this._detailId);
+      content.appendChild(found ? this._detailView(d, found) : this._goneView());
       return;
     }
 
@@ -1214,9 +1791,20 @@ class HaPercytaPanel extends HTMLElement {
     content.appendChild(grid);
 
     const riskGrid = this._el("div", { class: "stat-grid grid-sec" });
+    // Reihenfolge: High, Medium, Offene Befunde, Secrets, Cloud, Tokens, Fehler.
     riskGrid.append(
       this._statCard("🔴", c.high_risk || 0, this._t("k_high"), "accent-red", "integrations+addons"),
-      this._statCard("🟡", c.medium_risk || 0, this._t("k_medium"), "accent-amber", "integrations+addons"),
+      this._statCard("🟡", c.medium_risk || 0, this._t("k_medium"), "accent-amber", "integrations+addons")
+    );
+    if (Array.isArray(d.findings)) {
+      // Farbe nach Anzahl offener Befunde: 0 grün, 1-4 gelb, 5-19 orange, ab 20 rot.
+      const open = c.findings_open || 0;
+      const accent = open === 0 ? "accent-green"
+        : open < FINDINGS_ORANGE_FROM ? "accent-amber"
+        : open < FINDINGS_RED_FROM ? "accent-orange" : "accent-red";
+      riskGrid.append(this._statCard("🧭", open, this._t("k_findings"), accent, "findings"));
+    }
+    riskGrid.append(
       this._statCard("🔐", c.secrets_found || 0, this._t("k_secrets"), c.secrets_found ? "accent-amber" : "accent-green", "secrets"),
       this._statCard("☁️", c.cloud || 0, this._t("k_cloud"), c.cloud ? "accent-amber" : "accent-green", "cloud"),
       this._statCard("🗝️", c.stale_tokens || 0, this._t("k_stale"), c.stale_tokens ? "accent-red" : "accent-green", "tokens"),
@@ -1232,6 +1820,7 @@ class HaPercytaPanel extends HTMLElement {
     const defs = [
       ["system", systemSection],
       ["inventory", this._sectionInventory(d)],
+      ["findings", this._sectionFindings(d)],
       ["database", this._sectionDatabase(d)],
       ["integrations", this._sectionIntegrations(d)],
       ["addons", this._sectionAddons(d)],
@@ -1864,6 +2453,471 @@ class HaPercytaPanel extends HTMLElement {
         ])
       : this._el("div", { class: "empty", text: this._t("empty_tokens") });
     return this._section(this._t("sec_tokens"), list.length, body);
+  }
+
+  // ---------- Befunde ----------
+  _fdoc(f) {
+    const L = this._lang();
+    const doc = (FDOC[L] && FDOC[L][f.type]) || FDOC.en[f.type] || { title: String(f.type), what: String(f.subject), cause: "", impact: "", steps: [] };
+    const p = f.params || {};
+    const reasons = (p.reasons || []).map((r) => this._t("r_" + r)).join(", ");
+    const rights = [];
+    if (p.full_access) rights.push(this._t("p_full_access"));
+    if (p.host_network) rights.push(this._t("p_host_network"));
+    (p.privileged || []).forEach((x) => rights.push(String(x)));
+    if (p.role) rights.push(this._ti("p_role", { r: p.role }));
+    const vars = {
+      subject: f.subject, count: p.count != null ? p.count : f.items_total, days: p.days, percent: p.percent,
+      share: p.share, rows: this._fmtInt(p.rows), state: p.state, user: p.user, integrations: p.integrations,
+      reasons: reasons || "—", rights: rights.join(", ") || "—",
+    };
+    const fill = (s) => String(s || "").replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+    const what = p.never && doc.what_never ? doc.what_never : doc.what;
+    return { title: fill(doc.title), what: fill(what), cause: fill(doc.cause), impact: fill(doc.impact), steps: (doc.steps || []).map(fill) };
+  }
+
+  _sevBadge(sev) {
+    return this._el("span", { class: "sev sev-" + sev }, [
+      this._el("span", { class: "sev-dot" }),
+      document.createTextNode(this._t("sev_" + sev)),
+    ]);
+  }
+
+  _fmtDateTime(iso) {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? String(iso || "—") : d.toLocaleString();
+  }
+
+  _openLink(link) {
+    if (!link) return;
+    if (/^https?:\/\//i.test(link)) window.open(link, "_blank", "noopener");
+    else this._navigate(link);
+  }
+
+  _fStatusText(f) {
+    let s = this._t("st_" + f.status);
+    if (f.status === "snoozed" && f.until) s += " · " + this._ti("snooze_until", { d: new Date(f.until).toLocaleDateString() });
+    return s;
+  }
+
+  // Zeile unter dem Titel: Name bzw. ID des betroffenen Objekts.
+  _fSubject(f) {
+    const nodes = [];
+    const t = f.subject_type;
+    if (t === "system" || t === "backup" || t === "updates") return nodes;
+    nodes.push(this._el("span", { class: "f-subject", text: String(f.subject) }));
+    const ref = f.subject_ref;
+    if ((t === "automation" || t === "script") && ref && ref !== f.subject) {
+      nodes.push(this._el("span", { class: "mono", text: String(ref) }));
+    }
+    return nodes;
+  }
+
+  async _setFindingState(ids, status, days, note) {
+    if (!this._hass || !ids || !ids.length) return;
+    const msg = { type: "ha_percyta/set_finding_state", ids, status };
+    if (days) msg.days = days;
+    if (note) msg.note = note;
+    try {
+      await this._hass.connection.sendMessagePromise(msg);
+    } catch (e) {}
+    if (this._fs) this._fs.sel.clear();
+    await this._loadReport();
+  }
+
+  _findingRow(f, fs, onSel) {
+    const doc = this._fdoc(f);
+    const cb = this._el("input", { class: "f-cb", attrs: { type: "checkbox", "data-fid": f.id } });
+    cb.checked = fs.sel.has(f.id);
+    cb.addEventListener("change", () => {
+      if (cb.checked) fs.sel.add(f.id);
+      else fs.sel.delete(f.id);
+      onSel();
+    });
+
+    const title = this._el("span", { class: "f-title", text: doc.title, attrs: { "data-fid": f.id, title: this._t("f_open") } });
+    title.addEventListener("click", () => this._openDetail(f.id));
+    const sub = this._el("div", { class: "f-sub" }, this._fSubject(f));
+    if (f.status !== "open") sub.appendChild(this._chip(this._fStatusText(f), f.status === "hidden" ? "" : "info"));
+    if (f.note) sub.appendChild(this._el("span", { class: "muted f-note", text: "— " + f.note }));
+
+    const go = this._el("span", { class: "f-go-btn", text: "›", attrs: { title: this._t("f_open") } });
+    go.addEventListener("click", () => this._openDetail(f.id));
+    const since = Date.parse(f.first_seen) || 0;
+    return [
+      { node: cb, nosrch: true, sort: 0 },
+      { node: this._sevBadge(f.severity), sort: SEV_ORDER[f.severity] != null ? SEV_ORDER[f.severity] : 9 },
+      { node: this._el("div", {}, [title, sub]), sort: doc.title + " " + f.subject },
+      { text: CAT_ICON[f.category] + " " + this._t("cat_" + f.category), sort: this._t("cat_" + f.category) },
+      { text: f.items_total ? String(f.items_total) : "—", sort: f.items_total || 0 },
+      { text: since ? this._ago(new Date(since)) : "—", sort: since },
+      { node: go, nosrch: true, sort: "" },
+    ];
+  }
+
+  _sectionFindings(d) {
+    if (!Array.isArray(d.findings)) return null;
+    const c = d.counts || {};
+    const fs = (this._fs = this._fs || { tab: "open", cat: "all", sev: "all", sel: new Set(), resolvedOpen: false });
+    const all = d.findings;
+    const ids = new Set(all.map((f) => f.id));
+    Array.from(fs.sel).forEach((i) => { if (!ids.has(i)) fs.sel.delete(i); });
+    const body = this._el("div", { class: "f-body" });
+
+    const build = () => {
+      body.innerHTML = "";
+      const byStatus = { open: 0, known: 0, snoozed: 0, hidden: 0 };
+      all.forEach((f) => { byStatus[f.status] = (byStatus[f.status] || 0) + 1; });
+      const tabList = all.filter((f) => f.status === fs.tab);
+
+      // Kategorien-Kacheln (filtern die Liste)
+      const cats = this._el("div", { class: "f-cats" });
+      const mkCat = (key, icon, label, list) => {
+        const worst = list.reduce((w, f) => Math.min(w, SEV_ORDER[f.severity] != null ? SEV_ORDER[f.severity] : 9), 9);
+        const sev = ["high", "medium", "low", "info"][worst] || "none";
+        const tile = this._el("div", { class: "f-cat fc-" + sev + (fs.cat === key ? " active" : "") }, [
+          this._el("div", { class: "f-cat-top" }, [
+            this._el("span", { class: "f-cat-icon", text: icon }),
+            this._el("span", { class: "f-cat-n", text: String(list.length) }),
+          ]),
+          this._el("div", { class: "f-cat-label", text: label }),
+        ]);
+        tile.addEventListener("click", () => { fs.cat = fs.cat === key ? "all" : key; build(); });
+        return tile;
+      };
+      cats.appendChild(mkCat("all", "🧭", this._t("f_all"), tabList));
+      CATEGORIES.forEach((cat) => cats.appendChild(mkCat(cat, CAT_ICON[cat], this._t("cat_" + cat), tabList.filter((f) => f.category === cat))));
+      body.appendChild(cats);
+
+      // Werkzeugleiste: Status-Reiter, Schweregrad, Auswahl, Aktionen
+      const tabs = this._el("div", { class: "segmented f-tabs" });
+      STATUSES.forEach((st) => {
+        const b = this._el("button", { text: `${this._t("st_" + st)} ${byStatus[st] || 0}` });
+        if (fs.tab === st) b.classList.add("active");
+        b.addEventListener("click", () => { fs.tab = st; fs.sel.clear(); build(); });
+        tabs.appendChild(b);
+      });
+      const sevSel = this._el("select", { class: "ov-select" });
+      [["all", this._t("sev_all")], ...["high", "medium", "low", "info"].map((s) => [s, this._t("sev_" + s)])].forEach(([val, label]) => {
+        const opt = this._el("option", { text: label, attrs: { value: val } });
+        if (val === fs.sev) opt.setAttribute("selected", "");
+        sevSel.appendChild(opt);
+      });
+      sevSel.addEventListener("change", (e) => { fs.sev = e.target.value; build(); });
+
+      const selInfo = this._el("span", { class: "f-sel-info muted" });
+      const btnPage = this._el("button", { class: "vb-btn", text: this._t("f_select_page") });
+      const btnClear = this._el("button", { class: "vb-btn", text: this._t("f_clear_sel") });
+      const actions = this._el("div", { class: "f-actions" });
+      const act = (label, status, extra) => {
+        const b = this._el("button", { class: "vb-btn", text: label });
+        b.addEventListener("click", () => this._setFindingState(Array.from(fs.sel), status, extra ? extra() : undefined));
+        return b;
+      };
+      if (fs.tab === "open") {
+        const days = this._el("select", { class: "ov-select", attrs: { title: this._t("st_snoozed_t") } });
+        SNOOZE_DAYS.forEach((n) => days.appendChild(this._el("option", { text: this._ti("snooze_for", { n }), attrs: { value: String(n) } })));
+        const snooze = this._el("button", { class: "vb-btn", text: this._t("st_snoozed_t") });
+        snooze.addEventListener("click", () => this._setFindingState(Array.from(fs.sel), "snoozed", parseInt(days.value, 10)));
+        actions.append(act(this._t("st_known_t"), "known"), snooze, days, act(this._t("st_hidden_t"), "hidden"));
+      } else {
+        actions.append(act(this._t("f_reopen"), "open"));
+      }
+      const tools = this._el("div", { class: "f-tools" }, [
+        this._el("div", { class: "f-row" }, [tabs, sevSel]),
+        this._el("div", { class: "f-row" }, [btnPage, btnClear, selInfo, actions]),
+      ]);
+      body.appendChild(tools);
+
+      // Liste
+      const rowsData = tabList.filter((f) => (fs.cat === "all" || f.category === fs.cat) && (fs.sev === "all" || f.severity === fs.sev));
+      const listWrap = this._el("div", { class: "f-list" });
+      const updateSel = () => {
+        selInfo.textContent = fs.sel.size ? this._ti("f_selected", { n: fs.sel.size }) : "";
+        actions.querySelectorAll("button, select").forEach((el) => { el.disabled = !fs.sel.size; });
+        btnClear.disabled = !fs.sel.size;
+      };
+      if (!rowsData.length) {
+        const msg = !tabList.length ? (fs.tab === "open" ? "f_empty_open" : "f_empty_other") : "f_empty_filter";
+        listWrap.appendChild(this._el("div", { class: "empty", text: this._t(msg) }));
+      } else {
+        const rows = rowsData.map((f) => this._findingRow(f, fs, updateSel));
+        listWrap.appendChild(
+          this._table(
+            ["", this._t("f_th_sev"), this._t("f_th_finding"), this._t("f_th_cat"), this._t("f_th_affected"), this._t("f_th_since"), ""],
+            rows,
+            {
+              sortIdx: 1, sortDir: "asc", memKey: "findings",
+              cols: [{ cls: "f-check", nosort: true }, {}, {}, {}, {}, {}, { cls: "f-go", nosort: true }],
+            }
+          )
+        );
+      }
+      body.appendChild(listWrap);
+      btnPage.addEventListener("click", () => {
+        listWrap.querySelectorAll("tbody tr:not([hidden]) input.f-cb").forEach((cb) => { cb.checked = true; fs.sel.add(cb.dataset.fid); });
+        updateSel();
+      });
+      btnClear.addEventListener("click", () => {
+        fs.sel.clear();
+        listWrap.querySelectorAll("input.f-cb").forEach((cb) => { cb.checked = false; });
+        updateSel();
+      });
+      updateSel();
+
+      // Zuletzt behoben
+      const res = d.findings_resolved || [];
+      if (res.length) {
+        const list = this._el("div", { class: "f-resolved" }, res.map((r) => {
+          const doc = (FDOC[this._lang()] || FDOC.en)[r.type];
+          const label = doc ? doc.title : r.type;
+          const subj = r.subject ? String(r.subject) : String(r.id || "").split(":").slice(1).join(":");
+          return this._el("div", { class: "f-res-row" }, [
+            this._el("span", { class: "f-res-ico", text: "✔" }),
+            this._el("span", { class: "f-res-title", text: label }),
+            subj && !["system", "backup", "updates"].includes(r.subject_type) ? this._el("span", { class: "mono", text: subj }) : null,
+            this._el("span", { class: "muted f-res-when", text: this._ti("f_resolved_when", { a: this._ago(new Date(r.resolved_at)) }) }),
+          ]);
+        }));
+        const det = this._section(this._t("f_resolved"), res.length, list, fs.resolvedOpen);
+        det.classList.add("f-resolved-box");
+        det.addEventListener("toggle", () => { fs.resolvedOpen = det.open; });
+        body.appendChild(det);
+      }
+      body.appendChild(this._el("div", { class: "hint-line", text: this._t("f_hint") }));
+    };
+    build();
+    return this._section(this._t("sec_findings"), c.findings_open != null ? c.findings_open : all.length, body, true);
+  }
+
+  // ---------- Befund-Detailansicht ----------
+  _openDetail(id) {
+    const content = this.shadowRoot.getElementById("content");
+    const view = content && this._captureView(content);
+    if (view) this._storedView = { open: view.open, why: view.why, sort: this._sortMem || {}, scroll: [] };
+    this._backScroll = this.scrollTop;
+    // Reihenfolge der aktuell sichtbaren Liste für „Vorheriger/Nächster“.
+    const order = Array.from(this.shadowRoot.querySelectorAll(".f-list tbody tr:not([hidden]) .f-title")).map((n) => n.dataset.fid);
+    this._detailList = order.length ? order : [id];
+    this._detailId = id;
+    this._render();
+    this.scrollTop = 0;
+  }
+
+  _closeDetail() {
+    this._detailId = null;
+    this._render();
+    const top = this._backScroll || 0;
+    this.scrollTop = top;
+    requestAnimationFrame(() => { this.scrollTop = top; });
+  }
+
+  _stepDetail(delta) {
+    const list = this._detailList || [];
+    const pos = list.indexOf(this._detailId);
+    const next = list[pos + delta];
+    if (pos < 0 || !next) return;
+    this._detailId = next;
+    this._render();
+    this.scrollTop = 0;
+  }
+
+  _goneView() {
+    const back = this._el("button", { class: "vb-btn", text: this._t("f_back") });
+    back.addEventListener("click", () => this._closeDetail());
+    return this._el("div", { class: "fd" }, [
+      this._el("div", { class: "fd-top" }, [back]),
+      this._el("div", { class: "fd-card fd-gone" }, [
+        this._el("div", { class: "fd-gone-ico", text: "✔" }),
+        this._el("h3", { text: this._t("f_gone_title") }),
+        this._el("p", { class: "muted", text: this._t("f_gone_text") }),
+      ]),
+    ]);
+  }
+
+  _fmtDetail(key, v) {
+    if (typeof v === "boolean") return this._t(v ? "yes" : "no");
+    if (Array.isArray(v)) return v.join(", ");
+    if (/(_at|last_triggered|last_backup)$/.test(key)) return this._fmtDateTime(v);
+    if (["used", "total", "free", "size"].includes(key) && typeof v === "number") return this._fmtBytes(v);
+    if (typeof v === "number") return this._fmtInt(v);
+    return String(v);
+  }
+
+  _itemsPanel(f) {
+    const items = f.items || [];
+    const hasWhere = items.some((i) => i.paths && i.paths.length);
+    const hasVer = items.some((i) => i.installed || i.latest);
+    const hasCount = items.some((i) => i.count != null);
+    const headers = [this._t("fd_th_name"), this._t("fd_th_id")];
+    const cols = [{}, {}];
+    if (hasWhere) { headers.push(this._t("fd_th_where")); cols.push({}); }
+    if (hasVer) { headers.push(this._t("fd_th_version")); cols.push({}); }
+    if (hasCount) { headers.push(this._t("fd_th_count")); cols.push({}); }
+    headers.push(""); cols.push({ cls: "f-go", nosort: true });
+    const rows = items.map((it) => {
+      const row = [{ text: it.name == null ? "" : String(it.name) }, { node: this._el("span", { class: "mono", text: String(it.ref || "") }) }];
+      if (hasWhere) row.push({ node: this._el("span", { class: "mono", text: (it.paths || []).join(", ") }) });
+      if (hasVer) row.push({ text: [it.installed, it.latest].filter(Boolean).join(" → ") });
+      if (hasCount) row.push({ text: it.count != null ? String(it.count) : "", sort: it.count || 0 });
+      let cell = "";
+      if (it.link) {
+        const b = this._el("button", { class: "vb-btn small", text: this._t("f_open") + " ↗" });
+        b.addEventListener("click", () => this._openLink(it.link));
+        cell = { node: b, nosrch: true };
+      }
+      row.push(cell);
+      return row;
+    });
+    const wrap = this._el("div", {});
+    const savedSearch = this._search;
+    this._search = ""; // Die globale Suche gilt nur für die Übersicht.
+    wrap.appendChild(this._table(headers, rows, { memKey: "fd-items", cols }));
+    this._search = savedSearch;
+    if (f.items_total > items.length) {
+      wrap.appendChild(this._el("div", { class: "hint-line", text: this._ti("fd_more", { n: f.items_total - items.length, m: items.length }) }));
+    }
+    return wrap;
+  }
+
+  _techPanel(f) {
+    const tbody = this._el("tbody", {});
+    const add = (label, node) => tbody.appendChild(this._el("tr", {}, [this._el("th", { class: "fd-k", text: label }), this._el("td", {}, [node])]));
+    add("ID", this._el("span", { class: "mono", text: String(f.id) }));
+    Object.entries(f.details || {}).forEach(([k, v]) => {
+      const label = STR[this._lang()]["fd_k_" + k] || k;
+      add(label, this._el("span", { text: this._fmtDetail(k, v) }));
+    });
+    return this._el("div", { class: "table-wrap" }, [this._el("table", { class: "fd-kv" }, [tbody])]);
+  }
+
+  _detailView(d, f) {
+    const doc = this._fdoc(f);
+    const colors = { high: "var(--error-color,#db4437)", medium: "var(--warning-color,#ffa600)", low: "var(--info-color,#3f9dff)", info: "var(--secondary-text-color,#9aa0aa)" };
+    const sevColor = colors[f.severity] || colors.info;
+    const list = this._detailList || [f.id];
+    const pos = list.indexOf(f.id);
+    const wrap = this._el("div", { class: "fd" });
+
+    // Kopfzeile: Zurück, Pfad, Vor/Zurück innerhalb der Liste
+    const back = this._el("button", { class: "vb-btn", text: this._t("f_back") });
+    back.addEventListener("click", () => this._closeDetail());
+    const nav = this._el("div", { class: "fd-nav" });
+    if (pos >= 0 && list.length > 1) {
+      const prev = this._el("button", { class: "vb-btn", text: "‹", attrs: { title: this._t("f_prev") } });
+      const next = this._el("button", { class: "vb-btn", text: "›", attrs: { title: this._t("f_next") } });
+      prev.disabled = pos <= 0;
+      next.disabled = pos >= list.length - 1;
+      prev.addEventListener("click", () => this._stepDetail(-1));
+      next.addEventListener("click", () => this._stepDetail(1));
+      nav.append(prev, this._el("span", { class: "muted", text: `${pos + 1} / ${list.length}` }), next);
+    }
+    const crumb = this._t("sec_findings").replace(/^\S+\s*/, "") + " › " + doc.title;
+    wrap.appendChild(this._el("div", { class: "fd-top" }, [back, this._el("span", { class: "muted fd-crumb", text: crumb }), nav]));
+
+    // Kopfkarte
+    const badges = this._el("div", { class: "fd-badges" }, [
+      this._sevBadge(f.severity),
+      this._chip(CAT_ICON[f.category] + " " + this._t("cat_" + f.category)),
+    ]);
+    if (f.status !== "open") badges.appendChild(this._chip(this._fStatusText(f), "info"));
+    const heroMain = this._el("div", { class: "fd-hero-main" }, [
+      badges,
+      this._el("h2", { class: "fd-title", text: doc.title }),
+      this._el("div", { class: "f-sub" }, this._fSubject(f)),
+    ]);
+    const hero = this._el("div", { class: "fd-hero", style: `--sev:${sevColor}` }, [
+      this._el("div", { class: "fd-ico", text: TYPE_ICON[f.type] || "🧭" }),
+      heroMain,
+    ]);
+    if (f.link) {
+      const open = this._el("button", { class: "fd-open", text: this._t("f_open_ha") + " ↗" });
+      open.addEventListener("click", () => this._openLink(f.link));
+      hero.appendChild(open);
+    }
+    wrap.appendChild(hero);
+
+    // Reiter: Diagnose / Betroffene Objekte / Technische Daten
+    const step = (cls, icon, label, content) =>
+      this._el("li", { class: "fd-step " + cls }, [
+        this._el("div", { class: "fd-node", text: icon }),
+        this._el("div", { class: "fd-step-body" }, [this._el("h4", { text: label }), content]),
+      ]);
+    const fixList = this._el("ol", { class: "fd-fixlist" }, doc.steps.map((s) => this._el("li", { text: s })));
+    const steps = this._el("ul", { class: "fd-steps" }, [
+      step("", "🔎", this._t("fd_found"), this._el("p", { text: doc.what })),
+      step("", "🧩", this._t("fd_cause"), this._el("p", { text: doc.cause })),
+      step("", "⚡", this._t("fd_impact"), this._el("p", { text: doc.impact })),
+      step("fix", "🛠️", this._t("fd_fix"), fixList),
+    ]);
+    const panels = [["diag", this._t("fd_tab_diag"), steps]];
+    if ((f.items || []).length) panels.push(["items", `${this._t("fd_tab_items")} ${f.items_total}`, this._itemsPanel(f)]);
+    panels.push(["tech", this._t("fd_tab_tech"), this._techPanel(f)]);
+    const tabBar = this._el("div", { class: "fd-tabs" });
+    const panelBox = this._el("div", { class: "fd-panels" });
+    const show = (key) => {
+      this._detailTab = key;
+      tabBar.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.key === key));
+      panelBox.querySelectorAll(".fd-panel").forEach((p) => { p.hidden = p.dataset.key !== key; });
+    };
+    panels.forEach(([key, label, node]) => {
+      const b = this._el("button", { class: "fd-tab", text: label, attrs: { "data-key": key } });
+      b.addEventListener("click", () => show(key));
+      tabBar.appendChild(b);
+      panelBox.appendChild(this._el("div", { class: "fd-panel", attrs: { "data-key": key } }, [node]));
+    });
+    const main = this._el("div", { class: "fd-card fd-main" }, [tabBar, panelBox]);
+
+    // Seitenleiste: Auf einen Blick + Status verwalten
+    const row = (label, node) =>
+      this._el("div", { class: "fd-fact" }, [this._el("div", { class: "fd-fact-l", text: label }), this._el("div", { class: "fd-fact-v" }, [node])]);
+    const conf = Math.max(0, Math.min(100, Number(f.confidence) || 0));
+    const confNode = this._el("div", { class: "fd-conf", attrs: { title: this._t("fd_conf_t") } }, [
+      this._el("div", { class: "fd-conf-bar" }, [this._el("span", { style: `width:${conf}%` })]),
+      this._el("span", { text: conf + " %" }),
+    ]);
+    const first = f.first_seen ? new Date(f.first_seen) : null;
+    const sinceNode = this._el("div", {}, [
+      this._el("div", { text: first ? this._fmtDateTime(f.first_seen) : "—" }),
+      first ? this._el("div", { class: "muted small", text: this._ago(first) }) : null,
+    ]);
+    const statusNode = this._el("div", {}, [
+      this._el("span", { text: this._fStatusText(f) }),
+      f.note ? this._el("div", { class: "muted small", text: this._t("fd_note_label") + ": " + f.note }) : null,
+    ]);
+    const facts = this._el("div", { class: "fd-card fd-facts" }, [
+      this._el("h3", { text: this._t("fd_glance") }),
+      row(this._t("fd_sev"), this._sevBadge(f.severity)),
+      row(this._t("fd_conf"), confNode),
+      row(this._t("fd_cat"), this._el("span", { text: CAT_ICON[f.category] + " " + this._t("cat_" + f.category) })),
+      row(this._t("fd_since"), sinceNode),
+      f.items_total ? row(this._t("fd_affected"), this._el("span", { text: String(f.items_total) })) : null,
+      row(this._t("fd_status"), statusNode),
+    ]);
+
+    const note = this._el("input", { class: "fd-note", attrs: { type: "text", maxlength: "200", placeholder: this._t("fd_note_ph"), value: f.note || "" } });
+    const days = this._el("select", { class: "ov-select" });
+    SNOOZE_DAYS.forEach((n) => days.appendChild(this._el("option", { text: this._ti("snooze_for", { n }), attrs: { value: String(n) } })));
+    const seg = this._el("div", { class: "fd-status-seg" });
+    STATUSES.forEach((st) => {
+      const b = this._el("button", { class: "fd-st" + (f.status === st ? " active" : ""), text: this._t("st_" + st) });
+      b.addEventListener("click", () => {
+        if (f.status === st && st !== "snoozed") return;
+        this._setFindingState([f.id], st, st === "snoozed" ? parseInt(days.value, 10) : undefined, st === "open" ? undefined : note.value.trim());
+      });
+      seg.appendChild(b);
+    });
+    const manage = this._el("div", { class: "fd-card fd-manage" }, [
+      this._el("h3", { text: this._t("fd_manage") }),
+      seg,
+      this._el("div", { class: "fd-manage-row" }, [days]),
+      note,
+      this._el("div", { class: "hint-line", text: this._t("f_hint") }),
+    ]);
+
+    wrap.appendChild(this._el("div", { class: "fd-grid" }, [main, this._el("div", { class: "fd-side" }, [facts, manage])]));
+    show(panels.some((p) => p[0] === this._detailTab) ? this._detailTab : "diag");
+    return wrap;
   }
 
   _sectionErrors(d) {

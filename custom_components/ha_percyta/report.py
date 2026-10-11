@@ -220,6 +220,58 @@ NEW_TYPE_LABELS = {
 }
 
 
+FINDING_TYPE_LABELS = {
+    "broken_reference": "Defekte Referenz",
+    "integration_not_loaded": "Integration läuft nicht",
+    "unavailable_entities": "Nicht verfügbare Entitäten",
+    "orphaned_entities": "Verwaiste Entitäten",
+    "unused_automation": "Automation lange nicht ausgelöst",
+    "unused_script": "Skript lange nicht ausgeführt",
+    "stale_token": "Ungenutzter Token",
+    "high_risk_integration": "Integration mit hohem Risiko",
+    "privileged_app": "App mit weitreichenden Rechten",
+    "secrets_stored": "Gespeicherte Secrets",
+    "backup_old": "Backup zu alt",
+    "backup_missing": "Kein Backup",
+    "disk_high": "Speicher fast voll",
+    "db_hotspot": "Datenbank-Hotspot",
+    "updates_available": "Updates verfügbar",
+}
+FINDING_SEVERITY_EMOJI = {"high": "🔴", "medium": "🟡", "low": "🟢", "info": "🔵"}
+FINDING_STATUS_LABELS = {
+    "open": "offen",
+    "known": "erlaubt",
+    "snoozed": "zurückgestellt",
+    "hidden": "ausgeblendet",
+}
+
+
+def _append_findings(lines: list[str], data: dict[str, Any]) -> None:
+    """Abschnitt 'Reports' – offene Befunde (erlaubte/ausgeblendete nur gezählt)."""
+    findings = data.get("findings") or []
+    if not findings:
+        return
+    open_items = [f for f in findings if f.get("status", "open") == "open"]
+    other = len(findings) - len(open_items)
+    lines.append(f"\n## 🧭 Reports ({len(open_items)} offene Befunde)\n")
+    if other:
+        lines.append(
+            f"_{other} weitere sind als erlaubt markiert, zurückgestellt oder ausgeblendet._\n"
+        )
+    if not open_items:
+        return
+    lines.append("| | Befund | Objekt | Betroffen | Seit |")
+    lines.append("|---|---|---|---|---|")
+    for f in open_items:
+        total = f.get("items_total") or 0
+        since = str(f.get("first_seen") or "")[:10]
+        lines.append(
+            f"| {FINDING_SEVERITY_EMOJI.get(f.get('severity'), '')} "
+            f"| {FINDING_TYPE_LABELS.get(f.get('type'), f.get('type'))} "
+            f"| `{f.get('subject')}` | {total if total else '—'} | {since or '—'} |"
+        )
+
+
 def _append_new_items(lines: list[str], data: dict[str, Any]) -> None:
     """Abschnitt 'Neu seit letztem Scan' – was genau neu ist."""
     items = data.get("new_items") or []
@@ -339,6 +391,9 @@ def generate_report(data: dict[str, Any]) -> str:
 
     # Neu seit letztem Scan (mit Namen)
     _append_new_items(lines, data)
+
+    # Befunde
+    _append_findings(lines, data)
 
     # Speicher & System
     _append_system(lines, data)

@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.0-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.1-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -42,6 +42,24 @@ zusätzlich **Speicherplatz, CPU- und RAM-Auslastung** erfasst.
 </p>
 
 ## Features
+
+- **🧭 Reports** – macht aus dem Scan eine To-do-Liste: Jeder Befund kommt mit
+  **Beobachtung, möglicher Ursache, Auswirkung und Schritt-für-Schritt-Anleitung** sowie einem
+  Button, der an die passende Stelle in Home Assistant springt. Ein Klick auf einen Befund öffnet
+  die **Detailansicht** (Diagnose, betroffene Objekte, technische Daten, voriger/nächster Befund).
+  Befunde mit gemeinsamer Ursache werden zusammengefasst (z. B. eine nicht laufende Integration statt
+  dutzender einzelner nicht verfügbarer Entitäten) und nach Schwere sortiert. Abgedeckt:
+  - **Sicherheit & Datenschutz** – ungenutzte Langzeit-Tokens, Integrationen mit hohem Risiko, Apps
+    mit weitreichenden Rechten, gespeicherte Zugangsdaten (Hinweis), Backup fehlt/veraltet.
+  - **Defekte Verweise** – Automationen/Skripte, die auf nicht existierende Entitäten zeigen
+    (mit genauer Fundstelle in der Konfiguration), Integrationen, die nicht laufen.
+  - **Ungenutzt & verwaist** – Automationen/Skripte seit über 90 Tagen nicht ausgelöst, nicht
+    verfügbare Entitäten je Integration, verwaiste Entitäten (noch registriert, nicht mehr bereitgestellt).
+  - **Speicher & Wartung** – Speicher fast voll, Datenbank-Hotspots, verfügbare Updates.
+  - **Verwalten:** als *erlaubt* markieren, *zurückstellen* (7/30/90 Tage), *ausblenden* oder
+    *wieder öffnen* – für einzelne Befunde oder eine ganze Auswahl, optional mit Notiz. Der Status
+    wird **nur in HA Percyta** gespeichert; in Home Assistant wird nichts verändert. Die Liste
+    **„Zuletzt behoben“** zeigt, was in den letzten 30 Tagen verschwunden ist.
 
 - **Integrationen** – alle Config-Entries mit Zustand, Quelle, Custom-Flag, IoT-Klasse,
   Abhängigkeiten, Entitäten- und Geräte-Anzahl. Ein Klick auf die Entitäten-/Geräte-Zahl
@@ -135,6 +153,17 @@ Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ä
   - **Automatischer Scan beim Öffnen:** Beim Aufruf des Panels über die Seitenleiste wird
     automatisch ein frischer Scan ausgeführt; danach greift man bei Bedarf manuell über
     *Neu scannen* ein.
+- **🧭 Reports:** die dritte Box des Reports (nach *Speicher & System* und *Bestand & Zustand*). Die Kategorie-Kacheln filtern die Liste, die Reiter
+  wechseln zwischen *Offen / Erlaubt / Zurückgestellt / Ausgeblendet*. Befunde ankreuzen (oder
+  *Seite auswählen*) und mit den Buttons über der Liste gesammelt bearbeiten. Ein Klick auf einen
+  Befund öffnet die Detailansicht; *Esc* oder der Zurück-Button bringt dich genau an die Stelle zurück,
+  an der du warst (offene Boxen, Scroll-Position).
+  **Grenzen und Annahmen:** Defekte Verweise werden für Automationen und Skripte geprüft
+  (Entity-IDs unter `entity_id`, inkl. Blueprint-Eingaben) – nicht für Szenen, Dashboards oder Templates.
+  Schwellen: 90 Tage ohne Auslösung, Token nie genutzt (14 Tage Schonfrist), Backup älter als 7 Tage,
+  Speicher ≥ 85 %, eine Datenbank-Entität mit ≥ 10 % aller Zustandszeilen (mind. 50.000). Befunde
+  erscheinen nur, wenn ihre Datenquelle im Scan lesbar war; die Verweis-Prüfung entfällt, solange
+  Home Assistant noch startet.
 - **💾 Speicher & System:** eigener Abschnitt mit Karten für Speicher-Belegung, freien
   Speicher, RAM und CPU, dem Systemspeicher nach Kategorie sowie der Aufschlüsselung der
   größten Verbraucher.
@@ -147,7 +176,7 @@ Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ä
   Die Sensoren **„Letzter Scan“** und **„Nächster Scan“** zeigen transparent, wann der
   nächste automatische Lauf ansteht.
 - **Button „HA Percyta Scan starten“** löst einen Scan sofort aus.
-- **Sensoren:** Sicherheitsfunde, Integrationen, Apps, API-Keys & Secrets,
+- **Sensoren:** Sicherheitsfunde, **offene Befunde**, Integrationen, Apps, API-Keys & Secrets,
   CPU-Auslastung, RAM-Auslastung, Speicher-Belegung und freier Speicher
   (mit Detail-Attributen wie High-Risk-Domains, Root-Apps oder Gesamt-/Frei-GiB).
 - **Services:**
@@ -173,6 +202,8 @@ in Entity-Attributen abgelegt (die würde der Recorder speichern), sondern nur i
 
 ## Hinweis
 
-HA Percyta **liest** ausschließlich – es verändert nichts an deiner Installation.
+HA Percyta **liest** ausschließlich – es verändert nichts an deiner Installation. Gespeichert
+werden nur eigene Daten (Risiko-Overrides, Befund-Status wie erlaubt/zurückgestellt/ausgeblendet,
+Vergleichsstand für „Neu seit letztem Scan“).
 Reports werden lokal im gewählten Ausgabeverzeichnis gespeichert.
 

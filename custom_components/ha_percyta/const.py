@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ha_percyta"
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 
 # Konfigurations-/Options-Keys
 CONF_OUTPUT_DIR = "output_dir"
@@ -59,6 +59,7 @@ PANEL_ICON = "mdi:shield-lock"
 WS_TYPE_REPORT = "ha_percyta/report"
 WS_TYPE_SET_OVERRIDE = "ha_percyta/set_override"
 WS_TYPE_REVEAL_SECRET = "ha_percyta/reveal_secret"
+WS_TYPE_SET_FINDING_STATE = "ha_percyta/set_finding_state"
 
 # Persistenter Speicher für manuelle Risiko-Overrides (Store-Key)
 OVERRIDES_STORAGE_KEY = "ha_percyta_overrides"
@@ -69,6 +70,27 @@ RISK_LEVELS = ("low", "medium", "high")
 SNAPSHOT_STORAGE_KEY = "ha_percyta_snapshot"
 SNAPSHOT_STORAGE_VERSION = 1
 EVENT_NEW_FINDINGS = "ha_percyta_new_findings"
+
+# ---------------------------------------------------------------------------
+# Befunde (findings.py)
+# ---------------------------------------------------------------------------
+FINDINGS_STORAGE_KEY = "ha_percyta_findings"
+FINDINGS_STORAGE_VERSION = 1
+FINDING_STATUSES = ("open", "known", "snoozed", "hidden")
+SNOOZE_MAX_DAYS = 365
+RESOLVED_KEEP_DAYS = 30  # "Zuletzt behoben" wird so lange vorgehalten
+MAX_RESOLVED = 50
+MAX_FINDINGS = 500
+MAX_FINDING_ITEMS = 50  # betroffene Objekte je Befund
+UNUSED_AFTER_DAYS = 90  # Automation/Skript gilt danach als "lange nicht ausgelöst"
+NEVER_USED_TOKEN_GRACE_DAYS = 14  # frisch angelegte, noch nie genutzte Tokens zählen nicht
+BACKUP_MAX_AGE_DAYS = 7
+DISK_WARN_PERCENT = 85
+DISK_CRIT_PERCENT = 95
+DB_HOTSPOT_SHARE = 10  # % der Zustandszeilen, ab dem eine Entität auffällt
+DB_HOTSPOT_MIN_ROWS = 50000
+# Domains, deren Ausfall/Fehlverweis besonders ernst genommen wird.
+CRITICAL_DOMAINS = frozenset({"lock", "alarm_control_panel", "valve", "siren"})
 
 # ---------------------------------------------------------------------------
 # Speicher / System-Analyse

@@ -35,6 +35,7 @@ from .const import (
     SYSTEM_ACCESS_MAP,
     VERSION,
 )
+from .findings import build_findings
 from .system import (
     collect_system_stats,
     measure_blueprint_sizes,
@@ -305,7 +306,7 @@ class HAPercytaScanner:
         ram = system.get("ram", {}) or {}
         cpu = system.get("cpu", {}) or {}
 
-        return {
+        result = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "app_version": VERSION,
             "ha_version": self.hass.config.as_dict().get("version", "unknown"),
@@ -346,6 +347,16 @@ class HAPercytaScanner:
                 "cpu_percent": cpu.get("percent"),
             },
         }
+
+        # Befunde ableiten (eigene Auswertung; Fehler hier dürfen den Scan nie stoppen).
+        try:
+            findings, evaluated = build_findings(self.hass, result)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Befunde nicht ermittelbar: %s", err)
+            findings, evaluated = [], []
+        result["findings"] = findings
+        result["findings_evaluated"] = evaluated
+        return result
 
     # ------------------------------------------------------------------ #
     # Integrationen
