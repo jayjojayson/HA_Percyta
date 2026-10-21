@@ -32,8 +32,8 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
 ## Demo-Video (30 s)
 
 <p align="center">
-  <a href="percyta_demo.mp4"><img src="percyta_demo_poster.png" alt="HA Percyta Demo-Video – zum Abspielen klicken" width="100%"></a>
-  <br><sub>▶ Klicken, um <code>docs/percyta_demo.mp4</code> abzuspielen – Pflegebedarf mit „Warum?“, Pflege-Center, kompakte Box-Liste, Automations-Befunde, Datenbank aufräumen mit Live-Fortschritt, Log-Fehler mit Diagnose, abgesicherte Secrets</sub>
+  <img src="percyta_demo.gif" alt="HA Percyta Demo" width="100%">
+  <br><sub>Demo (in voller Qualität: <a href="percyta_demo.mp4">docs/percyta_demo.mp4</a>) – Pflegebedarf mit „Warum?“, Pflege-Center, kompakte Box-Liste, Automations-Befunde, Datenbank aufräumen mit Live-Fortschritt, Log-Fehler mit Diagnose, abgesicherte Secrets</sub>
 </p>
 
 ## Screenshots
@@ -414,7 +414,7 @@ danebenliegen. Werte wie `api_key=…`, `token=…` oder `password=…` werden i
 
 ## Changelog
 
-Siehe [CHANGELOG_de.md](CHANGELOG_de.md) (English: [CHANGELOG.md](../CHANGELOG.md)).
+Siehe [CHANGELOG_de.md](CHANGELOG_de.md) (English: [CHANGELOG.md](CHANGELOG.md)).
 
 ## Risikoklassifizierung
 

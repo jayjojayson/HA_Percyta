@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **HA Percyta**. German version: [docs/CHANGELOG_de.md](docs/CHANGELOG_de.md).
+All notable changes to **HA Percyta**. German version: [CHANGELOG_de.md](CHANGELOG_de.md).
 Older versions: see the [GitHub releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
 ## v1.2.2

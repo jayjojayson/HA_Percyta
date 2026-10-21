@@ -1,6 +1,6 @@
 # Changelog
 
-Alle wichtigen Änderungen an **HA Percyta**. English version: [CHANGELOG.md](../CHANGELOG.md).
+Alle wichtigen Änderungen an **HA Percyta**. English version: [CHANGELOG.md](CHANGELOG.md).
 Ältere Versionen: siehe [GitHub-Releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
 ## v1.2.2

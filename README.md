@@ -32,8 +32,8 @@ system from one panel.
 ## Demo video (30 s)
 
 <p align="center">
-  <a href="docs/percyta_demo.mp4"><img src="docs/percyta_demo_poster.png" alt="HA Percyta demo video – click to play" width="100%"></a>
-  <br><sub>▶ Click to play <code>docs/percyta_demo.mp4</code> – maintenance need with “Why?”, care center, the compact box list, automation findings, database clean-up with live progress, log errors with diagnosis, secured secrets</sub>
+  <img src="docs/percyta_demo.gif" alt="HA Percyta demo" width="100%">
+  <br><sub>Demo (in full quality: <a href="docs/percyta_demo.mp4">docs/percyta_demo.mp4</a>) – maintenance need with “Why?”, care center, the compact box list, automation findings, database clean-up with live progress, log errors with diagnosis, secured secrets</sub>
 </p>
 
 ## Screenshots
@@ -430,7 +430,7 @@ Values such as `api_key=…`, `token=…` or `password=…` are masked in the lo
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) (German: [docs/CHANGELOG_de.md](docs/CHANGELOG_de.md)).
+See [CHANGELOG.md](docs/CHANGELOG.md) (German: [docs/CHANGELOG_de.md](docs/CHANGELOG_de.md)).
 
 ## Risk classification
 
