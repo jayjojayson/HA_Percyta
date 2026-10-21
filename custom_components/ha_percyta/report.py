@@ -236,6 +236,13 @@ FINDING_TYPE_LABELS = {
     "disk_high": "Speicher fast voll",
     "db_hotspot": "Datenbank-Hotspot",
     "updates_available": "Updates verfügbar",
+    "automation_invalid": "Automation/Skript: Konfiguration ungültig",
+    "automation_errors": "Automation/Skript: Fehler beim Ausführen",
+    "automation_skipped": "Automation/Skript: Ausführung übersprungen",
+    "automation_refs": "Automation/Skript: Problematische Verweise",
+    "automations_off": "Ausgeschaltete Automationen",
+    "db_orphans": "Datenleichen in der Datenbank",
+    "orphaned_devices": "Verwaiste Geräte",
 }
 FINDING_SEVERITY_EMOJI = {"high": "🔴", "medium": "🟡", "low": "🟢", "info": "🔵"}
 FINDING_STATUS_LABELS = {
@@ -452,6 +459,7 @@ def generate_report(data: dict[str, Any]) -> str:
 
     # API-Keys / Secrets
     lines.append("\n## 🔐 API-Keys, Tokens & Secrets\n")
+    lines.append("_Werte sind grundsätzlich maskiert – der Klartext wird nie in den Report geschrieben._\n")
     secret_rows = [i for i in integrations if i["analysis"]["secrets"]]
     if secret_rows:
         lines.append("| Integration | Quelle | Feld | Wert |")

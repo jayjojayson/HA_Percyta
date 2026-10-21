@@ -47,7 +47,7 @@ def _path_size(path: str) -> int:
             return 0
 
     total = 0
-    for root, dirs, files in os.walk(path, followlinks=False):
+    for root, _dirs, files in os.walk(path, followlinks=False):
         for name in files:
             fp = os.path.join(root, name)
             try:

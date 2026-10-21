@@ -22,6 +22,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
@@ -60,6 +62,13 @@ TYPE_SOURCES = {
     "orphaned_entities": "entities",
     "unused_automation": "entities",
     "unused_script": "entities",
+    "automation_invalid": "automations",
+    "automation_errors": "traces",
+    "automation_skipped": "traces",
+    "automation_refs": "autorefs",
+    "automations_off": "automations",
+    "db_orphans": "database",
+    "orphaned_devices": "devices",
     "stale_token": "tokens",
     "high_risk_integration": "integrations",
     "privileged_app": "addons",
@@ -277,6 +286,8 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
     broken_entries: dict[str, Any] = {}
     for entry in hass.config_entries.async_entries():
         state = str(getattr(entry.state, "value", entry.state))
+        if entry.source == "ignore":
+            continue  # ignorierte Entdeckung – keine installierte Integration
         if state in NOT_RUNNING_STATES and not entry.disabled_by:
             broken_entries[entry.entry_id] = (entry, state)
 
@@ -308,6 +319,8 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
     for st in hass.states.async_all():
         if st.state != "unavailable" or st.entity_id in covered:
             continue
+        if st.domain in ("automation", "script"):
+            continue  # eigene Befunde unter "Automationen & Skripte"
         reg = ent_reg.async_get(st.entity_id)
         platform = (reg.platform if reg else None) or st.domain
         item = {"name": _name(st, st.entity_id), "ref": st.entity_id, "kind": "entity"}
@@ -373,7 +386,7 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
             link = f"/config/script/edit/{st.entity_id.split('.', 1)[-1]}"
         findings.append(
             _finding(
-                f"{ftype}:{st.entity_id}", ftype, "orphans", "low", confidence,
+                f"{ftype}:{st.entity_id}", ftype, "automations", "low", confidence,
                 _name(st, st.entity_id), kind, subject_ref=st.entity_id,
                 params={"days": days, "never": never},
                 link=link,
@@ -386,6 +399,386 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
             )
         )
     return findings
+
+
+# ---------------------------------------------------------------------- #
+# Automationen & Skripte: Warum läuft etwas nicht?
+# ---------------------------------------------------------------------- #
+# Ausführungen, die gar nicht erst gestartet sind, weil die Automation noch lief.
+SKIPPED_EXECUTIONS = {"failed_single", "failed_max_runs"}
+# Ausführungen mit Fehler.
+ERROR_EXECUTIONS = {"error"}
+# Pfad-Teile, unter denen "service"/"action" KEINE Aktion bezeichnet (Nutzdaten).
+_DATA_KEYS = {"data", "data_template", "event_data", "variables", "target", "fields"}
+_TEMPLATE_RES = (
+    re.compile(r"""\b(?:states|is_state|is_state_attr|state_attr|has_value|expand|state_translated)\(\s*['"]([a-z0-9_]+\.[a-z0-9_]+)['"]"""),
+    re.compile(r"""\bstates\.([a-z0-9_]+)\.([a-z0-9_]+)\b"""),
+)
+MAX_TRACE_ITEMS = 10
+
+
+def _object_key(kind: str, entity: Any) -> str | None:
+    """Schlüssel, unter dem HA Traces ablegt (Automation: id, Skript: object_id)."""
+    if kind == "automation":
+        unique = getattr(entity, "unique_id", None)
+        return str(unique) if unique else None
+    entity_id = str(getattr(entity, "entity_id", "") or "")
+    return entity_id.split(".", 1)[-1] if entity_id else None
+
+
+def _trace_link(kind: str, key: str | None, fallback: str) -> str:
+    return f"/config/{kind}/trace/{key}" if key else fallback
+
+
+def _collect_traces(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]] | None:
+    """Kurzfassungen der gespeicherten Läufe je Automation/Skript (neueste zuerst).
+
+    Home Assistant hält je Automation/Skript nur die letzten Läufe vor
+    (Standard 5, einstellbar über ``stored_traces``). Gibt None zurück, wenn
+    die Trace-Integration nicht geladen ist.
+    """
+    store = hass.data.get("trace")
+    if not isinstance(store, Mapping):
+        return None
+    out: dict[str, list[dict[str, Any]]] = {}
+    for key, bucket in list(store.items()):
+        runs = getattr(bucket, "runs", bucket)  # neuere Cores: TraceBuckets
+        try:
+            traces = list(runs.values())
+        except Exception:  # noqa: BLE001
+            continue
+        shorts: list[dict[str, Any]] = []
+        for trace in traces:
+            try:
+                short = trace.as_short_dict()
+            except Exception:  # noqa: BLE001
+                continue
+            if not isinstance(short, Mapping) or short.get("not_triggered"):
+                continue
+            if short.get("state") not in (None, "stopped"):
+                continue  # läuft gerade noch
+            shorts.append(dict(short))
+        shorts.sort(key=lambda t: str((t.get("timestamp") or {}).get("start") or ""), reverse=True)
+        out[str(key)] = shorts
+    return out
+
+
+def _trace_time(short: Mapping[str, Any]) -> str | None:
+    value = (short.get("timestamp") or {}).get("start")
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value) if value else None
+
+
+def _collect_extra_refs(
+    node: Any, path: str, out: dict[str, list[tuple[str, str]]], known_domains: set[str],
+    in_data: bool = False,
+) -> None:
+    """Sammelt Geräte, Bereiche, Aktionen und Entitäten in Templates."""
+    if isinstance(node, Mapping):
+        for key, value in node.items():
+            skey = str(key)
+            sub = f"{path}/{skey}" if path else skey
+            if skey == "device_id":
+                for dev in _split_ids(value):
+                    if "{" not in dev:
+                        out.setdefault("device", []).append((dev, sub))
+                continue
+            if skey == "area_id":
+                for area in _split_ids(value):
+                    if "{" not in area:
+                        out.setdefault("area", []).append((area, sub))
+                continue
+            if skey in ("service", "action") and not in_data and isinstance(value, str):
+                svc = value.strip()
+                if ENTITY_RE.match(svc):
+                    out.setdefault("action", []).append((svc, sub))
+                continue
+            _collect_extra_refs(value, sub, out, known_domains, in_data or skey in _DATA_KEYS)
+    elif isinstance(node, (list, tuple)):
+        for idx, value in enumerate(node):
+            _collect_extra_refs(value, f"{path}/{idx}", out, known_domains, in_data)
+    elif isinstance(node, str) and ("{{" in node or "{%" in node):
+        found: set[str] = set()
+        for match in _TEMPLATE_RES[0].finditer(node):
+            found.add(match.group(1))
+        for match in _TEMPLATE_RES[1].finditer(node):
+            found.add(f"{match.group(1)}.{match.group(2)}")
+        for eid in found:
+            if eid.split(".")[0] in known_domains:
+                out.setdefault("template", []).append((eid, path))
+
+
+def _part_of(path: str) -> str:
+    """Erster Pfadteil → trigger / condition / action (für die Anzeige)."""
+    head = path.split("/", 1)[0]
+    if head in ("trigger", "triggers"):
+        return "trigger"
+    if head in ("condition", "conditions"):
+        return "condition"
+    if head in ("action", "actions", "sequence"):
+        return "action"
+    if head in ("use_blueprint", "input"):
+        return "blueprint"
+    return "other"
+
+
+def _entity_issue(
+    hass: HomeAssistant, ent_reg: er.EntityRegistry, eid: str
+) -> str | None:
+    """Problem einer referenzierten Entität (None = in Ordnung)."""
+    state = hass.states.get(eid)
+    entry = ent_reg.async_get(eid)
+    if state is None:
+        if entry is None:
+            return "missing"
+        if entry.disabled_by:
+            return "disabled"
+        return "no_state"
+    if state.attributes.get("restored"):
+        return "orphaned"
+    if state.state == "unavailable":
+        return "unavailable"
+    return None
+
+
+# Gewicht der Probleme für die Schwere des Befunds.
+_ISSUE_WEIGHT = {
+    "missing": 2, "disabled": 2, "missing_device": 2, "missing_area": 1,
+    "unknown_action": 2, "orphaned": 1, "no_state": 1, "unavailable": 0,
+}
+
+
+def _automation_findings(
+    hass: HomeAssistant, traces: dict[str, list[dict[str, Any]]] | None
+) -> dict[str, list[dict[str, Any]]]:
+    """Analysiert jede Automation und jedes Skript.
+
+    Liefert die Befunde je Quelle ("automations", "traces", "autorefs"), damit
+    "behoben" nur aus tatsächlich auswertbaren Quellen abgeleitet wird.
+    """
+    result: dict[str, list[dict[str, Any]]] = {"automations": [], "autorefs": []}
+    if traces is not None:
+        result["traces"] = []
+    if not hass.is_running:
+        result.pop("autorefs", None)  # beim Start fehlen Entitäten noch → Fehlalarme
+
+    ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(hass)
+    try:
+        area_reg = ar.async_get(hass)
+    except Exception:  # noqa: BLE001
+        area_reg = None
+    known_domains = {s.domain for s in hass.states.async_all()} | {
+        e.domain for e in ent_reg.entities.values()
+    }
+
+    seen = False
+    off_items: list[dict[str, Any]] = []
+    for kind, entity in _config_objects(hass):
+        seen = True
+        entity_id = str(getattr(entity, "entity_id", "") or "")
+        if not entity_id:
+            continue
+        state = hass.states.get(entity_id)
+        name = _name(state, entity_id)
+        key = _object_key(kind, entity)
+        edit_link = _object_link(kind, entity)
+        trace_link = _trace_link(kind, key, edit_link)
+        config = getattr(entity, "raw_config", None)
+
+        # 1) Konfiguration ungültig → HA legt die Automation "nicht verfügbar" an.
+        validation_error = getattr(entity, "_validation_error", None)
+        if validation_error is not None or type(entity).__name__.startswith("Unavailable"):
+            status = getattr(entity, "_validation_status", None)
+            status = str(getattr(status, "value", status) or "") or None
+            result["automations"].append(
+                _finding(
+                    f"automation_invalid:{entity_id}", "automation_invalid", "automations",
+                    "high", 95, name, kind, subject_ref=entity_id,
+                    params={"kind": kind, "status": status},
+                    link=edit_link,
+                    details={"entity_id": entity_id, "validation_status": status,
+                             "validation_error": str(validation_error or "")[:600]},
+                )
+            )
+            continue
+
+        # 2) Ausgeschaltete Automationen (laufen nie).
+        if kind == "automation" and state is not None and state.state == "off":
+            off_items.append(
+                {"name": name, "ref": entity_id, "kind": "automation",
+                 "when": state.last_changed.isoformat() if state.last_changed else None,
+                 "link": edit_link}
+            )
+
+        # 3) Letzte Läufe: Fehler / übersprungen.
+        runs = (traces or {}).get(f"{kind}.{key}") if key else None
+        if traces is not None and runs:
+            errors = [r for r in runs if r.get("error") or r.get("script_execution") in ERROR_EXECUTIONS]
+            last = runs[0]
+            last_failed = bool(last.get("error") or last.get("script_execution") in ERROR_EXECUTIONS)
+            if last_failed:
+                all_failed = len(errors) == len(runs) and len(runs) >= 2
+                items = [
+                    {"name": str(r.get("error") or r.get("script_execution") or "error")[:300],
+                     "ref": str(r.get("last_step") or ""), "kind": "run",
+                     "when": _trace_time(r), "issue": "error", "link": trace_link}
+                    for r in errors[:MAX_TRACE_ITEMS]
+                ]
+                # Ausgeschaltet → läuft ohnehin nicht mehr; der alte Fehler ist nur noch Hinweis.
+                switched_off = kind == "automation" and state is not None and state.state == "off"
+                result["traces"].append(
+                    _finding(
+                        f"automation_errors:{entity_id}", "automation_errors", "automations",
+                        "low" if switched_off else ("high" if all_failed else "medium"), 95, name, kind,
+                        subject_ref=entity_id,
+                        params={"kind": kind, "errors": len(errors), "runs": len(runs),
+                                "error": str(last.get("error") or "")[:300], "active": not switched_off},
+                        items=items, link=trace_link,
+                        details={"entity_id": entity_id, "last_error": str(last.get("error") or "")[:600],
+                                 "last_step": last.get("last_step"), "last_run": _trace_time(last),
+                                 "runs_stored": len(runs), "runs_failed": len(errors)},
+                    )
+                )
+            skipped = [r for r in runs if r.get("script_execution") in SKIPPED_EXECUTIONS]
+            if skipped:
+                mode = str((config or {}).get("mode") or "single") if isinstance(config, Mapping) else "single"
+                result["traces"].append(
+                    _finding(
+                        f"automation_skipped:{entity_id}", "automation_skipped", "automations",
+                        "low", 90, name, kind, subject_ref=entity_id,
+                        params={"kind": kind, "count": len(skipped), "runs": len(runs), "mode": mode},
+                        items=[{"name": str(r.get("script_execution")), "ref": str(r.get("run_id") or ""),
+                                "kind": "run", "when": _trace_time(r), "issue": str(r.get("script_execution")),
+                                "link": trace_link} for r in skipped[:MAX_TRACE_ITEMS]],
+                        link=trace_link,
+                        details={"entity_id": entity_id, "mode": mode, "runs_stored": len(runs),
+                                 "runs_skipped": len(skipped)},
+                    )
+                )
+
+        # 4) Verweise: fehlende, falsche, verwaiste Entitäten, Geräte, Bereiche, Aktionen.
+        if "autorefs" not in result or not isinstance(config, Mapping):
+            continue
+        refs: list[tuple[str, str]] = []
+        _collect_refs(config, "", refs, known_domains)
+        extra: dict[str, list[tuple[str, str]]] = {}
+        _collect_extra_refs(config, "", extra, known_domains)
+        refs.extend(extra.get("template", []))
+        template_ids = {eid for eid, _ in extra.get("template", [])}
+
+        problems: dict[tuple[str, str], dict[str, Any]] = {}
+
+        def add(kind_: str, ref: str, issue: str, path: str, label: str | None = None,
+                link: str | None = None) -> None:
+            item = problems.get((kind_, ref))
+            if item is None:
+                item = problems[(kind_, ref)] = {
+                    "name": label or ref, "ref": ref, "kind": kind_, "issue": issue,
+                    "paths": [], "parts": [], "link": link,
+                }
+            if path not in item["paths"]:
+                item["paths"].append(path)
+            part = _part_of(path)
+            if part not in item["parts"]:
+                item["parts"].append(part)
+
+        for eid, path in refs:
+            if eid in ("all", "none"):
+                continue
+            issue = _entity_issue(hass, ent_reg, eid)
+            if issue is None:
+                continue
+            st = hass.states.get(eid)
+            # "#entity:" öffnet im Panel den Detail-Dialog der Entität (Einstellungen, Verlauf).
+            link = f"#entity:{eid}" if issue != "missing" else f"#finding:broken_reference:{eid}"
+            add("template" if eid in template_ids and issue == "missing" else "entity",
+                eid, issue, path, _name(st, eid), link)
+        for dev, path in extra.get("device", []):
+            if dev_reg.async_get(dev) is None:
+                add("device", dev, "missing_device", path)
+            else:
+                device = dev_reg.async_get(dev)
+                if getattr(device, "disabled_by", None):
+                    add("device", dev, "disabled", path,
+                        getattr(device, "name_by_user", None) or getattr(device, "name", None) or dev,
+                        f"/config/devices/device/{dev}")
+        if area_reg is not None:
+            for area, path in extra.get("area", []):
+                if area_reg.async_get_area(area) is None:
+                    add("area", area, "missing_area", path)
+        for svc, path in extra.get("action", []):
+            domain, service = svc.split(".", 1)
+            if not hass.services.has_service(domain, service):
+                add("action", svc, "unknown_action", path)
+
+        if not problems:
+            continue
+        items = sorted(
+            problems.values(),
+            key=lambda i: (-_ISSUE_WEIGHT.get(i["issue"], 0), i["kind"], str(i["name"]).lower()),
+        )
+        for item in items:
+            item["paths"] = item["paths"][:5]
+        weight = max(_ISSUE_WEIGHT.get(i["issue"], 0) for i in items)
+        active = kind == "script" or (state is not None and state.state == "on")
+        crit = any(i["kind"] == "entity" and i["ref"].split(".")[0] in CRITICAL_DOMAINS
+                   and _ISSUE_WEIGHT.get(i["issue"], 0) >= 2 for i in items)
+        if crit and active:
+            severity = "high"
+        elif weight >= 2 and active:
+            severity = "medium"
+        else:
+            severity = "low"
+        counts: dict[str, int] = {}
+        for item in items:
+            counts[item["issue"]] = counts.get(item["issue"], 0) + 1
+        result["autorefs"].append(
+            _finding(
+                f"automation_refs:{entity_id}", "automation_refs", "automations",
+                severity, 85, name, kind, subject_ref=entity_id,
+                params={"kind": kind, "count": len(items), "issues": counts, "active": active},
+                items=items, link=edit_link,
+                details={"entity_id": entity_id, "active": active,
+                         **{f"issue_{k}": v for k, v in counts.items()}},
+            )
+        )
+
+    if not seen:
+        return {}
+    if off_items:
+        off_items.sort(key=lambda i: str(i["name"]).lower())
+        result["automations"].append(
+            _finding(
+                "automations_off", "automations_off", "automations", "info", 100,
+                "automations", "system", params={"count": len(off_items)},
+                items=off_items, link="/config/automation/dashboard",
+                details={"count": len(off_items)},
+            )
+        )
+    return result
+
+
+def _enrich_unused(findings: list[dict[str, Any]], traces: dict[str, list[dict[str, Any]]] | None,
+                   hass: HomeAssistant) -> None:
+    """Ergänzt 'lange nicht ausgelöst' um blockierende Bedingungen aus den Traces."""
+    if not traces:
+        return
+    by_entity = {}
+    for kind, entity in _config_objects(hass):
+        key = _object_key(kind, entity)
+        if key:
+            by_entity[str(getattr(entity, "entity_id", ""))] = f"{kind}.{key}"
+    for finding in findings:
+        if finding["type"] not in ("unused_automation", "unused_script"):
+            continue
+        runs = traces.get(by_entity.get(finding["subject_ref"] or "", ""), [])
+        blocked = [r for r in runs if r.get("script_execution") == "failed_conditions"]
+        if blocked:
+            finding["params"]["cond_blocked"] = len(blocked)
+            finding["details"]["blocked_by_conditions"] = len(blocked)
+            finding["details"]["last_blocked"] = _trace_time(blocked[0])
 
 
 # ---------------------------------------------------------------------- #
@@ -408,7 +801,7 @@ def _token_findings(data: dict[str, Any], now: datetime) -> list[dict[str, Any]]
             _finding(
                 fid, "stale_token", "security", "medium", 80 if never else 90,
                 f"{client}", "token", subject_ref=str(tok.get("user") or ""),
-                params={"user": tok.get("user"), "never": never, "days": days},
+                params={"user": tok.get("user"), "never": never, "days": days, "token_id": tok.get("id")},
                 link="/profile/security",
                 details={
                     "user": tok.get("user"),
@@ -577,6 +970,65 @@ def _db_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
     return findings
 
 
+def _device_findings(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Geräte, deren Integration (Config-Entry) es nicht mehr gibt."""
+    dev_reg = dr.async_get(hass)
+    ent_reg = er.async_get(hass)
+    counts: dict[str, int] = {}
+    for ent in ent_reg.entities.values():
+        if ent.device_id:
+            counts[ent.device_id] = counts.get(ent.device_id, 0) + 1
+    items = []
+    for device in list(dev_reg.devices.values()):
+        entries = list(getattr(device, "config_entries", None) or [])
+        if not entries:
+            continue
+        if any(hass.config_entries.async_get_entry(e) is not None for e in entries):
+            continue
+        items.append({
+            "name": getattr(device, "name_by_user", None) or device.name or device.id,
+            "ref": device.id, "kind": "device", "count": counts.get(device.id, 0),
+            "link": f"/config/devices/device/{device.id}",
+        })
+    if not items:
+        return []
+    items.sort(key=lambda i: str(i["name"]).lower())
+    return [
+        _finding(
+            "orphaned_devices", "orphaned_devices", "orphans", "low", 90,
+            "devices", "system", params={"count": len(items)},
+            items=items, link="/config/devices/dashboard",
+            details={"count": len(items)},
+        )
+    ]
+
+
+def _db_orphan_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """Datenleichen: Verlauf/Statistik von Entitäten, die es nicht mehr gibt."""
+    db = data.get("database") or {}
+    orphans = db.get("orphans")
+    if orphans is None:
+        return None
+    if not orphans:
+        return []
+    rows = sum((o.get("states") or 0) + (o.get("stats") or 0) for o in orphans)
+    items = [
+        {"name": o.get("id"), "ref": o.get("id"), "kind": "db",
+         "count": (o.get("states") or 0) + (o.get("stats") or 0)}
+        for o in orphans
+    ]
+    total = db.get("orphans_total") or len(orphans)
+    return [
+        _finding(
+            "db_orphans", "db_orphans", "storage",
+            "low" if rows >= DB_HOTSPOT_MIN_ROWS else "info", 90,
+            "database", "system", params={"count": total, "rows": rows},
+            items=items, link="#percyta:db-orphans",
+            details={"count": total, "rows": rows},
+        )
+    ]
+
+
 def _update_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
     inventory = data.get("inventory") or {}
     if not inventory:
@@ -624,6 +1076,22 @@ def build_findings(
 
     run("refs", _find_broken_refs, hass)
     run("entities", _entity_findings, hass, now)
+    traces = None
+    try:
+        traces = _collect_traces(hass)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Traces nicht lesbar: %s", err)
+    try:
+        for source, result in _automation_findings(hass, traces).items():
+            sources_ok.add(source)
+            findings.extend(result)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Automations-Befunde nicht ermittelbar: %s", err)
+    try:
+        _enrich_unused(findings, traces, hass)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Traces für ungenutzte Automationen nicht auswertbar: %s", err)
+    run("devices", _device_findings, hass)
     run("tokens", _token_findings, data, now)
     run("integrations", _integration_findings, data)
     if data.get("addons"):
@@ -631,6 +1099,7 @@ def build_findings(
     run("backup", _backup_findings, data, now)
     run("disk", _disk_findings, data)
     run("database", _db_findings, data)
+    run("database", _db_orphan_findings, data)
     run("updates", _update_findings, data)
 
     findings.sort(

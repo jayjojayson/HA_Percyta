@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -13,20 +14,20 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_ALLOW_REVEAL,
     CONF_INCLUDE_ADDONS,
     CONF_INCLUDE_ERRORS,
     CONF_INCLUDE_SECRETS,
     CONF_INCLUDE_STORAGE,
-    CONF_MASK_SECRETS,
     CONF_OUTPUT_DIR,
     CONF_SCAN_AUTO_ENABLED,
     CONF_SCAN_AUTO_INTERVAL,
     CONF_WRITE_REPORT,
+    DEFAULT_ALLOW_REVEAL,
     DEFAULT_INCLUDE_ADDONS,
     DEFAULT_INCLUDE_ERRORS,
     DEFAULT_INCLUDE_SECRETS,
     DEFAULT_INCLUDE_STORAGE,
-    DEFAULT_MASK_SECRETS,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_SCAN_AUTO_ENABLED,
     DEFAULT_SCAN_AUTO_INTERVAL,
@@ -36,11 +37,15 @@ from .const import (
     FINDING_STATUSES,
     FINDINGS_STORAGE_KEY,
     FINDINGS_STORAGE_VERSION,
+    HISTORY_NAMES,
+    MAX_HISTORY,
     MAX_RESOLVED,
     OVERRIDES_STORAGE_KEY,
     OVERRIDES_STORAGE_VERSION,
     RESOLVED_KEEP_DAYS,
     RISK_LEVELS,
+    SNAPSHOT_ITEM_KEYS,
+    SNAPSHOT_ITEMS,
     SNOOZE_MAX_DAYS,
     SNAPSHOT_STORAGE_KEY,
     SNAPSHOT_STORAGE_VERSION,
@@ -49,6 +54,9 @@ from .report import generate_report
 from .scanner import HAPercytaScanner
 
 _LOGGER = logging.getLogger(__name__)
+
+MAX_REPORT_FILES = 20  # so viele Markdown-Berichte bleiben im Ausgabeordner
+REPORT_NAME_RE = re.compile(r"^ha_percyta_\d{8}_\d{6}\.md$")
 
 
 class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -242,9 +250,39 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.warning("Override konnte nicht gespeichert werden: %s", err)
             return {"error": "Speichern fehlgeschlagen."}
 
-        # Neu bewerten (auf Abschluss warten), damit Anzeige/Zähler sofort stimmen.
-        await self.async_refresh()
+        # Sofort in den aktuellen Daten übernehmen (Anzeige/Zähler stimmen direkt),
+        # danach im Hintergrund neu scannen (Befunde wie "Integration mit hohem Risiko").
+        self._apply_override_now(entry_id, self.overrides.get(entry_id))
+        self.hass.async_create_task(self.async_request_refresh())
         return {"success": True, "entry_id": entry_id, "level": level or "auto"}
+
+    def _apply_override_now(self, entry_id: str, level: str | None) -> None:
+        data = self.data
+        if not isinstance(data, dict):
+            return
+        integrations = data.get("integrations") or []
+        changed = False
+        for integ in integrations:
+            if integ.get("entry_id") != entry_id:
+                continue
+            analysis = integ.setdefault("analysis", {})
+            auto = analysis.get("risk_level_auto") or analysis.get("risk_level")
+            analysis["risk_level_auto"] = auto
+            analysis["risk_level"] = level or auto
+            analysis["risk_overridden"] = bool(level)
+            changed = True
+        if not changed:
+            return
+        addon_high = sum(
+            1 for a in data.get("addons") or [] if (a.get("analysis") or {}).get("risk_level") == "high"
+        )
+        high = sum(1 for i in integrations if (i.get("analysis") or {}).get("risk_level") == "high")
+        medium = sum(1 for i in integrations if (i.get("analysis") or {}).get("risk_level") == "medium")
+        counts = data.setdefault("counts", {})
+        counts["high_risk"] = high + addon_high
+        counts["medium_risk"] = medium
+        counts["risk_total"] = high + medium + addon_high
+        self.async_set_updated_data(data)
 
     # ------------------------------------------------------------------ #
     # Befunde: Status verwalten
@@ -283,6 +321,63 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return None
         return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
+    @staticmethod
+    def _item_key(item: dict[str, Any]) -> str:
+        return f"{item.get('kind') or ''}|{item.get('ref') or item.get('name') or ''}|{item.get('issue') or ''}"
+
+    @classmethod
+    def _snapshot(cls, finding: dict[str, Any]) -> dict[str, Any]:
+        """Kompakte Kopie eines Befunds für 'Zuletzt behoben'."""
+        items = []
+        for item in (finding.get("items") or [])[:SNAPSHOT_ITEMS]:
+            items.append({k: item.get(k) for k in SNAPSHOT_ITEM_KEYS if item.get(k) not in (None, "", [])})
+        return {
+            "category": finding.get("category"),
+            "severity": finding.get("severity"),
+            "confidence": finding.get("confidence"),
+            "subject": finding.get("subject"),
+            "subject_type": finding.get("subject_type"),
+            "subject_ref": finding.get("subject_ref"),
+            "params": dict(finding.get("params") or {}),
+            "details": dict(finding.get("details") or {}),
+            "link": finding.get("link"),
+            "items": items,
+            "items_total": finding.get("items_total") or 0,
+        }
+
+    def _track_finding(self, state: dict[str, Any], finding: dict[str, Any], now_iso: str) -> bool:
+        """Hält Änderungen eines offenen Befunds fest (Objekte, Schwere).
+
+        Gibt zurück, ob sich der gespeicherte Stand geändert hat.
+        """
+        refs = sorted({self._item_key(i) for i in finding.get("items") or []})
+        sig = {"refs": refs, "severity": finding.get("severity"), "total": finding.get("items_total") or 0}
+        old = state.get("sig")
+        state["snap"] = self._snapshot(finding)
+        if old == sig:
+            return False
+        state["sig"] = sig
+        if old is None:
+            return True  # erste Beobachtung (oder Update von einer älteren Version)
+        names = {self._item_key(i): str(i.get("name") or i.get("ref") or "") for i in finding.get("items") or []}
+        old_refs = set(old.get("refs") or [])
+        added = [names.get(r) or r.split("|")[1] for r in refs if r not in old_refs]
+        removed = [r.split("|")[1] for r in old_refs if r not in set(refs)]
+        event: dict[str, Any] = {"at": now_iso}
+        if added:
+            event["added"] = added[:HISTORY_NAMES]
+        if removed:
+            event["removed"] = sorted(removed)[:HISTORY_NAMES]
+        if old.get("severity") != sig["severity"]:
+            event["sev_from"], event["sev_to"] = old.get("severity"), sig["severity"]
+        if old.get("total") != sig["total"]:
+            event["total_from"], event["total_to"] = old.get("total"), sig["total"]
+        if len(event) > 1:
+            history = list(state.get("history") or [])
+            history.append(event)
+            state["history"] = history[-MAX_HISTORY:]
+        return True
+
     def _apply_finding_states(self, data: dict[str, Any], *, track: bool) -> bool:
         """Legt Status/Erstbeobachtung auf die Befunde und aktualisiert die Zähler.
 
@@ -303,6 +398,8 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 state = {"first_seen": now_iso}
                 self.finding_states[fid] = state
                 changed = True
+            if track and self._track_finding(state, finding, now_iso):
+                changed = True
             status = state.get("status", "open")
             if status not in FINDING_STATUSES:
                 status = "open"
@@ -317,32 +414,37 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             finding["until"] = until.isoformat() if until else None
             finding["note"] = state.get("note")
             finding["first_seen"] = state.get("first_seen") or now_iso
+            finding["history"] = list(state.get("history") or [])
 
         if track:
             evaluated = set(data.get("findings_evaluated") or [])
             by_id = {f["id"]: f for f in findings}
+            previous = {f["id"]: f for f in (getattr(self, "data", None) or {}).get("findings", [])}
             for fid in list(self.finding_states):
                 if fid in by_id:
                     continue
                 ftype = fid.split(":", 1)[0]
                 if ftype not in evaluated:
                     continue  # Quelle in diesem Scan nicht auswertbar → nichts ableiten
-                self.finding_states.pop(fid, None)
-                self.resolved_findings.append(
-                    {"id": fid, "type": ftype, "resolved_at": now_iso}
-                )
+                state = self.finding_states.pop(fid, None) or {}
+                # Momentaufnahme des Befunds, wie er zuletzt aussah – damit sich
+                # unter "Zuletzt behoben" nachvollziehen lässt, was behoben wurde.
+                snap = dict(state.get("snap") or {})
+                prev = previous.get(fid)
+                if prev:
+                    snap = self._snapshot(prev)
+                entry = {
+                    "id": fid,
+                    "type": ftype,
+                    "resolved_at": now_iso,
+                    "first_seen": state.get("first_seen"),
+                    "status": state.get("status", "open"),
+                    "note": state.get("note"),
+                    "history": list(state.get("history") or []),
+                }
+                entry.update({k: v for k, v in snap.items() if k not in entry or entry[k] is None})
+                self.resolved_findings.append(entry)
                 changed = True
-            # Namen für "zuletzt behoben" aus dem vorigen Datenstand übernehmen.
-            previous = {f["id"]: f for f in (getattr(self, "data", None) or {}).get("findings", [])}
-            for entry in self.resolved_findings:
-                prev = previous.get(entry["id"])
-                if prev and "subject" not in entry:
-                    entry.update(
-                        subject=prev.get("subject"),
-                        subject_type=prev.get("subject_type"),
-                        severity=prev.get("severity"),
-                        category=prev.get("category"),
-                    )
 
         # "Zuletzt behoben": nur die letzten Tage, höchstens MAX_RESOLVED.
         cutoff = now - timedelta(days=RESOLVED_KEEP_DAYS)
@@ -429,7 +531,6 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             include_storage=options.get(
                 CONF_INCLUDE_STORAGE, DEFAULT_INCLUDE_STORAGE
             ),
-            mask_secrets=options.get(CONF_MASK_SECRETS, DEFAULT_MASK_SECRETS),
             overrides=self.overrides,
         )
 
@@ -445,6 +546,7 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data["auto_interval"] = options.get(
             CONF_SCAN_AUTO_INTERVAL, DEFAULT_SCAN_AUTO_INTERVAL
         )
+        data["allow_reveal"] = bool(options.get(CONF_ALLOW_REVEAL, DEFAULT_ALLOW_REVEAL))
 
         # "Neu seit letztem Scan" markieren (nach jedem Scan wird der Stand fortgeschrieben).
         await self._apply_new_since(data)
@@ -477,4 +579,11 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         with open(path, "w", encoding="utf-8") as file:
             file.write(report)
         _LOGGER.info("HA Percyta-Report geschrieben: %s", path)
+        # Nur die letzten Berichte behalten (sonst wächst der Ordner bei jedem Scan).
+        own = sorted(f for f in os.listdir(output_dir) if REPORT_NAME_RE.match(f))
+        for old in own[:-MAX_REPORT_FILES]:
+            try:
+                os.remove(os.path.join(output_dir, old))
+            except OSError:
+                pass
         return path

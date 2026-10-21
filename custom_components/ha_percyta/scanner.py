@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
 from collections import Counter
 from collections.abc import Mapping
@@ -26,6 +27,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DATAFLOW_TAGS,
+    DB_ORPHANS_MAX,
     DOMAIN,
     MAX_ERRORS,
     RISK_LEVELS,
@@ -137,6 +139,9 @@ def _query_db_stats(instance) -> dict[str, Any]:
     return {
         "available": True,
         "engine": engine,
+        # Vollständige Zählungen (nur im Cache, nicht im Report) – für Datenleichen.
+        "_all_states": dict(states),
+        "_all_stats": {sid: long_term.get(sid, 0) + short_term.get(sid, 0) for sid in stat_ids},
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "states_total": sum(count for _, count in states),
         "states_entities": len(states),
@@ -150,6 +155,15 @@ def _query_db_stats(instance) -> dict[str, Any]:
         "statistics_top": stats[:DB_TOP_ROWS],
     }
 _GIB = 1024 ** 3
+# Schlüssel=Wert-Paare mit Secrets in Log-Texten unkenntlich machen (z. B. ?api_key=…).
+_LOG_SECRET_RE = re.compile(
+    r"(?i)((?:api[_-]?key|access[_-]?token|token|password|passwd|secret|apikey|auth)[\"']?\s*[=:]\s*[\"']?)([^\s&\"',;)]{4,})"
+)
+
+
+def _redact_log(text: str) -> str:
+    return _LOG_SECRET_RE.sub(lambda m: m.group(1) + "•••", text)
+ENTITY_ID_RE = re.compile(r"^[a-z0-9_]+\.[a-z0-9_]+$")
 
 
 def is_secret_key(key: Any) -> bool:
@@ -192,11 +206,18 @@ def resolve_secret_value(mapping: Any, path: str) -> Any:
 
 
 def _mask(value: Any) -> str:
-    """Maskiert einen Secret-Wert (erste/letzte 4 Zeichen sichtbar)."""
+    """Maskiert einen Secret-Wert.
+
+    Feste Länge (verrät nicht die Länge des Secrets), nur bei langen Werten die
+    letzten Zeichen als Wiedererkennungsmerkmal. Der Klartext verlässt den
+    Server ausschließlich über den Abruf auf Klick (``ha_percyta/reveal_secret``).
+    """
     text = str(value)
-    if len(text) <= 8:
-        return "•" * len(text)
-    return f"{text[:4]}{'•' * (len(text) - 8)}{text[-4:]}"
+    if len(text) >= 24:
+        return "••••••••" + text[-4:]
+    if len(text) >= 12:
+        return "••••••••" + text[-2:]
+    return "••••••••"
 
 
 class HAPercytaScanner:
@@ -210,7 +231,6 @@ class HAPercytaScanner:
         include_secrets: bool = True,
         include_errors: bool = True,
         include_storage: bool = True,
-        mask_secrets: bool = True,
         overrides: dict[str, str] | None = None,
     ) -> None:
         self.hass = hass
@@ -218,7 +238,6 @@ class HAPercytaScanner:
         self.include_secrets = include_secrets
         self.include_errors = include_errors
         self.include_storage = include_storage
-        self.mask_secrets = mask_secrets
         self.overrides = overrides or {}
 
     async def scan_all(self) -> dict[str, Any]:
@@ -367,6 +386,10 @@ class HAPercytaScanner:
         result: list[dict[str, Any]] = []
 
         for entry in self.hass.config_entries.async_entries():
+            if entry.source == "ignore":
+                # Vom Nutzer ignorierte Entdeckung (z. B. ein gefundener Fernseher) –
+                # keine installierte Integration, HA blendet sie in der Liste aus.
+                continue
             entities = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
             devices = dr.async_entries_for_config_entry(dev_reg, entry.entry_id)
             entity_domains = sorted({e.entity_id.split(".")[0] for e in entities})
@@ -437,8 +460,9 @@ class HAPercytaScanner:
                     {
                         "source": source_name,
                         "key": path,
-                        "value": _mask(value) if self.mask_secrets else str(value),
-                        "masked": bool(self.mask_secrets),
+                        # Immer maskiert: Klartext gelangt nie in Report, Datei oder Sensor.
+                        "value": _mask(value),
+                        "masked": True,
                     }
                 )
 
@@ -721,8 +745,30 @@ class HAPercytaScanner:
         except Exception:  # noqa: BLE001
             areas = None
 
+        # Offene Reparaturen (Einstellungen › Reparaturen), ohne ausgeblendete.
+        repairs: list[dict[str, Any]] = []
+        try:
+            from homeassistant.helpers import issue_registry as ir  # noqa: PLC0415
+
+            for issue in ir.async_get(self.hass).issues.values():
+                if not issue.active or issue.dismissed_version:
+                    continue
+                repairs.append(
+                    {
+                        "domain": issue.domain,
+                        "issue_id": issue.issue_id,
+                        "severity": str(getattr(issue.severity, "value", issue.severity) or ""),
+                        "fixable": bool(issue.is_fixable),
+                    }
+                )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Reparaturen nicht lesbar: %s", err)
+            repairs = None
+
         total_states = len(states)
         return {
+            "repairs": repairs[:50] if repairs is not None else None,
+            "repairs_total": len(repairs) if repairs is not None else None,
             "automations": by_domain.get("automation", 0),
             "scripts": by_domain.get("script", 0),
             "scenes": by_domain.get("scene", 0),
@@ -774,7 +820,7 @@ class HAPercytaScanner:
         cache = self.hass.data.setdefault(DB_CACHE_KEY, {})
         cached = cache.get("data")
         if cached and time.monotonic() - cache.get("ts", 0) < DB_STATS_TTL:
-            return cached
+            return self._with_orphans(cached)
 
         future = cache.get("future")
         if future is None or future.done():
@@ -782,8 +828,10 @@ class HAPercytaScanner:
                 future = instance.async_add_executor_job(_query_db_stats, instance)
             except Exception as err:  # noqa: BLE001
                 _LOGGER.debug("Datenbank-Auswertung nicht startbar: %s", err)
-                return cached or {}
+                return self._with_orphans(cached) if cached else {}
             cache["future"] = future
+            cache["future_gen"] = cache.get("gen", 0)
+        gen = cache.get("future_gen", 0)
 
         try:
             result = await asyncio.wait_for(
@@ -791,18 +839,52 @@ class HAPercytaScanner:
             )
         except asyncio.TimeoutError:
             # Läuft im Hintergrund weiter – der nächste Scan übernimmt das Ergebnis.
-            return cached or {"available": True, "pending": True}
+            return self._with_orphans(cached) if cached else {"available": True, "pending": True}
         except Exception as err:  # noqa: BLE001
             _LOGGER.debug("Datenbank-Auswertung fehlgeschlagen: %s", err)
             cache.pop("future", None)
-            return cached or {}
+            return self._with_orphans(cached) if cached else {}
 
-        cache.pop("future", None)
+        if cache.get("future") is future:
+            cache.pop("future", None)
+        if gen != cache.get("gen", 0):
+            # Während der Zählung wurde die Datenbank geändert → Ergebnis veraltet.
+            cached = cache.get("data")
+            return self._with_orphans(cached) if cached else {"available": True, "pending": True}
         if isinstance(result, dict) and result.get("available"):
             cache["data"] = result
             cache["ts"] = time.monotonic()
+            return self._with_orphans(result)
+        return self._with_orphans(cached) if cached else {}
+
+    def _with_orphans(self, cached: dict[str, Any]) -> dict[str, Any]:
+        """Report-Kopie der DB-Auswertung inkl. Datenleichen.
+
+        Datenleichen = Entitäts-IDs mit Verlauf/Statistik in der Datenbank, die es
+        weder als Zustand noch in der Entitäten-Registry gibt. Externe Statistiken
+        (z. B. ``energy:…``) zählen nicht dazu.
+        """
+        result = {k: v for k, v in cached.items() if not k.startswith("_")}
+        all_states = cached.get("_all_states")
+        all_stats = cached.get("_all_stats")
+        if all_states is None or all_stats is None:
             return result
-        return cached or {}
+        ent_reg = er.async_get(self.hass)
+        ids = set(all_states) | {sid for sid in all_stats if ENTITY_ID_RE.match(sid)}
+        orphans = []
+        for eid in ids:
+            if not ENTITY_ID_RE.match(eid):
+                continue
+            if self.hass.states.get(eid) is not None or ent_reg.async_get(eid) is not None:
+                continue
+            orphans.append(
+                {"id": eid, "states": all_states.get(eid, 0), "stats": all_stats.get(eid, 0)}
+            )
+        orphans.sort(key=lambda o: o["states"] + o["stats"], reverse=True)
+        result["orphans_total"] = len(orphans)
+        result["orphans_rows"] = sum(o["states"] + o["stats"] for o in orphans)
+        result["orphans"] = orphans[:DB_ORPHANS_MAX]
+        return result
 
     # ------------------------------------------------------------------ #
     # Backups
@@ -1201,6 +1283,7 @@ class HAPercytaScanner:
                 )
                 tokens.append(
                     {
+                        "id": token.id,
                         "user": user.name,
                         "client_name": getattr(token, "client_name", None)
                         or getattr(token, "client_id", "") or "",
@@ -1254,14 +1337,21 @@ class HAPercytaScanner:
                     timestamp, tz=timezone.utc
                 ).isoformat()
 
+            first = entry.get("first_occurred")
+            if isinstance(first, (int, float)):
+                first = datetime.fromtimestamp(first, tz=timezone.utc).isoformat()
+            # Letzter Teil des Tracebacks (für die Fehlerdiagnose im Panel).
+            exception = str(entry.get("exception") or "")
             errors.append(
                 {
                     "level": level,
                     "name": entry.get("name", ""),
-                    "message": str(message)[:400],
+                    "message": _redact_log(str(message))[:400],
                     "source": str(source),
                     "count": entry.get("count", 1),
                     "timestamp": timestamp or "",
+                    "first": first or "",
+                    "exception": _redact_log(exception[-1500:]),
                 }
             )
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ha_percyta"
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 
 # Konfigurations-/Options-Keys
 CONF_OUTPUT_DIR = "output_dir"
@@ -13,8 +13,8 @@ CONF_INCLUDE_ADDONS = "include_addons"
 CONF_INCLUDE_SECRETS = "include_secrets"
 CONF_INCLUDE_ERRORS = "include_errors"
 CONF_INCLUDE_STORAGE = "include_storage"
-CONF_MASK_SECRETS = "mask_secrets"
 CONF_WRITE_REPORT = "write_report"
+CONF_ALLOW_REVEAL = "allow_reveal"
 
 # Standard-Werte
 DEFAULT_OUTPUT_DIR = "custom_components/ha_percyta/output"
@@ -24,8 +24,8 @@ DEFAULT_INCLUDE_ADDONS = True
 DEFAULT_INCLUDE_SECRETS = True
 DEFAULT_INCLUDE_ERRORS = True
 DEFAULT_INCLUDE_STORAGE = True
-DEFAULT_MASK_SECRETS = True
 DEFAULT_WRITE_REPORT = True
+DEFAULT_ALLOW_REVEAL = True
 
 MIN_SCAN_INTERVAL = 300  # 5 Minuten
 MAX_ERRORS = 50  # max. Anzahl wichtiger Fehler im Report
@@ -47,7 +47,6 @@ SERVICE_EXPORT = "export"
 
 # Anzeigename / Branding (technische IDs wie DOMAIN bleiben unverändert)
 APP_NAME = "HA Percyta"
-APP_SUBTITLE = "Permissions, Privacy & Data"
 APP_MODEL = "Permissions, Privacy & Data Scanner"
 
 # Report-Panel (Custom-Panel in der Seitenleiste)
@@ -60,6 +59,22 @@ WS_TYPE_REPORT = "ha_percyta/report"
 WS_TYPE_SET_OVERRIDE = "ha_percyta/set_override"
 WS_TYPE_REVEAL_SECRET = "ha_percyta/reveal_secret"
 WS_TYPE_SET_FINDING_STATE = "ha_percyta/set_finding_state"
+WS_TYPE_DB_INFO = "ha_percyta/db_info"
+WS_TYPE_DB_BACKUP = "ha_percyta/db_backup"
+WS_TYPE_DB_BACKUP_DELETE = "ha_percyta/db_backup_delete"
+WS_TYPE_DB_PURGE = "ha_percyta/db_purge"
+WS_TYPE_DB_RENAME = "ha_percyta/db_rename"
+WS_TYPE_DB_REPLACE = "ha_percyta/db_replace"
+WS_TYPE_DB_LOG = "ha_percyta/db_log"
+WS_TYPE_DB_LIST = "ha_percyta/db_list"
+WS_TYPE_DB_CLEANUP = "ha_percyta/db_cleanup"
+WS_TYPE_DB_CLEANUP_PREVIEW = "ha_percyta/db_cleanup_preview"
+WS_TYPE_REGISTRY_REMOVE = "ha_percyta/registry_remove"
+WS_TYPE_TOKEN_REVOKE = "ha_percyta/token_revoke"
+WS_TYPE_ENTITY_DISABLE = "ha_percyta/entity_disable"
+WS_TYPE_ENTRY_RELOAD = "ha_percyta/entry_reload"
+WS_TYPE_DEVICE_REMOVE = "ha_percyta/device_remove"
+WS_TYPE_JOB_STATUS = "ha_percyta/job_status"
 
 # Persistenter Speicher für manuelle Risiko-Overrides (Store-Key)
 OVERRIDES_STORAGE_KEY = "ha_percyta_overrides"
@@ -82,6 +97,11 @@ RESOLVED_KEEP_DAYS = 30  # "Zuletzt behoben" wird so lange vorgehalten
 MAX_RESOLVED = 50
 MAX_FINDINGS = 500
 MAX_FINDING_ITEMS = 50  # betroffene Objekte je Befund
+SNAPSHOT_ITEMS = 25  # betroffene Objekte, die für "Zuletzt behoben" gemerkt werden
+SNAPSHOT_ITEM_KEYS = ("name", "ref", "kind", "issue", "paths", "parts", "count", "when",
+                      "installed", "latest", "link")
+MAX_HISTORY = 15  # Änderungs-Ereignisse je Befund
+HISTORY_NAMES = 10  # Namen je Ereignis (hinzugekommen/entfallen)
 UNUSED_AFTER_DAYS = 90  # Automation/Skript gilt danach als "lange nicht ausgelöst"
 NEVER_USED_TOKEN_GRACE_DAYS = 14  # frisch angelegte, noch nie genutzte Tokens zählen nicht
 BACKUP_MAX_AGE_DAYS = 7
@@ -91,6 +111,24 @@ DB_HOTSPOT_SHARE = 10  # % der Zustandszeilen, ab dem eine Entität auffällt
 DB_HOTSPOT_MIN_ROWS = 50000
 # Domains, deren Ausfall/Fehlverweis besonders ernst genommen wird.
 CRITICAL_DOMAINS = frozenset({"lock", "alarm_control_panel", "valve", "siren"})
+
+# ---------------------------------------------------------------------------
+# Secrets: Klartext-Anzeige (nur Admins, auf Klick)
+# ---------------------------------------------------------------------------
+REVEAL_RATE_LIMIT = 10  # max. Aufdeckungen je Benutzer …
+REVEAL_RATE_WINDOW = 60  # … innerhalb dieser Sekunden
+AUDIT_STORAGE_KEY = "ha_percyta_audit"
+AUDIT_STORAGE_VERSION = 1
+MAX_AUDIT = 100
+
+# ---------------------------------------------------------------------------
+# Datenbank-Werkzeuge (db_tools.py)
+# ---------------------------------------------------------------------------
+DB_BACKUP_DIR = "ha_percyta_db_backups"  # unter <config>
+DB_BACKUP_KEEP = 2  # so viele Datenbank-Kopien werden behalten
+DB_BACKUP_MIN_FREE = 512 * 1024 * 1024  # zusätzlicher freier Platz neben der Kopie
+DB_MAX_IDS = 200  # max. Entitäten je Löschauftrag
+DB_ORPHANS_MAX = 300  # max. gelistete Datenleichen
 
 # ---------------------------------------------------------------------------
 # Speicher / System-Analyse

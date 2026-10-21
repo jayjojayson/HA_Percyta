@@ -23,7 +23,7 @@ from .const import (
     CONF_INCLUDE_ERRORS,
     CONF_INCLUDE_SECRETS,
     CONF_INCLUDE_STORAGE,
-    CONF_MASK_SECRETS,
+    CONF_ALLOW_REVEAL,
     CONF_OUTPUT_DIR,
     CONF_SCAN_AUTO_ENABLED,
     CONF_SCAN_AUTO_INTERVAL,
@@ -32,7 +32,7 @@ from .const import (
     DEFAULT_INCLUDE_ERRORS,
     DEFAULT_INCLUDE_SECRETS,
     DEFAULT_INCLUDE_STORAGE,
-    DEFAULT_MASK_SECRETS,
+    DEFAULT_ALLOW_REVEAL,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_SCAN_AUTO_ENABLED,
     DEFAULT_SCAN_AUTO_INTERVAL,
@@ -63,8 +63,8 @@ def _build_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_INCLUDE_STORAGE, DEFAULT_INCLUDE_STORAGE),
             ): bool,
             vol.Optional(
-                CONF_MASK_SECRETS,
-                default=defaults.get(CONF_MASK_SECRETS, DEFAULT_MASK_SECRETS),
+                CONF_ALLOW_REVEAL,
+                default=defaults.get(CONF_ALLOW_REVEAL, DEFAULT_ALLOW_REVEAL),
             ): bool,
             vol.Optional(
                 CONF_WRITE_REPORT,
