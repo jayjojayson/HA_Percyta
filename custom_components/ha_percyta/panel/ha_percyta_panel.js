@@ -199,14 +199,21 @@ const STR = {
 
 // ---------- Befunde: Konstanten und Texte ----------
 const SEV_ORDER = { high: 0, medium: 1, low: 2, info: 3 };
-const CATEGORIES = ["security", "automations", "integrity", "orphans", "storage"];
-const CAT_ICON = { security: "🛡️", automations: "🤖", integrity: "🔗", orphans: "🧹", storage: "💾" };
+const CATEGORIES = ["security", "automations", "integrity", "orphans", "config", "storage"];
+const CAT_ICON = { security: "🛡️", automations: "🤖", integrity: "🔗", orphans: "🧹", config: "🧩", storage: "💾" };
 const TYPE_ICON = {
   broken_reference: "🔗", integration_not_loaded: "🔌", unavailable_entities: "📡", orphaned_entities: "👻",
   unused_automation: "💤", unused_script: "💤", stale_token: "🗝️", high_risk_integration: "⚠️",
   privileged_app: "🧩", secrets_stored: "🔐", backup_old: "💾", backup_missing: "💾",
   disk_high: "🖴", db_hotspot: "🗄️", updates_available: "⬆️",
+  dashboard_refs: "🖼️", dashboard_resources: "📦", energy_refs: "⚡", area_sensor_refs: "🌡️",
+  empty_areas: "🏠", empty_floors: "🏢", unused_labels: "🏷️", unused_blueprints: "📘",
 };
+// „Warum?“-Zeile → Kachel in „Aufräumen & Prüfen“ (Speicher: Bereich „Speicher & System“).
+const SCORE_TILE = { sc_unav: "unav", sc_int: "int", sc_auto: "auto", sc_orph: "rest", sc_dbo: "dbo", sc_bk: "bk",
+  sc_tok: "tok", sc_rep: "rep", sc_err: "err", sc_upd: "upd", sc_disk: null };
+// Befunde, deren Objekte Percyta (wie „Löschen“ in HA) entfernen kann → Art für ha_percyta/config_delete.
+const CONFIG_DELETE = { empty_areas: "area", empty_floors: "floor", unused_labels: "label", unused_blueprints: "blueprint" };
 const STATUSES = ["open", "known", "snoozed", "hidden"];
 const SNOOZE_DAYS = [7, 30, 90];
 
@@ -214,7 +221,7 @@ const FSTR = {
   de: {
     sec_findings: "🧭 Reports",
     f_all: "Alle", cat_security: "Sicherheit & Datenschutz", cat_integrity: "Defekte Verweise",
-    cat_orphans: "Ungenutzt & verwaist", cat_storage: "Speicher & Wartung",
+    cat_orphans: "Ungenutzt & verwaist", cat_storage: "Speicher & Wartung", cat_config: "Konfiguration",
     sev_high: "Hoch", sev_medium: "Mittel", sev_low: "Niedrig", sev_info: "Hinweis",
     sev_all: "Alle Schweregrade",
     st_open: "Offen", st_known: "Erlaubt", st_snoozed: "Zurückgestellt", st_hidden: "Ausgeblendet",
@@ -227,7 +234,7 @@ const FSTR = {
     f_empty_filter: "Kein Befund passt zu den gewählten Filtern.",
     f_resolved: "Zuletzt behoben (letzte 30 Tage)", f_resolved_when: "behoben {a}",
     f_hint: "Erlaubt, zurückgestellt und ausgeblendet gilt nur in HA Percyta – in Home Assistant wird nichts geändert.",
-    f_open_ha: "In Home Assistant öffnen", f_open: "Öffnen", f_back: "← Zur Übersicht", f_prev: "Vorheriger Befund", f_next: "Nächster Befund",
+    f_open: "Öffnen", f_back: "← Zur Übersicht", f_prev: "Vorheriger Befund", f_next: "Nächster Befund",
     f_gone_title: "Dieser Befund ist nicht mehr vorhanden", f_gone_text: "Er wurde vermutlich behoben. Beim nächsten Scan erscheint er unter „Zuletzt behoben“, falls er in der Liste verschwunden ist.",
     fd_tab_diag: "Diagnose", fd_tab_items: "Betroffene Objekte", fd_tab_tech: "Technische Daten",
     fd_found: "Beobachtung", fd_cause: "Mögliche Ursache", fd_impact: "Auswirkung", fd_fix: "So gehst du vor",
@@ -251,7 +258,7 @@ const FSTR = {
   en: {
     sec_findings: "🧭 Reports",
     f_all: "All", cat_security: "Security & privacy", cat_integrity: "Broken references",
-    cat_orphans: "Unused & orphaned", cat_storage: "Storage & upkeep",
+    cat_orphans: "Unused & orphaned", cat_storage: "Storage & upkeep", cat_config: "Configuration",
     sev_high: "High", sev_medium: "Medium", sev_low: "Low", sev_info: "Notice",
     sev_all: "All severities",
     st_open: "Open", st_known: "Allowed", st_snoozed: "Snoozed", st_hidden: "Hidden",
@@ -264,7 +271,7 @@ const FSTR = {
     f_empty_filter: "No finding matches the selected filters.",
     f_resolved: "Recently resolved (last 30 days)", f_resolved_when: "resolved {a}",
     f_hint: "Allowed, snoozed and hidden only apply inside HA Percyta – nothing is changed in Home Assistant.",
-    f_open_ha: "Open in Home Assistant", f_open: "Open", f_back: "← Back to overview", f_prev: "Previous finding", f_next: "Next finding",
+    f_open: "Open", f_back: "← Back to overview", f_prev: "Previous finding", f_next: "Next finding",
     f_gone_title: "This finding no longer exists", f_gone_text: "It has probably been resolved. If it disappeared from the list it will show up under “Recently resolved” after the next scan.",
     fd_tab_diag: "Diagnosis", fd_tab_items: "Affected objects", fd_tab_tech: "Technical data",
     fd_found: "Observation", fd_cause: "Possible cause", fd_impact: "Impact", fd_fix: "What to do",
@@ -640,7 +647,101 @@ const XSTR = {
     iss_failed_single: "Lief noch (Modus single)", iss_failed_max_runs: "Max. Läufe erreicht",
     part_trigger: "Auslöser", part_condition: "Bedingung", part_action: "Aktion", part_blueprint: "Blueprint-Eingabe", part_other: "Sonstiges",
     kind_entity: "Entität", kind_template: "Template", kind_device: "Gerät", kind_area: "Bereich", kind_action: "Aktion",
+    iss_duplicate: "Doppelt eingetragen",
+    iss_missing_file: "Datei fehlt",
+    iss_missing_temperature: "Temperatur-Sensor fehlt",
+    iss_missing_humidity: "Feuchte-Sensor fehlt",
+    iss_unknown_trigger_id: "Trigger-ID gibt es nicht",
+    kind_resource: "Ressource",
+    kind_floor: "Etage",
+    kind_label: "Label",
+    kind_blueprint: "Blueprint",
+    kind_trigger_id: "Trigger-ID",
+    lk_energy: "Energie-Dashboard öffnen",
+    lk_resources: "Ressourcen öffnen",
+    lk_labels: "Labels öffnen",
+    lk_areas: "Bereiche öffnen",
+    lk_blueprints: "Blueprints öffnen",
+    lk_dashboard: "Dashboard öffnen",
+    lk_energy_s: "Energie",
+    lk_resources_s: "Ressourcen",
+    lk_labels_s: "Labels",
+    lk_areas_s: "Bereiche",
+    lk_blueprints_s: "Blueprints",
+    lk_dashboard_s: "Dashboard",
+    cfd_btn: "🗑️ Löschen …",
+    cfd_title_area: "🏠 Leere Bereiche löschen",
+    cfd_title_floor: "🏢 Leere Etagen löschen",
+    cfd_title_label: "🏷️ Ungenutzte Labels löschen",
+    cfd_title_blueprint: "📘 Ungenutzte Blueprints löschen",
+    cfd_what: "Was passiert beim Löschen?",
+    cfd_w1: "Wirkt wie „Löschen“ in Home Assistant – das Objekt wird aus der Konfiguration entfernt (Blueprints: die YAML-Datei).",
+    cfd_w2: "Vorher prüft Percyta erneut, ob es inzwischen verwendet wird. Dann wird nichts gelöscht.",
+    cfd_w3: "Rückgängig nur über ein Backup – das HA-Backup ist deshalb vorausgewählt.",
+    cfd_pick: "Auswahl",
+    cfd_confirm: "Ausgewählte Objekte löschen.",
+    cfd_run: "🗑️ Löschen",
+    cc_conf: "Konfiguration & Dashboards",
+    cc_conf_d: "Dashboards und Energie-Dashboard mit fehlenden Entitäten, doppelte Ressourcen, leere Bereiche/Etagen, ungenutzte Labels und Blueprints. Zählt nicht zum Pflegebedarf.",
+    a_config_delete: "Konfiguration bereinigt",
+    e_in_use: "Wird inzwischen verwendet – nichts gelöscht",
     fd_th_when: "Zeitpunkt", fd_th_issue: "Problem", fd_th_part: "Teil", fd_th_kind: "Art", fd_th_now: "Jetzt",
+    lk_entity: "Entität öffnen",
+    lk_finding: "Befund öffnen",
+    lk_percyta: "In Percyta zeigen",
+    lk_automation: "Automation bearbeiten",
+    lk_trace: "Ablaufverfolgung öffnen",
+    lk_script: "Skript bearbeiten",
+    lk_automations: "Automationsliste öffnen",
+    lk_scripts: "Skriptliste öffnen",
+    lk_integration: "Integration öffnen",
+    lk_device: "Gerät öffnen",
+    lk_devices: "Geräteliste öffnen",
+    lk_entities: "Entitätenliste öffnen",
+    lk_area: "Bereich öffnen",
+    lk_backup: "Backups öffnen",
+    lk_updates: "Updates öffnen",
+    lk_profile: "Profil › Sicherheit öffnen",
+    lk_storage: "Speicher öffnen",
+    lk_history: "Verlauf öffnen",
+    lk_addon: "App öffnen",
+    lk_repairs: "Reparaturen öffnen",
+    lk_logs: "Protokolle öffnen",
+    lk_web: "Webseite öffnen",
+    lk_ha: "In Home Assistant öffnen",
+    lk_entity_s: "Entität",
+    lk_finding_s: "Befund",
+    lk_percyta_s: "Zeigen",
+    lk_automation_s: "Automation",
+    lk_trace_s: "Ablauf",
+    lk_script_s: "Skript",
+    lk_automations_s: "Liste",
+    lk_scripts_s: "Liste",
+    lk_integration_s: "Integration",
+    lk_device_s: "Gerät",
+    lk_devices_s: "Liste",
+    lk_entities_s: "Liste",
+    lk_area_s: "Bereich",
+    lk_backup_s: "Backups",
+    lk_updates_s: "Updates",
+    lk_profile_s: "Profil",
+    lk_storage_s: "Speicher",
+    lk_history_s: "Verlauf",
+    lk_addon_s: "App",
+    lk_repairs_s: "Reparaturen",
+    lk_logs_s: "Protokolle",
+    lk_web_s: "Web",
+    lk_ha_s: "Öffnen",
+    fd_more_why: "Warum & Auswirkung",
+    fd_intent_t: "Gewollt so?",
+    fd_th_area: "Bereich",
+    f_area_all: "Alle Bereiche",
+    f_label_all: "Alle Labels",
+    f_supp: "Nicht bewertet: {parts}.",
+    f_supp_label: "{n} Objekt(e) mit den Labels {l}",
+    f_supp_safety: "{n} Schutz-Automation(en) (Wasser, Rauch, Alarm …) zählen nicht als „lange nicht ausgelöst“",
+    fd_intent_cur: "Aktuell ignorierte Labels: {l}.",
+    fh_labels: "Gewollte Ausnahmen markierst du in Home Assistant selbst: Integration, Gerät oder Entität deaktivieren – oder ein Label vergeben (z. B. „Saisonal“) und es unter „🏷️ Gewollte Ausnahmen mit Labels“ ankreuzen. Mit den Filtern Bereich und Label siehst du nur die Befunde eines Raums oder Labels.",
     fd_tab_history: "Verlauf", fd_hist_first: "Erstmals beobachtet", fd_hist_resolved: "Behoben",
     fd_hist_added: "Hinzugekommen: {n}", fd_hist_removed: "Entfallen: {n}", fd_hist_sev: "Schwere: {a} → {b}",
     fd_hist_total: "Betroffene Objekte: {a} → {b}", fd_hist_none: "Seit der ersten Beobachtung keine Änderung.",
@@ -827,9 +928,111 @@ const XSTR = {
     jl_cl_purge: "🧹 Recorder löscht alles älter als {days} Tage …", jl_cl_repack: "📦 Danach wird die Datenbank verkleinert (VACUUM) …",
     jl_rg_remove: "👻 Entferne {n} Entität(en) aus der Registry", jl_rg_purge: "🗑️ Lösche ihren Verlauf und ihre Statistik", jl_dv_remove: "📵 Entferne {n} Gerät(e)",
     jl_done: "✅ Fertig", jl_done_bg: "✅ Erledigt – der Recorder räumt im Hintergrund noch nach", jl_failed: "❌ Fehlgeschlagen: {code}",
-    cc_open: "Pflege-Center öffnen", cc_todo: "{n} Punkte zum Aufräumen", cc_all_ok: "✓ Alles in Ordnung",
+    cc_open: "Pflege-Center öffnen", cc_todo: "{n} Aufgaben offen", cc_all_ok: "✓ Alles in Ordnung",
     cc_l_findings: "Befunde", cc_l_db: "Datenbank (Recorder)", cc_h_todo: "🧽 Aufräumen & Prüfen", cc_h_system: "🩺 System & Wartung",
     cc_h_tools: "🛠️ Werkzeuge", cc_h_log: "📜 Letzte Aktionen",
+    sc_row_t: "Zur Kachel in „Aufräumen & Prüfen“ springen",
+    sc_row_disk_t: "Zum Bereich „Speicher & System“ springen",
+    sc_click: "Tipp: Ein Klick auf einen Bereich springt zur passenden Kachel; der Button rechts öffnet direkt das Fenster dazu.",
+    sc_vs_todo: "„Aufgaben offen“ zählt die Kacheln unter „Aufräumen & Prüfen“, bei denen etwas zu tun ist (ohne „Konfiguration & Dashboards“ und „Ausgeschaltete Automationen“ – das entscheidest du selbst). Die Punkte oben sind etwas anderes: die Gewichtung für den Pflegebedarf. Nicht jede Aufgabe bringt gleich viele Punkte, und Befunde zählen gar nicht zum Pflegebedarf.",
+    cl_pend_scopes: "Welche Daten löschen?",
+    cl_pend_none_sel: "Nichts ausgewählt – es wird nur verkleinert.",
+    jl_cl_size_wal: " (zusätzlich belegt die WAL-Datei gerade {wal})",
+    e_not_pending: "Nur Entitäten, die in HA Percyta entfernt wurden, können hier bereinigt werden",
+    cl_orph: "Daten der in HA Percyta entfernten Entitäten löschen",
+    cl_orph_none: "Keine in HA Percyta entfernten Entitäten mit übrig gebliebenen Daten – es wird nur verkleinert.",
+    cl_orph_h: "Nur Entitäten, die du in HA Percyta entfernt hast (einzeln oder mit ihrem Gerät). Andere verwaiste Daten – z. B. Statistik fürs Energie-Dashboard – bleiben unangetastet. Auswahl und Datenarten bestimmst du.",
+    jl_cl_file: "💽 Datei jetzt {size}{free}",
+    jl_cl_file_free: " – davon ca. {free} ungenutzt (wird beim Verkleinern frei)",
+    jl_cl_orphans: "🧹 Lösche die gewählten Daten von {n} in HA Percyta entfernten Entität(en):",
+    jl_cl_orphans_none: "ℹ️ Langzeitstatistik bleibt erhalten (nicht ausgewählt).",
+    jl_repack_tick: "   … Verkleinern läuft seit {t}{detail}",
+    jl_repack_detail: " · Schritt 1/2: Kopie wird geschrieben (bisher {used})",
+    jl_repack_wal: " · Schritt 2/2: Übertrag in die Datenbank (WAL {wal})",
+    jl_repack_timeout: "⚠️ Nach einer Stunde noch nicht fertig – der Recorder arbeitet im Hintergrund weiter. Home Assistant bitte nicht neu starten.",
+    jp_repack: "Datenbank wird verkleinert (VACUUM)",
+    cl_wait_note: "Während des Verkleinerns zeigt das Protokoll alle 30 Sekunden den Stand. Home Assistant bitte nicht neu starten, bis „Fertig“ erscheint.",
+    tp_broken_reference: "Entität",
+    tp_integration_not_loaded: "Integration",
+    tp_unavailable_entities: "Entitäten",
+    tp_orphaned_entities: "Entitäten",
+    tp_unused_automation: "Automation",
+    tp_unused_script: "Skript",
+    tp_stale_token: "Token",
+    tp_high_risk_integration: "Integration",
+    tp_privileged_app: "App",
+    tp_secrets_stored: "Secrets",
+    tp_backup_old: "Backup",
+    tp_backup_missing: "Backup",
+    tp_disk_high: "Speicher",
+    tp_db_hotspot: "Datenbank",
+    tp_db_orphans: "Datenbank",
+    tp_updates_available: "Updates",
+    tp_automations_off: "Automationen",
+    tp_orphaned_devices: "Geräte",
+    tp_automation: "Automation",
+    tp_script: "Skript",
+    tp_dashboard_refs: "Dashboard",
+    tp_dashboard_resources: "Ressourcen",
+    tp_energy_refs: "Energie",
+    tp_area_sensor_refs: "Bereiche",
+    tp_empty_areas: "Bereiche",
+    tp_empty_floors: "Etagen",
+    tp_unused_labels: "Labels",
+    tp_unused_blueprints: "Blueprints",
+    cl_mode: "Was soll passieren?",
+    cl_mode_repack: "Aufgeräumtes bereinigen & verkleinern",
+    cl_mode_repack_h: "Für nach dem Aufräumen im Pflege-Center: löscht – nur was du unten auswählst – die übrig gebliebenen Daten von Entitäten, die du in HA Percyta entfernt hast, und verkleinert danach die Datei. Erst dann wird der Platz wirklich frei.",
+    cl_mode_purge: "Alte Daten löschen",
+    cl_mode_purge_h: "Löscht in der ganzen Datenbank alles, was älter als der gewählte Zeitraum ist – optional mit Verkleinern.",
+    cl_repack_note: "Verkleinern schreibt die Datenbank neu (VACUUM). Das kann bei großen Datenbanken einige Minuten dauern und braucht kurz freien Speicher in Größe der Datenbank.",
+    cl_db_size: "Aktuelle Größe der Datenbank-Datei: {s}",
+    jl_cl_repack_only: "📦 Verkleinere die Datenbank-Datei (aktuell {size}) – das kann bei großen Datenbanken länger dauern …",
+    jv_repack: "🧹 Jetzt bereinigen & verkleinern …",
+    lb_title: "🏷️ Gewollte Ausnahmen mit Labels – so geht's",
+    lb_intro: "Manches ist absichtlich so: ein Drucker, der meist aus ist, die Weihnachtsbeleuchtung, ein Gerät in der Schublade, eine Wasser-Warnung, die nie auslösen soll. Damit solche Dinge nicht als Befund erscheinen, markierst du sie in Home Assistant mit einem Label. HA Percyta lässt dann alles mit diesem Label bei der Bewertung aus.",
+    lb_s1: "Label anlegen: Einstellungen › Bereiche, Labels & Zonen › Labels › „Label erstellen“ – z. B. „Percyta ignorieren“ oder „Saisonal“.",
+    lb_s2: "Label vergeben: am Gerät, an der Entität, am Bereich, an der Automation oder am Skript (jeweils in deren Einstellungen). Ein Label am Gerät gilt für alle seine Entitäten, ein Label am Bereich für alles in diesem Raum.",
+    lb_s3: "Unten das Label ankreuzen und „Speichern & neu scannen“ wählen. Das ist dieselbe Einstellung wie in den Optionen der Integration.",
+    lb_s4: "Nach dem Scan fehlen die Befunde dafür; über der Liste steht „Nicht bewertet: …“. Label wieder abwählen → alles wird wieder bewertet.",
+    lb_note: "Das Label ändert in Home Assistant nichts – es ist nur eine Markierung. Deaktivierte Integrationen, Geräte und Entitäten bewertet HA Percyta ohnehin nicht.",
+    lb_pick: "Diese Labels nicht bewerten:",
+    lb_none: "In Home Assistant gibt es noch keine Labels – lege zuerst eines an (Schritt 1).",
+    lb_save: "💾 Speichern & neu scannen",
+    lb_saved: "Gespeichert – HA Percyta scannt neu. Die Liste aktualisiert sich gleich von selbst.",
+    lb_open_labels: "Labels in HA öffnen",
+    lb_open_opts: "Optionen der Integration",
+    lb_cur_none: "Aktuell werden alle Labels bewertet.",
+    lb_n: "{n} Befund(e)",
+    jl_item: "   • {id}: {parts}{size}",
+    jl_item_more: "   • … und {n} weitere",
+    jl_p_states: "{n} Verlauf",
+    jl_p_short: "{n} Kurzzeit",
+    jl_p_long: "{n} Langzeit",
+    jl_est_space: "💽 Das gibt in der Datenbank ca. {size} frei (Schätzung)",
+    jl_result: "🧮 Ergebnis: {rows} Zeilen gelöscht{size}",
+    jl_result_size: " · ca. {size} in der Datenbank frei",
+    jl_repack_hint: "ℹ️ Die Datei wird erst kleiner nach „🧹 Datenbank aufräumen & verkleinern“ oder wenn Home Assistant sie am 2. Sonntag im Monat selbst verkleinert.",
+    jl_cl_count: "🔢 Älter als gewählt: {states} Zustände, {events} Ereignisse, {short} Kurzzeit-Statistik – am meisten betroffen:",
+    jl_cl_size: "📦 Datei vorher {before}, nachher {after} → {freed} frei{wal}",
+    jl_rg_item: "   • entfernt: {id}",
+    jl_rg_missing: "   • nicht in der Registry (übersprungen): {id}",
+    jl_dv_item: "   • entfernt: {name}",
+    jl_failed_msg: "   Meldung: {msg}",
+    jl_failed_ids: "   Betroffen: {ids}",
+    jl_failed_hint: "   → Was tun? Meldung lesen, Ursache beheben (z. B. Speicher freigeben, warten bis der Recorder fertig ist) und erneut starten. Mehr Details: Einstellungen › System › Protokolle.",
+    sc_db_note: "💡 Datenbankgröße: Gelöschte Daten machen die Datenbank-Datei nicht sofort kleiner – der Platz wird intern frei und von neuen Daten wiederverwendet. Kleiner wird die Datei erst nach „🧹 Datenbank aufräumen & verkleinern“ (mit Häkchen Verkleinern) oder wenn Home Assistant sie selbst verkleinert: automatisch am zweiten Sonntag jedes Monats nach dem nächtlichen Aufräumen (Recorder-Option auto_repack).",
+    sc_db_btn: "🧹 Jetzt aufräumen & verkleinern …",
+    log_page: "Seite {p} / {n} · {t} Einträge",
+    log_prev: "‹ Neuere",
+    log_next: "Ältere ›",
+    log_clear: "🗑️ Verlauf leeren",
+    log_clear_sure: "Wirklich leeren?",
+    log_keep: "Automatisch löschen:",
+    log_keep_0: "nie",
+    log_keep_n: "nach {n} Tagen",
+    log_cleared: "{n} Einträge gelöscht.",
+    log_sec_note: "Das Sicherheitsprotokoll zu Secrets (Anzeigen/Kopieren) bleibt erhalten.",
     ct_replace: "Gerät getauscht? Neue Entität übernimmt Verlauf & Statistik.", ct_rename: "Entität samt Verlauf auf eine neue ID umbenennen.",
     ct_purge: "Verlauf, Kurz- oder Langzeitstatistik gezielt löschen.", ct_cleanup: "Alles älter als N Tage löschen, Datei verkleinern.",
     ct_registry: "Registry-Einträge ohne Integration entfernen.", ct_backup: "Datenbank kopieren oder HA-Backup erstellen.",
@@ -916,7 +1119,101 @@ const XSTR = {
     iss_failed_single: "Still running (mode single)", iss_failed_max_runs: "Max runs reached",
     part_trigger: "Trigger", part_condition: "Condition", part_action: "Action", part_blueprint: "Blueprint input", part_other: "Other",
     kind_entity: "Entity", kind_template: "Template", kind_device: "Device", kind_area: "Area", kind_action: "Action",
+    iss_duplicate: "Listed more than once",
+    iss_missing_file: "File missing",
+    iss_missing_temperature: "Temperature sensor missing",
+    iss_missing_humidity: "Humidity sensor missing",
+    iss_unknown_trigger_id: "Trigger ID does not exist",
+    kind_resource: "Resource",
+    kind_floor: "Floor",
+    kind_label: "Label",
+    kind_blueprint: "Blueprint",
+    kind_trigger_id: "Trigger ID",
+    lk_energy: "Open energy dashboard",
+    lk_resources: "Open resources",
+    lk_labels: "Open labels",
+    lk_areas: "Open areas",
+    lk_blueprints: "Open blueprints",
+    lk_dashboard: "Open dashboard",
+    lk_energy_s: "Energy",
+    lk_resources_s: "Resources",
+    lk_labels_s: "Labels",
+    lk_areas_s: "Areas",
+    lk_blueprints_s: "Blueprints",
+    lk_dashboard_s: "Dashboard",
+    cfd_btn: "🗑️ Delete …",
+    cfd_title_area: "🏠 Delete empty areas",
+    cfd_title_floor: "🏢 Delete empty floors",
+    cfd_title_label: "🏷️ Delete unused labels",
+    cfd_title_blueprint: "📘 Delete unused blueprints",
+    cfd_what: "What happens when deleting?",
+    cfd_w1: "Works like “Delete” in Home Assistant – the object is removed from the configuration (blueprints: the YAML file).",
+    cfd_w2: "Percyta checks again whether it is in use by now. If so, nothing is deleted.",
+    cfd_w3: "Can only be undone with a backup – so the HA backup is pre-selected.",
+    cfd_pick: "Selection",
+    cfd_confirm: "Delete the selected objects.",
+    cfd_run: "🗑️ Delete",
+    cc_conf: "Configuration & dashboards",
+    cc_conf_d: "Dashboards and the energy dashboard with missing entities, duplicate resources, empty areas/floors, unused labels and blueprints. Not part of the maintenance need.",
+    a_config_delete: "Configuration cleaned up",
+    e_in_use: "In use by now – nothing deleted",
     fd_th_when: "Time", fd_th_issue: "Problem", fd_th_part: "Part", fd_th_kind: "Type", fd_th_now: "Now",
+    lk_entity: "Open entity",
+    lk_finding: "Open finding",
+    lk_percyta: "Show in Percyta",
+    lk_automation: "Edit automation",
+    lk_trace: "Open trace",
+    lk_script: "Edit script",
+    lk_automations: "Open automation list",
+    lk_scripts: "Open script list",
+    lk_integration: "Open integration",
+    lk_device: "Open device",
+    lk_devices: "Open device list",
+    lk_entities: "Open entity list",
+    lk_area: "Open area",
+    lk_backup: "Open backups",
+    lk_updates: "Open updates",
+    lk_profile: "Open profile › security",
+    lk_storage: "Open storage",
+    lk_history: "Open history",
+    lk_addon: "Open app",
+    lk_repairs: "Open repairs",
+    lk_logs: "Open logs",
+    lk_web: "Open web page",
+    lk_ha: "Open in Home Assistant",
+    lk_entity_s: "Entity",
+    lk_finding_s: "Finding",
+    lk_percyta_s: "Show",
+    lk_automation_s: "Automation",
+    lk_trace_s: "Trace",
+    lk_script_s: "Script",
+    lk_automations_s: "List",
+    lk_scripts_s: "List",
+    lk_integration_s: "Integration",
+    lk_device_s: "Device",
+    lk_devices_s: "List",
+    lk_entities_s: "List",
+    lk_area_s: "Area",
+    lk_backup_s: "Backups",
+    lk_updates_s: "Updates",
+    lk_profile_s: "Profile",
+    lk_storage_s: "Storage",
+    lk_history_s: "History",
+    lk_addon_s: "App",
+    lk_repairs_s: "Repairs",
+    lk_logs_s: "Logs",
+    lk_web_s: "Web",
+    lk_ha_s: "Open",
+    fd_more_why: "Why & impact",
+    fd_intent_t: "Intended?",
+    fd_th_area: "Area",
+    f_area_all: "All areas",
+    f_label_all: "All labels",
+    f_supp: "Not rated: {parts}.",
+    f_supp_label: "{n} object(s) with the labels {l}",
+    f_supp_safety: "{n} safety automation(s) (water, smoke, alarm …) don't count as “not triggered for a long time”",
+    fd_intent_cur: "Currently ignored labels: {l}.",
+    fh_labels: "You mark intended exceptions in Home Assistant itself: disable the integration, device or entity – or assign a label (e.g. “Seasonal”) and tick it under “🏷️ Intended exceptions with labels”. The Area and Label filters show only the findings of one room or label.",
     fd_tab_history: "History", fd_hist_first: "First observed", fd_hist_resolved: "Resolved",
     fd_hist_added: "Added: {n}", fd_hist_removed: "Gone: {n}", fd_hist_sev: "Severity: {a} → {b}",
     fd_hist_total: "Affected objects: {a} → {b}", fd_hist_none: "No change since it was first observed.",
@@ -1099,9 +1396,111 @@ const XSTR = {
     jl_cl_purge: "🧹 Recorder deletes everything older than {days} days …", jl_cl_repack: "📦 Afterwards the database is shrunk (VACUUM) …",
     jl_rg_remove: "👻 Removing {n} entity(ies) from the registry", jl_rg_purge: "🗑️ Deleting their history and statistics", jl_dv_remove: "📵 Removing {n} device(s)",
     jl_done: "✅ Done", jl_done_bg: "✅ Done – the recorder is still tidying up in the background", jl_failed: "❌ Failed: {code}",
-    cc_open: "Open care center", cc_todo: "{n} items to clean up", cc_all_ok: "✓ All good",
+    cc_open: "Open care center", cc_todo: "{n} open tasks", cc_all_ok: "✓ All good",
     cc_l_findings: "Findings", cc_l_db: "Database (Recorder)", cc_h_todo: "🧽 Clean up & check", cc_h_system: "🩺 System & upkeep",
     cc_h_tools: "🛠️ Tools", cc_h_log: "📜 Recent actions",
+    sc_row_t: "Jump to the tile in “Clean up & check”",
+    sc_row_disk_t: "Jump to “Storage & system”",
+    sc_click: "Tip: click an area to jump to its tile; the button on the right opens its window directly.",
+    sc_vs_todo: "“Open tasks” counts the tiles under “Clean up & check” that have something to do (without “Configuration & dashboards” and “Turned-off automations” – that is your decision). The points above are something else: the weighting for the maintenance need. Not every task brings the same points, and findings don't count towards the maintenance need at all.",
+    cl_pend_scopes: "Which data to delete?",
+    cl_pend_none_sel: "Nothing selected – only shrinking.",
+    jl_cl_size_wal: " (the WAL file currently takes another {wal})",
+    e_not_pending: "Only entities removed in HA Percyta can be cleaned up here",
+    cl_orph: "Delete data of entities removed in HA Percyta",
+    cl_orph_none: "No entities removed in HA Percyta with leftover data – only shrinking.",
+    cl_orph_h: "Only entities you removed in HA Percyta (single or with their device). Other orphaned data – e.g. statistics for the energy dashboard – is not touched. You choose the selection and the data types.",
+    jl_cl_file: "💽 File now {size}{free}",
+    jl_cl_file_free: " – approx. {free} of it unused (freed by shrinking)",
+    jl_cl_orphans: "🧹 Deleting the chosen data of {n} entit(y/ies) removed in HA Percyta:",
+    jl_cl_orphans_none: "ℹ️ Long-term statistics are kept (not selected).",
+    jl_repack_tick: "   … shrinking for {t}{detail}",
+    jl_repack_detail: " · step 1/2: writing the copy ({used} so far)",
+    jl_repack_wal: " · step 2/2: transferring into the database (WAL {wal})",
+    jl_repack_timeout: "⚠️ Not finished after one hour – the recorder keeps working in the background. Please don't restart Home Assistant.",
+    jp_repack: "Shrinking the database (VACUUM)",
+    cl_wait_note: "While shrinking, the log shows the status every 30 seconds. Please don't restart Home Assistant until “Done” appears.",
+    tp_broken_reference: "Entity",
+    tp_integration_not_loaded: "Integration",
+    tp_unavailable_entities: "Entities",
+    tp_orphaned_entities: "Entities",
+    tp_unused_automation: "Automation",
+    tp_unused_script: "Script",
+    tp_stale_token: "Token",
+    tp_high_risk_integration: "Integration",
+    tp_privileged_app: "App",
+    tp_secrets_stored: "Secrets",
+    tp_backup_old: "Backup",
+    tp_backup_missing: "Backup",
+    tp_disk_high: "Storage",
+    tp_db_hotspot: "Database",
+    tp_db_orphans: "Database",
+    tp_updates_available: "Updates",
+    tp_automations_off: "Automations",
+    tp_orphaned_devices: "Devices",
+    tp_automation: "Automation",
+    tp_script: "Script",
+    tp_dashboard_refs: "Dashboard",
+    tp_dashboard_resources: "Resources",
+    tp_energy_refs: "Energy",
+    tp_area_sensor_refs: "Areas",
+    tp_empty_areas: "Areas",
+    tp_empty_floors: "Floors",
+    tp_unused_labels: "Labels",
+    tp_unused_blueprints: "Blueprints",
+    cl_mode: "What should happen?",
+    cl_mode_repack: "Clean up leftovers & shrink",
+    cl_mode_repack_h: "For after cleaning up in the care center: deletes – only what you select below – the leftover data of entities you removed in HA Percyta, then shrinks the file. Only then is the space really freed.",
+    cl_mode_purge: "Delete old data",
+    cl_mode_purge_h: "Deletes everything older than the chosen period in the whole database – optionally with shrinking.",
+    cl_repack_note: "Shrinking rewrites the database (VACUUM). With large databases this can take a few minutes and briefly needs free space the size of the database.",
+    cl_db_size: "Current size of the database file: {s}",
+    jl_cl_repack_only: "📦 Shrinking the database file (currently {size}) – this can take a while with large databases …",
+    jv_repack: "🧹 Clean up & shrink now …",
+    lb_title: "🏷️ Intended exceptions with labels – how it works",
+    lb_intro: "Some things are intended: a printer that is usually off, the Christmas lights, a device in the drawer, a water alarm that should never fire. So they don't show up as findings, mark them in Home Assistant with a label. HA Percyta then leaves out everything with this label when rating.",
+    lb_s1: "Create a label: Settings › Areas, labels & zones › Labels › “Create label” – e.g. “Percyta ignore” or “Seasonal”.",
+    lb_s2: "Assign the label: to the device, entity, area, automation or script (in their settings). A label on a device applies to all its entities, a label on an area to everything in that room.",
+    lb_s3: "Tick the label below and choose “Save & rescan”. This is the same setting as in the integration options.",
+    lb_s4: "After the scan the findings for it are gone; above the list it says “Not rated: …”. Untick the label → everything is rated again.",
+    lb_note: "The label changes nothing in Home Assistant – it is only a marker. Disabled integrations, devices and entities are never rated by HA Percyta anyway.",
+    lb_pick: "Don't rate these labels:",
+    lb_none: "There are no labels in Home Assistant yet – create one first (step 1).",
+    lb_save: "💾 Save & rescan",
+    lb_saved: "Saved – HA Percyta rescans. The list updates on its own in a moment.",
+    lb_open_labels: "Open labels in HA",
+    lb_open_opts: "Integration options",
+    lb_cur_none: "Currently all labels are rated.",
+    lb_n: "{n} finding(s)",
+    jl_item: "   • {id}: {parts}{size}",
+    jl_item_more: "   • … and {n} more",
+    jl_p_states: "{n} history",
+    jl_p_short: "{n} short-term",
+    jl_p_long: "{n} long-term",
+    jl_est_space: "💽 This frees approx. {size} inside the database (estimate)",
+    jl_result: "🧮 Result: {rows} rows deleted{size}",
+    jl_result_size: " · approx. {size} freed in the database",
+    jl_repack_hint: "ℹ️ The file only gets smaller after “🧹 Clean up & shrink the database” or when Home Assistant shrinks it itself on the 2nd Sunday of the month.",
+    jl_cl_count: "🔢 Older than chosen: {states} states, {events} events, {short} short-term statistics – most affected:",
+    jl_cl_size: "📦 File before {before}, after {after} → {freed} freed{wal}",
+    jl_rg_item: "   • removed: {id}",
+    jl_rg_missing: "   • not in the registry (skipped): {id}",
+    jl_dv_item: "   • removed: {name}",
+    jl_failed_msg: "   Message: {msg}",
+    jl_failed_ids: "   Affected: {ids}",
+    jl_failed_hint: "   → What to do? Read the message, fix the cause (e.g. free up space, wait until the recorder is done) and start again. More details: Settings › System › Logs.",
+    sc_db_note: "💡 Database size: deleted data does not make the database file smaller right away – the space is freed inside and reused by new data. The file only shrinks after “🧹 Clean up & shrink the database” (with the shrink tick) or when Home Assistant shrinks it itself: automatically on the second Sunday of each month after the nightly purge (recorder option auto_repack).",
+    sc_db_btn: "🧹 Clean up & shrink now …",
+    log_page: "Page {p} / {n} · {t} entries",
+    log_prev: "‹ Newer",
+    log_next: "Older ›",
+    log_clear: "🗑️ Clear history",
+    log_clear_sure: "Really clear?",
+    log_keep: "Delete automatically:",
+    log_keep_0: "never",
+    log_keep_n: "after {n} days",
+    log_cleared: "{n} entries deleted.",
+    log_sec_note: "The security log for secrets (show/copy) is kept.",
     ct_replace: "Replaced a device? The new entity takes over history & statistics.", ct_rename: "Rename an entity incl. history to a new ID.",
     ct_purge: "Delete history, short- or long-term statistics selectively.", ct_cleanup: "Delete everything older than N days, shrink the file.",
     ct_registry: "Remove registry entries without an integration.", ct_backup: "Copy the database or create an HA backup.",
@@ -1327,6 +1726,33 @@ const XDOC = {
 };
 Object.assign(FDOC.de, XDOC.de);
 Object.assign(FDOC.en, XDOC.en);
+Object.assign(FDOC.de, {"dashboard_refs": {"title": "Dashboard mit fehlenden Entitäten", "what": "Im Dashboard „{subject}“ zeigen {count} Karte(n)/Einträge auf Entitäten oder Bereiche, die es nicht mehr gibt.", "cause": "Die Entität wurde gelöscht oder umbenannt, das Dashboard verweist noch auf die alte ID.", "impact": "Die Karte zeigt einen Fehler oder bleibt leer.", "steps": ["Unter „Betroffene Objekte“ steht, in welcher Ansicht und Karte die ID steckt.", "Dashboard öffnen, Karte bearbeiten und die ID ersetzen oder entfernen."]}, "dashboard_resources": {"title": "Dashboard-Ressourcen prüfen", "what": "{count} Dashboard-Ressource(n) sind doppelt eingetragen oder ihre Datei fehlt.", "cause": "Doppelt: meist eine Custom Card, die nach einem Update mit neuer Versionsnummer (?v=…) erneut eingetragen wurde. Datei fehlt: die Karte wurde gelöscht, der Eintrag blieb.", "impact": "Doppelte Einträge laden die Karte mehrfach (Konflikte, langsamer). Fehlende Dateien erzeugen Fehler beim Laden.", "steps": ["Ressourcen öffnen (Einstellungen › Dashboards › ⋮ › Ressourcen).", "Bei doppelten Einträgen den älteren löschen, fehlende Dateien entfernen oder neu installieren."]}, "energy_refs": {"title": "Energie-Dashboard: Sensor fehlt", "what": "Das Energie-Dashboard nutzt {count} Sensor(en), die es nicht mehr gibt.", "cause": "Ein Zähler oder Preis-Sensor wurde gelöscht oder umbenannt.", "impact": "Diese Werte fehlen im Energie-Dashboard; Summen und Kosten stimmen nicht.", "steps": ["Energie-Einstellungen öffnen.", "Den alten Sensor durch den neuen ersetzen oder den Eintrag entfernen."]}, "area_sensor_refs": {"title": "Bereichs-Sensor fehlt", "what": "Bei {count} Bereich(en) ist ein Temperatur- oder Feuchte-Sensor eingetragen, den es nicht mehr gibt.", "cause": "Der Sensor wurde gelöscht oder umbenannt.", "impact": "Die Bereichs-Anzeige zeigt keinen Wert.", "steps": ["Bereich öffnen (Link unter „Betroffene Objekte“).", "Neuen Sensor wählen oder das Feld leeren."]}, "empty_areas": {"title": "Leere Bereiche", "what": "{count} Bereich(e) haben keine Geräte und Entitäten und werden in keiner Automation, keinem Skript und keinem Dashboard verwendet.", "cause": "Der Bereich wurde angelegt, aber nie genutzt – oder alles darin wurde verschoben oder gelöscht.", "impact": "Kein Fehler – nur Ballast in Listen und Auswahlfeldern.", "steps": ["Wird der Bereich noch gebraucht, „Erlaubt“ wählen.", "Sonst mit „🗑️ Löschen …“ entfernen."]}, "empty_floors": {"title": "Leere Etagen", "what": "{count} Etage(n) haben keine Bereiche und werden in keiner Automation und keinem Skript verwendet.", "cause": "Die Etage wurde angelegt, aber kein Bereich zugeordnet.", "impact": "Kein Fehler – nur Ballast.", "steps": ["Bereiche der Etage zuordnen oder „Erlaubt“ wählen.", "Sonst mit „🗑️ Löschen …“ entfernen."]}, "unused_labels": {"title": "Ungenutzte Labels", "what": "{count} Label(s) sind an nichts vergeben und werden in keiner Automation und keinem Skript verwendet.", "cause": "Das Label wurde angelegt, aber nicht (mehr) vergeben. Labels, die Percyta ignorieren soll, zählen als genutzt.", "impact": "Kein Fehler – nur Ballast in der Label-Auswahl.", "steps": ["Wird das Label noch gebraucht, „Erlaubt“ wählen.", "Sonst mit „🗑️ Löschen …“ entfernen."]}, "unused_blueprints": {"title": "Ungenutzte Blueprints", "what": "{count} Blueprint(s) werden von keiner Automation und keinem Skript verwendet.", "cause": "Der Blueprint wurde importiert, aber nicht (mehr) benutzt.", "impact": "Kein Fehler – nur Ballast im Blueprint-Ordner.", "steps": ["Wird er noch gebraucht, „Erlaubt“ wählen.", "Sonst mit „🗑️ Löschen …“ entfernen (löscht die YAML-Datei)."]}});
+Object.assign(FDOC.en, {"dashboard_refs": {"title": "Dashboard with missing entities", "what": "In the dashboard “{subject}”, {count} card(s)/entries point to entities or areas that no longer exist.", "cause": "The entity was deleted or renamed; the dashboard still uses the old ID.", "impact": "The card shows an error or stays empty.", "steps": ["“Affected objects” shows the view and card that contain the ID.", "Open the dashboard, edit the card and replace or remove the ID."]}, "dashboard_resources": {"title": "Check dashboard resources", "what": "{count} dashboard resource(s) are listed more than once or their file is missing.", "cause": "Duplicate: usually a custom card added again with a new version (?v=…) after an update. File missing: the card was deleted, the entry stayed.", "impact": "Duplicates load the card several times (conflicts, slower). Missing files cause loading errors.", "steps": ["Open resources (Settings › Dashboards › ⋮ › Resources).", "Delete the older duplicate; remove or reinstall missing files."]}, "energy_refs": {"title": "Energy dashboard: sensor missing", "what": "The energy dashboard uses {count} sensor(s) that no longer exist.", "cause": "A meter or price sensor was deleted or renamed.", "impact": "These values are missing in the energy dashboard; totals and costs are wrong.", "steps": ["Open the energy settings.", "Replace the old sensor with the new one or remove the entry."]}, "area_sensor_refs": {"title": "Area sensor missing", "what": "{count} area(s) use a temperature or humidity sensor that no longer exists.", "cause": "The sensor was deleted or renamed.", "impact": "The area shows no value.", "steps": ["Open the area (link under “Affected objects”).", "Pick a new sensor or clear the field."]}, "empty_areas": {"title": "Empty areas", "what": "{count} area(s) have no devices and entities and are not used in any automation, script or dashboard.", "cause": "The area was created but never used – or everything in it was moved or deleted.", "impact": "No error – just clutter in lists and pickers.", "steps": ["Still needed? Choose “Allowed”.", "Otherwise remove it with “🗑️ Delete …”."]}, "empty_floors": {"title": "Empty floors", "what": "{count} floor(s) have no areas and are not used in any automation or script.", "cause": "The floor was created but no area was assigned.", "impact": "No error – just clutter.", "steps": ["Assign areas or choose “Allowed”.", "Otherwise remove it with “🗑️ Delete …”."]}, "unused_labels": {"title": "Unused labels", "what": "{count} label(s) are not assigned to anything and not used in any automation or script.", "cause": "The label was created but is not (or no longer) assigned. Labels Percyta should ignore count as used.", "impact": "No error – just clutter in the label picker.", "steps": ["Still needed? Choose “Allowed”.", "Otherwise remove it with “🗑️ Delete …”."]}, "unused_blueprints": {"title": "Unused blueprints", "what": "{count} blueprint(s) are not used by any automation or script.", "cause": "The blueprint was imported but is not (or no longer) used.", "impact": "No error – just clutter in the blueprint folder.", "steps": ["Still needed? Choose “Allowed”.", "Otherwise remove it with “🗑️ Delete …” (deletes the YAML file)."]}});
+
+// „Gewollt so?“ – kurzer Hinweis, wie man gewollte Zustände mit HA-eigenen Mitteln kennzeichnet.
+const INTENT = {
+  de: {
+    unavailable_entities: "Gerät nur zeitweise an (Drucker, Bewässerung)? Gib Gerät oder Bereich in Home Assistant ein Label und wähle es unter Reports › „🏷️ Gewollte Ausnahmen mit Labels“. Dauerhaft weg? Deaktivieren oder entfernen.",
+    integration_not_loaded: "Gerät absichtlich aus oder in der Schublade? Integrationseintrag in Home Assistant deaktivieren (Integration › ⋮ › Deaktivieren) – deaktivierte Einträge zählen nicht.",
+    unused_automation: "Soll sie möglichst nie auslösen (Wasser, Rauch, Alarm)? Solche Schutz-Automationen erkennt Percyta an der Geräteklasse der Auslöser und zählt sie nicht. Sonst: Label (Reports › „🏷️ Gewollte Ausnahmen mit Labels“) oder „Erlaubt“.",
+    unused_script: "Nur selten gebraucht? Label (Reports › „🏷️ Gewollte Ausnahmen mit Labels“) oder „Erlaubt“.",
+    automation_refs: "Gerät zeitweise aus? Entitäten mit einem ignorierten Label (Reports › „🏷️ Gewollte Ausnahmen mit Labels“) erscheinen hier nicht.",
+    automations_off: "Bewusst aus? Dann ist das nur ein Hinweis – er zählt nicht zum Pflegebedarf.",
+    empty_areas: "Für später angelegt? „Erlaubt“ wählen – oder dem Bereich ein ignoriertes Label geben.",
+    unused_labels: "Labels, die Percyta ignorieren soll, gelten als genutzt und erscheinen hier nicht.",
+  },
+  en: {
+    unavailable_entities: "Device only on now and then (printer, irrigation)? Give the device or area a label in Home Assistant and choose it under Reports › “🏷️ Intended exceptions with labels”. Gone for good? Disable or remove.",
+    integration_not_loaded: "Device off or in the drawer on purpose? Disable the integration entry in Home Assistant (integration › ⋮ › Disable) – disabled entries don't count.",
+    unused_automation: "Should it ideally never fire (water, smoke, alarm)? Percyta recognises such safety automations by the device class of their triggers and doesn't count them. Otherwise: label (Reports › “🏷️ Intended exceptions with labels”) or “Allowed”.",
+    unused_script: "Only needed rarely? Label (Reports › “🏷️ Intended exceptions with labels”) or “Allowed”.",
+    automation_refs: "Device off now and then? Entities with an ignored label (Reports › “🏷️ Intended exceptions with labels”) don't show up here.",
+    automations_off: "Turned off on purpose? Then this is only a note – it doesn't count towards the maintenance need.",
+    empty_areas: "Created for later? Choose “Allowed” – or give the area an ignored label.",
+    unused_labels: "Labels Percyta should ignore count as used and don't show up here.",
+  },
+};
+
 FDOC.de.unused_automation.blocked = "Laut den letzten Ablaufverfolgungen wurde sie {cond_blocked}× ausgelöst, aber ihre Bedingungen waren nicht erfüllt.";
 FDOC.en.unused_automation.blocked = "According to the latest traces it was triggered {cond_blocked}× but its conditions were not met.";
 FDOC.de.unused_script.blocked = FDOC.de.unused_automation.blocked;
@@ -1798,6 +2224,7 @@ class HaPercytaPanel extends HTMLElement {
   _build() {
     const style = document.createElement("style");
     style.textContent = `
+      [hidden] { display:none !important; } /* „hidden“ gilt immer – auch bei Buttons mit eigener display-Regel */
       :host { display:block; height:100%; overflow:auto;
         /* Buttons etwas dunkler als die Primärfarbe (HA-Farbskala, Fallback: Primärfarbe) */
         --pc-btn:var(--ha-color-primary-40, var(--primary-color,#3f9dff));
@@ -2108,6 +2535,46 @@ class HaPercytaPanel extends HTMLElement {
       .fd-step-body p { margin:0; line-height:1.6; font-size:14px; }
       .fd-fixlist { margin:2px 0 0; padding-left:20px; line-height:1.65; font-size:14px; }
       .fd-fixlist li { margin-bottom:5px; }
+      .fd-intent { margin:8px 0 4px; padding:8px 12px; border-radius:10px; font-size:13px; line-height:1.5;
+        background:rgba(63,157,255,.08); border:1px solid rgba(63,157,255,.25); }
+      .fd-more { margin-top:8px; }
+      .fd-more > summary { cursor:pointer; font-size:13px; color:var(--secondary-text-color); user-select:none; }
+      .fd-more > summary:hover { color:var(--primary-text-color); }
+      .fd-more-b { padding:4px 0 0 2px; }
+      .fd-more-b h5 { margin:8px 0 2px; font-size:13px; font-weight:600; }
+      .fd-more-b p { margin:0; font-size:13.5px; line-height:1.55; color:var(--secondary-text-color); }
+      .f-scope.active { border-color:var(--pc-btn); box-shadow:0 0 0 1px var(--pc-btn) inset; }
+      .f-supp { padding:0 2px 8px; }
+      .f-title-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+      .f-topic { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border-radius:999px; font-size:11.5px; font-weight:600;
+        white-space:nowrap; border:1px solid currentColor; line-height:1.6; }
+      .f-topic.fc-security { color:#ef6c6c; background:rgba(239,108,108,.12); }
+      .f-topic.fc-automations { color:#5aa8ff; background:rgba(90,168,255,.12); }
+      .f-topic.fc-integrity { color:#f0a43a; background:rgba(240,164,58,.12); }
+      .f-topic.fc-orphans { color:#b58cf0; background:rgba(181,140,240,.12); }
+      .f-topic.fc-config { color:#2fbfa8; background:rgba(47,191,168,.14); }
+      .f-topic.fc-storage { color:#9aa4b2; background:rgba(154,164,178,.12); }
+      .cl-mode { margin:2px 0 6px; }
+      .cl-orph { margin:0 0 8px 26px; }
+      .cc-block-h { display:flex; align-items:baseline; gap:10px; }
+      .cc-block-aside { font-size:12.5px; font-weight:400; }
+      .cc-tile.flash { animation:ccflash 1.4s ease-out; }
+      @keyframes ccflash { 0% { box-shadow:0 0 0 3px rgba(255,166,0,.9); } 100% { box-shadow:0 0 0 0 rgba(255,166,0,0); } }
+      .f-labels { margin-bottom:8px; }
+      .f-labels .lb-p { margin:0 0 6px; line-height:1.55; }
+      .f-labels .lb-steps { margin:4px 0 8px; padding-left:20px; line-height:1.6; }
+      .lb-pick { margin-top:8px; padding-top:8px; border-top:1px solid var(--divider-color,rgba(127,127,127,.25)); }
+      .lb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:2px 12px; margin:4px 0 6px; }
+      .lb-acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center; }
+      .jv-term .jv-l.err { color:var(--error-color,#ff6b6b); }
+      .jv-term .jv-l.warn { color:var(--warning-color,#ffa600); }
+      .jv-term .jv-l.ok { color:var(--success-color,#43a047); }
+      .sc-db { margin-top:10px; padding:10px 12px; border-radius:10px; line-height:1.55; font-size:13px;
+        background:rgba(63,157,255,.08); border:1px solid rgba(63,157,255,.25); display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+      .log-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 4px; }
+      .log-note { margin:0 0 8px; }
+      .log-pager { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:8px; }
+      .danger-btn { border-color:var(--error-color,#db4437) !important; color:var(--error-color,#db4437) !important; }
       .fd-kv th.fd-k { width:34%; text-transform:none; letter-spacing:0; font-size:13px; }
       .fd-fact { display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px solid var(--divider-color); font-size:13.5px; }
       .fd-fact:last-child { border-bottom:none; }
@@ -2153,6 +2620,8 @@ class HaPercytaPanel extends HTMLElement {
       .modal-x { border:none; background:transparent; color:var(--secondary-text-color); font-size:24px; cursor:pointer; line-height:1; }
       .modal-body { padding:14px 18px; overflow:auto; }
       .modal-foot { display:flex; gap:10px; justify-content:flex-end; padding:12px 18px; border-top:1px solid var(--divider-color); flex-wrap:wrap; }
+      .modal-foot-left { margin-right:auto; display:flex; align-items:center; min-width:0; flex:1 1 260px; }
+      .modal-foot-left .dlg-check { margin:0; font-size:13px; line-height:1.35; }
       .fd-open.danger { background:var(--error-color,#db4437); }
       .fd-open[disabled] { opacity:.45; cursor:default; filter:none; }
       .dlg-intro { margin:0 0 12px; line-height:1.5; font-size:13.5px; }
@@ -2324,7 +2793,10 @@ class HaPercytaPanel extends HTMLElement {
       .cc-p-btns { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
       .sc-why { padding:12px 2px 2px; border-top:1px dashed var(--divider-color); font-size:13px; animation:fadeIn .18s ease; }
       .care-page .sc-why { padding:16px 18px; margin-bottom:16px; border-top:none; }
-      .sc-row { display:grid; grid-template-columns:20px minmax(0,1.6fr) minmax(0,1.3fr) 70px 58px; gap:8px; align-items:center; padding:4px 0; }
+      .sc-row { display:grid; grid-template-columns:20px minmax(0,1.6fr) minmax(0,1.3fr) 70px 58px 112px; gap:8px; align-items:center; padding:4px 0; }
+      .sc-row.sc-link { cursor:pointer; border-radius:8px; padding:4px 6px; margin:0 -6px; }
+      .sc-row.sc-link:hover, .sc-row.sc-link:focus-visible { background:rgba(127,127,127,.12); outline:none; }
+      .sc-act { justify-self:end; padding:3px 10px !important; font-size:12px !important; }
       .sc-row.sc-head { font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; padding-bottom:2px; }
       .sc-row.ok .sc-lbl { color:var(--secondary-text-color); }
       .sc-lbl { overflow:hidden; text-overflow:ellipsis; }
@@ -2338,7 +2810,7 @@ class HaPercytaPanel extends HTMLElement {
       .sc-pts { text-align:right; font-variant-numeric:tabular-nums; font-size:12px; font-weight:600; }
       .sc-total { margin-top:8px; padding-top:8px; border-top:1px solid var(--divider-color); }
       .sc-why .note { color:var(--secondary-text-color); font-size:12px; margin-top:8px; line-height:1.45; }
-      @media (max-width:560px) { .sc-row { grid-template-columns:20px minmax(0,1fr) 54px; } .sc-val, .sc-bar, .sc-bar-h { display:none; } }
+      @media (max-width:560px) { .sc-row { grid-template-columns:20px minmax(0,1fr) 54px auto; } .sc-val, .sc-bar, .sc-bar-h { display:none; } }
       details.section.cc-reports { margin:0 0 16px; }
       .f-help { margin:2px 0 10px; }
       .f-help > summary { cursor:pointer; font-size:13px; color:var(--secondary-text-color); padding:4px 0; }
@@ -2496,10 +2968,34 @@ class HaPercytaPanel extends HTMLElement {
     return this._isInternalPath(link) ? link : null;
   }
 
+  // Beschriftung, die sagt, WAS geöffnet wird (Entität, Automation, Integration, Liste …).
+  _linkLabel(link, short) {
+    const l = String(link || "");
+    const map = [
+      [/^#entity:/, "lk_entity"], [/^#finding:/, "lk_finding"], [/^#percyta:/, "lk_percyta"],
+      [/^\/config\/(automation|script)\/trace\//, "lk_trace"], [/^\/config\/automation\/edit\//, "lk_automation"],
+      [/^\/config\/script\/edit\//, "lk_script"], [/^\/config\/automation\/dashboard/, "lk_automations"], [/^\/config\/script\/dashboard/, "lk_scripts"],
+      [/^\/config\/integrations\/integration\//, "lk_integration"], [/^\/config\/devices\/device\//, "lk_device"],
+      [/^\/config\/devices\/dashboard/, "lk_devices"], [/^\/config\/entities/, "lk_entities"], [/^\/config\/areas\/area\//, "lk_area"],
+      [/^\/config\/backup/, "lk_backup"], [/^\/config\/updates/, "lk_updates"], [/^\/profile\/security/, "lk_profile"],
+      [/^\/config\/storage/, "lk_storage"], [/^\/history/, "lk_history"], [/^\/hassio\/addon\//, "lk_addon"],
+      [/^\/config\/repairs/, "lk_repairs"], [/^\/config\/logs/, "lk_logs"], [/^https?:\/\//i, "lk_web"],
+      [/^\/config\/energy/, "lk_energy"], [/^\/config\/lovelace\/resources/, "lk_resources"], [/^\/config\/labels/, "lk_labels"],
+      [/^\/config\/areas\/dashboard/, "lk_areas"], [/^\/config\/blueprint/, "lk_blueprints"], [/^\/(?!config\/|profile|history|hassio)[a-z0-9_-]+$/i, "lk_dashboard"],
+    ];
+    const hit = map.find(([re]) => re.test(l));
+    const key = (hit ? hit[1] : "lk_ha") + (short ? "_s" : "");
+    const arrow = l.startsWith("#") && !l.startsWith("#entity:") ? " ›" : " ↗";
+    return this._t(key) + arrow;
+  }
+
   // Button als Link: Linksklick bleibt im Panel (wie bisher), Strg/Cmd-/Mittel-/Rechtsklick öffnet einen neuen Tab.
   _linkBtn(label, link, cls, before) {
     const href = this._hrefFor(link);
-    const el = this._el(href ? "a" : "button", { class: cls, text: label, attrs: href ? { href, rel: "noopener noreferrer" } : { type: "button" } });
+    const target = String(link || "").startsWith("#entity:") ? String(link).slice(8) : href;
+    const attrs = href ? { href, rel: "noopener noreferrer" } : { type: "button" };
+    if (target) attrs.title = target;
+    const el = this._el(href ? "a" : "button", { class: cls, text: label, attrs });
     el.addEventListener("click", (e) => {
       if (href && (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0)) return; // Browser übernimmt (neuer Tab)
       e.preventDefault();
@@ -4016,6 +4512,14 @@ class HaPercytaPanel extends HTMLElement {
 
     const title = this._el("span", { class: "f-title", text: doc.title, attrs: { "data-fid": f.id, title: this._t("f_open") } });
     title.addEventListener("click", () => this._openDetail(f.id));
+    // Thema auf einen Blick (Dashboard, Blueprints, Automation …) – farbig nach Kategorie.
+    const kind = (f.params || {}).kind;
+    const topicKey = f.category === "automations" && (kind === "automation" || kind === "script") && !/^unused_/.test(f.type) ? "tp_" + kind : "tp_" + f.type;
+    const topic = STR[this._lang()][topicKey] || STR.en[topicKey];
+    const titleRow = this._el("div", { class: "f-title-row" }, [
+      topic ? this._el("span", { class: "f-topic fc-" + f.category, text: `${TYPE_ICON[f.type] || CAT_ICON[f.category] || ""} ${topic}` }) : null,
+      title,
+    ]);
     const sub = this._el("div", { class: "f-sub" }, this._fSubject(f));
     if (f.status !== "open") sub.appendChild(this._chip(this._fStatusText(f), f.status === "hidden" ? "" : "info"));
     if (f.note) sub.appendChild(this._el("span", { class: "muted f-note", text: "— " + f.note }));
@@ -4026,7 +4530,7 @@ class HaPercytaPanel extends HTMLElement {
     return [
       { node: cb, nosrch: true, sort: 0 },
       { node: this._sevBadge(f.severity), sort: SEV_ORDER[f.severity] != null ? SEV_ORDER[f.severity] : 9 },
-      { node: this._el("div", {}, [title, sub]), sort: doc.title + " " + f.subject },
+      { node: this._el("div", {}, [titleRow, sub]), sort: doc.title + " " + f.subject },
       { text: CAT_ICON[f.category] + " " + this._t("cat_" + f.category), sort: this._t("cat_" + f.category) },
       { text: f.items_total ? String(f.items_total) : "—", sort: f.items_total || 0 },
       { text: since ? this._ago(new Date(since)) : "—", sort: since },
@@ -4040,14 +4544,21 @@ class HaPercytaPanel extends HTMLElement {
     const c = d.counts || {};
     // Eigener Filter-Zustand je Ort (Übersicht / Pflege-Center), damit sich beide nicht beeinflussen.
     const key = noSearch ? "_fsCare" : "_fs";
-    const fs = (this[key] = this[key] || { tab: "open", cat: "all", sev: "all", sel: new Set(), resolvedOpen: false });
-    const all = d.findings;
-    const ids = new Set(all.map((f) => f.id));
+    const fs = (this[key] = this[key] || { tab: "open", cat: "all", sev: "all", area: "", label: "", sel: new Set(), resolvedOpen: false });
+    const meta = d.findings_meta || {};
+    const areaNames = meta.area_names || {};
+    const labelNames = meta.label_names || {};
+    if (fs.area && !areaNames[fs.area]) fs.area = "";
+    if (fs.label && !labelNames[fs.label]) fs.label = "";
+    const inScope = (f) => (!fs.area || (f.areas || []).includes(fs.area)) && (!fs.label || (f.labels || []).includes(fs.label));
+    let all = d.findings.filter(inScope);
+    const ids = new Set(d.findings.map((f) => f.id));
     Array.from(fs.sel).forEach((i) => { if (!ids.has(i)) fs.sel.delete(i); });
     const body = this._el("div", { class: "f-body" });
 
     const build = () => {
       body.replaceChildren();
+      all = d.findings.filter(inScope);
       const byStatus = { open: 0, known: 0, snoozed: 0, hidden: 0 };
       all.forEach((f) => { byStatus[f.status] = (byStatus[f.status] || 0) + 1; });
       const tabList = all.filter((f) => f.status === fs.tab);
@@ -4086,6 +4597,23 @@ class HaPercytaPanel extends HTMLElement {
         sevSel.appendChild(opt);
       });
       sevSel.addEventListener("change", (e) => { fs.sev = e.target.value; build(); });
+      // Bereich / Label (aus Home Assistant) – für große Installationen.
+      const scopeSel = (cur, allKey, names, onPick, field) => {
+        const entries = Object.entries(names).sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+        if (!entries.length) return null;
+        const sel = this._el("select", { class: "ov-select f-scope" + (cur ? " active" : "") });
+        sel.appendChild(this._el("option", { text: this._t(allKey), attrs: { value: "" } }));
+        entries.forEach(([id, name]) => {
+          const n = d.findings.filter((f) => f.status === fs.tab && (f[field] || []).includes(id)).length;
+          const o = this._el("option", { text: `${name} (${n})`, attrs: { value: id } });
+          if (id === cur) o.setAttribute("selected", "");
+          sel.appendChild(o);
+        });
+        sel.addEventListener("change", (e) => { onPick(e.target.value); fs.sel.clear(); build(); });
+        return sel;
+      };
+      const areaSel = scopeSel(fs.area, "f_area_all", areaNames, (v) => { fs.area = v; }, "areas");
+      const labelSel = scopeSel(fs.label, "f_label_all", labelNames, (v) => { fs.label = v; }, "labels");
 
       const selInfo = this._el("span", { class: "f-sel-info muted" });
       const btnPage = this._el("button", { class: "vb-btn", text: this._t("f_select_page") });
@@ -4106,7 +4634,7 @@ class HaPercytaPanel extends HTMLElement {
         actions.append(act(this._t("f_reopen"), "open"));
       }
       const tools = this._el("div", { class: "f-tools" }, [
-        this._el("div", { class: "f-row" }, [tabs, sevSel]),
+        this._el("div", { class: "f-row" }, [tabs, sevSel, areaSel, labelSel]),
         this._el("div", { class: "f-row" }, [btnPage, btnClear, selInfo, actions]),
       ]);
       body.appendChild(tools);
@@ -4121,9 +4649,16 @@ class HaPercytaPanel extends HTMLElement {
           this._el("div", { class: "muted small", style: "margin-top:6px;line-height:1.5", text: this._t("fh_note") }),
         ]),
       ]);
+      help.querySelector(".dlg-explain").appendChild(this._el("div", { class: "muted small", style: "margin-top:6px;line-height:1.5", text: this._t("fh_labels") }));
       help.open = !!this._fsHelpOpen;
       help.addEventListener("toggle", () => { this._fsHelpOpen = help.open; });
       body.appendChild(help);
+      body.appendChild(this._labelBox(d));
+      const supp = meta.suppressed || {};
+      const suppParts = [];
+      if (supp.label) suppParts.push(this._ti("f_supp_label", { n: supp.label, l: (meta.ignore_labels || []).map((x) => labelNames[x] || x).join(", ") }));
+      if (supp.safety) suppParts.push(this._ti("f_supp_safety", { n: supp.safety }));
+      if (suppParts.length) body.appendChild(this._el("div", { class: "hint-line f-supp", text: this._ti("f_supp", { parts: suppParts.join(" · ") }) }));
 
       // Liste
       const rowsData = tabList.filter((f) => (fs.cat === "all" || f.category === fs.cat) && (fs.sev === "all" || f.severity === fs.sev));
@@ -4303,6 +4838,7 @@ class HaPercytaPanel extends HTMLElement {
     const hasWhen = has((i) => i.when);
     const hasVer = has((i) => i.installed || i.latest);
     const hasCount = has((i) => i.count != null);
+    const hasArea = has((i) => i.area);
     const hasNow = !!opts.now && has((i) => /^[a-z0-9_]+\.[a-z0-9_]+$/.test(String(i.ref || "")) && i.kind !== "run");
     const headers = [this._t("fd_th_name"), this._t("fd_th_id")];
     const cols = [{}, {}];
@@ -4314,6 +4850,7 @@ class HaPercytaPanel extends HTMLElement {
     push(hasWhere, "fd_th_where");
     push(hasVer, "fd_th_version");
     push(hasCount, "fd_th_count");
+    push(hasArea, "fd_th_area");
     push(hasNow, "fd_th_now");
     headers.push(""); cols.push({ cls: "f-go", nosort: true });
     const states = (this._hass && this._hass.states) || {};
@@ -4332,6 +4869,7 @@ class HaPercytaPanel extends HTMLElement {
       if (hasWhere) row.push({ node: this._el("span", { class: "mono", text: (it.paths || []).join(", ") }) });
       if (hasVer) row.push({ text: [it.installed, it.latest].filter(Boolean).join(" → ") });
       if (hasCount) row.push({ text: it.count != null ? this._fmtInt(it.count) : "", sort: it.count || 0 });
+      if (hasArea) row.push({ text: it.area || "" });
       if (hasNow) {
         const st = states[it.ref];
         let node;
@@ -4346,12 +4884,12 @@ class HaPercytaPanel extends HTMLElement {
         const on = this._el("button", { class: "vb-btn small", text: this._t("au_turn_on") });
         on.addEventListener("click", () => this._automationAction(on, "turn_on", it.ref));
         const wrapB = this._el("div", { class: "secret-actions" }, [on]);
-        if (it.link) wrapB.appendChild(this._linkBtn(this._t("f_open") + " ↗", it.link, "vb-btn small"));
+        if (it.link) wrapB.appendChild(this._linkBtn(this._linkLabel(it.link, true), it.link, "vb-btn small"));
         row.push({ node: wrapB, nosrch: true });
         return row;
       }
       if (it.link && !opts.noLinks) {
-        cell = { node: this._linkBtn(this._t("f_open") + (String(it.link).startsWith("#") && !String(it.link).startsWith("#entity:") ? " ›" : " ↗"), it.link, "vb-btn small"), nosrch: true };
+        cell = { node: this._linkBtn(this._linkLabel(it.link, true), it.link, "vb-btn small"), nosrch: true };
       }
       row.push(cell);
       return row;
@@ -4417,10 +4955,7 @@ class HaPercytaPanel extends HTMLElement {
       this._el("div", { class: "fd-ico", text: TYPE_ICON[f.type] || "🧭" }),
       heroMain,
     ]);
-    if (f.link) {
-      const internal = String(f.link).startsWith("#");
-      hero.appendChild(this._linkBtn(internal ? this._t("f_open") + " ›" : this._t("f_open_ha") + " ↗", f.link, "fd-open"));
-    }
+    if (f.link) hero.appendChild(this._linkBtn(this._linkLabel(f.link), f.link, "fd-open"));
     const heroActs = this._heroActions(f);
     if (heroActs.length) hero.appendChild(this._el("div", { class: "fd-hero-acts" }, heroActs));
     wrap.appendChild(hero);
@@ -4432,10 +4967,28 @@ class HaPercytaPanel extends HTMLElement {
         this._el("div", { class: "fd-step-body" }, [this._el("h4", { text: label }), content]),
       ]);
     const fixList = this._el("ol", { class: "fd-fixlist" }, doc.steps.map((s) => this._el("li", { text: s })));
+    // Kurz halten: Beobachtung + „So gehst du vor“ sichtbar, Ursache & Auswirkung auf Klick.
+    const why = this._el("details", { class: "fd-more" }, [
+      this._el("summary", { text: this._t("fd_more_why") }),
+      this._el("div", { class: "fd-more-b" }, [
+        this._el("h5", { text: "🧩 " + this._t("fd_cause") }), this._el("p", { text: doc.cause }),
+        this._el("h5", { text: "⚡ " + this._t("fd_impact") }), this._el("p", { text: doc.impact }),
+      ]),
+    ]);
+    why.open = !!this._whyOpen;
+    why.addEventListener("toggle", () => { this._whyOpen = why.open; });
+    const intentText = (INTENT[this._lang()] || INTENT.en)[f.type];
+    let intent = null;
+    if (intentText) {
+      const meta = (d && d.findings_meta) || {};
+      const names = (meta.ignore_labels || []).map((x) => (meta.label_names || {})[x] || x);
+      intent = this._el("div", { class: "fd-intent" }, [
+        this._el("b", { text: "💡 " + this._t("fd_intent_t") + " " }),
+        this._el("span", { text: intentText + (names.length ? " " + this._ti("fd_intent_cur", { l: names.join(", ") }) : "") }),
+      ]);
+    }
     const steps = this._el("ul", { class: "fd-steps" }, [
-      step("", "🔎", this._t("fd_found"), this._el("p", { text: doc.what })),
-      step("", "🧩", this._t("fd_cause"), this._el("p", { text: doc.cause })),
-      step("", "⚡", this._t("fd_impact"), this._el("p", { text: doc.impact })),
+      step("", "🔎", this._t("fd_found"), this._el("div", {}, [this._el("p", { text: doc.what }), intent, why])),
       step("fix", "🛠️", this._t("fd_fix"), fixList),
     ]);
     const panels = [["diag", this._t("fd_tab_diag"), steps]];
@@ -4543,6 +5096,9 @@ class HaPercytaPanel extends HTMLElement {
       btn(this._t("ed_run"), () => this._disableDialog(refs, "disable"));
       btn(this._t("rm_btn"), () => this._disableDialog(refs, "remove"), "warn-btn");
     }
+    if (CONFIG_DELETE[f.type] && (f.items || []).length) {
+      btn(this._t("cfd_btn"), () => this._configDeleteDialog(f), "warn-btn");
+    }
     if (f.type === "orphaned_devices") {
       btn(this._t("dv_run"), () => this._deviceDialog(f), "warn-btn");
     }
@@ -4646,8 +5202,8 @@ class HaPercytaPanel extends HTMLElement {
         this._el("div", { class: "f-sub" }, this._fSubject(f)),
       ]),
     ]);
-    if (f.link && !String(f.link).startsWith("#")) {
-      hero.appendChild(this._linkBtn(this._t("f_open_ha") + " ↗", f.link, "fd-open"));
+    if (f.link && (!String(f.link).startsWith("#") || String(f.link).startsWith("#entity:"))) {
+      hero.appendChild(this._linkBtn(this._linkLabel(f.link), f.link, "fd-open"));
     }
     wrap.appendChild(hero);
 
@@ -4704,20 +5260,131 @@ class HaPercytaPanel extends HTMLElement {
     return wrap;
   }
 
+  // ---------- Gewollte Ausnahmen per Label: Erklärung + Auswahl ----------
+  _labelBox(d) {
+    const meta = d.findings_meta || {};
+    const names = meta.label_names || {};
+    const ignored = new Set(meta.ignore_labels || []);
+    const box = this._el("details", { class: "f-help f-labels" });
+    box.open = !!this._labelBoxOpen;
+    box.addEventListener("toggle", () => { this._labelBoxOpen = box.open; });
+    box.appendChild(this._el("summary", { text: this._t("lb_title") + (ignored.size ? ` · ${ignored.size} ✓` : "") }));
+    const inner = this._el("div", { class: "dlg-explain" }, [
+      this._el("p", { class: "lb-p", text: this._t("lb_intro") }),
+      this._el("ol", { class: "lb-steps" }, ["lb_s1", "lb_s2", "lb_s3", "lb_s4"].map((k) => this._el("li", { text: this._t(k) }))),
+      this._el("div", { class: "muted small lb-p", text: this._t("lb_note") }),
+    ]);
+    box.appendChild(inner);
+    const entries = Object.entries(names).sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+    const pick = this._el("div", { class: "lb-pick" });
+    const status = this._el("div", { class: "dlg-status" });
+    if (!entries.length) {
+      pick.appendChild(this._el("div", { class: "muted", text: this._t("lb_none") }));
+    } else {
+      pick.appendChild(this._el("div", { class: "dlg-sub", text: this._t("lb_pick") }));
+      const grid = this._el("div", { class: "lb-grid" });
+      const boxes = entries.map(([id, name]) => {
+        const n = (d.findings || []).filter((f) => (f.labels || []).includes(id)).length;
+        const c = this._check(String(name), ignored.has(id), n ? this._ti("lb_n", { n }) : "");
+        c.cb.dataset.label = id;
+        grid.appendChild(c.node);
+        return c.cb;
+      });
+      pick.appendChild(grid);
+      if (!ignored.size) pick.appendChild(this._el("div", { class: "muted small", text: this._t("lb_cur_none") }));
+      const save = this._el("button", { class: "fd-open", text: this._t("lb_save"), attrs: { type: "button" } });
+      const changed = () => boxes.some((cb) => cb.checked !== ignored.has(cb.dataset.label));
+      save.disabled = true;
+      boxes.forEach((cb) => cb.addEventListener("change", () => { save.disabled = !changed(); }));
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        status.className = "dlg-status busy";
+        status.textContent = this._t("dlg_running");
+        const res = await this._ws({ type: "ha_percyta/set_ignore_labels", labels: boxes.filter((cb) => cb.checked).map((cb) => cb.dataset.label) });
+        if (!res || res.error) {
+          status.className = "dlg-status err";
+          status.textContent = this._t("dlg_error") + this._errText(res || {});
+          save.disabled = false;
+          return;
+        }
+        status.className = "dlg-status ok";
+        status.textContent = this._t("lb_saved");
+        this._refreshSoon();
+      });
+      pick.appendChild(this._el("div", { class: "lb-acts" }, [save]));
+    }
+    pick.appendChild(this._el("div", { class: "lb-acts" }, [
+      this._linkBtn(this._t("lb_open_labels") + " ↗", "/config/labels", "vb-btn small"),
+      this._linkBtn(this._t("lb_open_opts") + " ↗", "/config/integrations/integration/ha_percyta", "vb-btn small"),
+    ]));
+    pick.appendChild(status);
+    inner.appendChild(pick);
+    return box;
+  }
+
   // ---------- Protokoll ----------
-  async _loadAudit(box, prefix) {
+  async _loadAudit(box, prefix, extra) {
     if (!box || !this._hass) return;
     let entries = [];
+    let res = null;
     try {
-      const res = await this._hass.connection.sendMessagePromise({ type: "ha_percyta/db_log" });
+      res = await this._hass.connection.sendMessagePromise(Object.assign({ type: "ha_percyta/db_log" }, extra || {}));
       entries = (res && res.entries) || [];
     } catch (e) {}
     entries = entries.filter((e) => (prefix ? String(e.action).startsWith(prefix) : !String(e.action).startsWith("secret_")));
     box.replaceChildren();
+    // Werkzeugleiste (nur Aktionen-Verlauf): automatisch löschen nach N Tagen, Verlauf leeren.
+    if (!prefix && res) {
+      const keep = this._el("select", { class: "ov-select" });
+      [0, 7, 14, 30, 90, 180].forEach((n) => {
+        const o = this._el("option", { text: n ? this._ti("log_keep_n", { n }) : this._t("log_keep_0"), attrs: { value: String(n) } });
+        if (n === (res.keep_days || 0)) o.setAttribute("selected", "");
+        keep.appendChild(o);
+      });
+      keep.addEventListener("change", () => { box._page = 0; this._loadAudit(box, prefix, { keep_days: parseInt(keep.value, 10) || 0 }); });
+      const clear = this._el("button", { class: "vb-btn small", text: this._t("log_clear"), attrs: { type: "button" } });
+      clear.disabled = !entries.length;
+      let armed = false;
+      clear.addEventListener("click", () => {
+        if (!armed) { armed = true; clear.textContent = this._t("log_clear_sure"); clear.classList.add("danger-btn"); return; }
+        box._page = 0;
+        this._loadAudit(box, prefix, { clear: true });
+      });
+      const bar = this._el("div", { class: "log-bar" }, [
+        this._el("span", { class: "muted small", text: this._t("log_keep") }), keep, clear,
+        res.removed ? this._el("span", { class: "muted small", text: this._ti("log_cleared", { n: res.removed }) }) : null,
+      ]);
+      box.appendChild(bar);
+      box.appendChild(this._el("div", { class: "muted small log-note", text: this._t("log_sec_note") }));
+    }
     if (!entries.length) {
       box.appendChild(this._el("div", { class: "empty", text: this._t(prefix ? "sec_audit_empty" : "log_empty") }));
       return;
     }
+    const size = 10;
+    const pages = Math.max(1, Math.ceil(entries.length / size));
+    box._page = Math.min(Math.max(0, box._page || 0), pages - 1);
+    const holder = this._el("div", {});
+    box.appendChild(holder);
+    const renderPage = () => {
+      holder.replaceChildren();
+      this._auditTable(holder, entries.slice(box._page * size, box._page * size + size), prefix);
+      if (pages > 1) {
+        const prev = this._el("button", { class: "vb-btn small", text: this._t("log_prev"), attrs: { type: "button" } });
+        const next = this._el("button", { class: "vb-btn small", text: this._t("log_next"), attrs: { type: "button" } });
+        prev.disabled = box._page <= 0;
+        next.disabled = box._page >= pages - 1;
+        prev.addEventListener("click", () => { box._page -= 1; renderPage(); });
+        next.addEventListener("click", () => { box._page += 1; renderPage(); });
+        holder.appendChild(this._el("div", { class: "log-pager" }, [
+          prev, this._el("span", { class: "muted small", text: this._ti("log_page", { p: box._page + 1, n: pages, t: entries.length }) }), next,
+        ]));
+      }
+    };
+    renderPage();
+  }
+
+  _auditTable(box, entries, prefix) {
     const rows = entries.map((e) => {
       const target = e.target || (e.old && e.new ? `${e.old} → ${e.new}` : (e.ids || []).join(", ")) || e.name || e.kind || "";
       return [
@@ -4830,10 +5497,25 @@ class HaPercytaPanel extends HTMLElement {
     this._closeModal();
     const close = this._el("button", { class: "modal-x", text: "×", attrs: { title: this._t("dlg_close"), "aria-label": this._t("dlg_close") } });
     close.addEventListener("click", () => this._closeModal());
+    const foot = this._el("div", { class: "modal-foot" }, footerNodes || []);
+    // Bestätigung („Ich habe verstanden …“) unten links neben Schließen/Ausführen – auch wenn der
+    // Dialog sie erst nach dem Öffnen einfügt (z. B. nach dem Laden der Vorschau).
+    const footLeft = this._el("div", { class: "modal-foot-left" });
+    footLeft.hidden = true;
+    foot.prepend(footLeft);
+    const moveConfirm = () => {
+      const c = bodyNode && bodyNode.querySelector ? bodyNode.querySelector(".dlg-confirm") : null;
+      if (c) { footLeft.replaceChildren(c); footLeft.hidden = false; }
+      return !!c;
+    };
+    if (!moveConfirm() && bodyNode && typeof MutationObserver !== "undefined") {
+      const mo = new MutationObserver(() => { if (moveConfirm()) mo.disconnect(); });
+      mo.observe(bodyNode, { childList: true, subtree: true });
+    }
     const modal = this._el("div", { class: "modal", attrs: { role: "dialog", "aria-modal": "true" } }, [
       this._el("div", { class: "modal-head" }, [this._el("h3", { text: title }), close]),
       this._el("div", { class: "modal-body" }, [bodyNode]),
-      this._el("div", { class: "modal-foot" }, footerNodes || []),
+      foot,
     ]);
     const back = this._el("div", { class: "modal-back" }, [modal]);
     back.addEventListener("click", (e) => { if (e.target === back && !this._modalBusy) this._closeModal(); });
@@ -4861,6 +5543,13 @@ class HaPercytaPanel extends HTMLElement {
     } catch (err) {
       return { error: (err && err.code) || "action_failed", message: (err && err.message) || String(err) };
     }
+  }
+
+  // Bestätigung zum Ausführen – _openModal setzt sie unten links in die Fußzeile (neben Schließen/Ausführen).
+  _confirmCheck(label) {
+    const c = this._check(label, false);
+    c.node.classList.add("dlg-confirm");
+    return c;
   }
 
   _check(label, checked, hint) {
@@ -5130,7 +5819,7 @@ class HaPercytaPanel extends HTMLElement {
     // Vorauswahl mit einem Klick leeren (z. B. alle vorgeschlagenen Einträge abwählen).
     clr.addEventListener("click", (e) => { e.preventDefault(); selected.clear(); renderChips(); if (!panel.hidden) render(); emit(); });
     const head = this._el("div", { class: "pk-head" }, [headInfo, selSearch, viewBtn, clr]);
-    root.append(multi ? head : null, multi ? chips : null, field, panel);
+    root.append(...[multi ? head : null, multi ? chips : null, field, panel].filter(Boolean));
     const renderChips = () => {
       const st = (this._hass && this._hass.states) || {};
       headInfo.textContent = selected.size ? this._ti("pk_sel_n", { n: this._fmtInt(selected.size) }) : this._t("pk_none_sel");
@@ -5332,7 +6021,7 @@ class HaPercytaPanel extends HTMLElement {
     const backupSlot = this._el("div", {});
     const nsSlot = this._el("div", {});
     body.append(backupSlot, nsSlot);
-    const confirm = this._check(this._t("dlg_confirm"), false);
+    const confirm = this._confirmCheck(this._t("dlg_confirm"));
     body.append(confirm.node, status);
     let backup = this._backupChooser(null, kind === "registry");
     backupSlot.appendChild(backup);
@@ -5498,8 +6187,49 @@ class HaPercytaPanel extends HTMLElement {
   }
 
   // Ganze Datenbank aufräumen (recorder.purge) und optional verkleinern.
-  _cleanupDialog() {
-    const body = this._el("div", { class: "dlg" }, [this._el("p", { class: "dlg-intro", text: this._t("cl_intro") })]);
+  _cleanupDialog(opts = {}) {
+    const intro = this._el("p", { class: "dlg-intro", text: this._t("cl_intro") });
+    const body = this._el("div", { class: "dlg" });
+    // Modus: nur verkleinern (nach dem Löschen von Entitäten) oder alte Daten nach Zeitraum löschen.
+    const rname = "cl-mode-" + Math.random().toString(36).slice(2);
+    const radio = (val, label, hint) => {
+      const r = this._el("input", { attrs: { type: "radio", name: rname, value: val } });
+      r.checked = (opts.mode || "repack") === val;
+      return { r, node: this._el("label", { class: "dlg-check" }, [r, this._el("span", {}, [this._el("span", { text: label }), this._el("span", { class: "dlg-check-h", text: hint })])]) };
+    };
+    const mRepack = radio("repack", this._t("cl_mode_repack"), this._t("cl_mode_repack_h"));
+    const mPurge = radio("purge", this._t("cl_mode_purge"), this._t("cl_mode_purge_h"));
+    const sizeLine = this._el("div", { class: "muted small" });
+    const repackNote = this._el("div", { class: "hint-line", text: this._t("cl_repack_note") + " " + this._t("cl_wait_note") });
+    // Nur Entitäten, die in HA Percyta entfernt wurden – Auswahl und Datenarten bestimmt der Nutzer.
+    const orphBox = this._el("div", { class: "cl-orph" }, [this._el("div", { class: "muted small", text: this._t("pv_loading") })]);
+    let pendPk = null;
+    const sState = this._check(this._t("dlg_scope_states"), true, this._t("dlg_scope_states_h"));
+    const sShort = this._check(this._t("dlg_scope_short"), true, this._t("dlg_scope_short_h"));
+    const sLong = this._check(this._t("dlg_scope_long"), false, this._t("dlg_scope_long_h"));
+    this._ws({ type: "ha_percyta/pending_cleanup" }).then((res) => {
+      const list = (res && !res.error && res.items) || [];
+      orphBox.replaceChildren();
+      if (!list.length) {
+        orphBox.appendChild(this._el("div", { class: "muted small", text: this._t("cl_orph_none") }));
+        return;
+      }
+      const items = list.map((x) => ({ id: x.id, name: x.id, exists: false, note: [
+        x.states ? this._ti("jl_p_states", { n: this._fmtInt(x.states) }) : null,
+        x.stats_short ? this._ti("jl_p_short", { n: this._fmtInt(x.stats_short) }) : null,
+        x.stats_long ? this._ti("jl_p_long", { n: this._fmtInt(x.stats_long) }) : null,
+      ].filter(Boolean).join(" · ") }));
+      pendPk = this._picker({ multi: true, items, preset: items.map((i) => i.id), placeholder: this._t("pk_search") });
+      orphBox.append(
+        this._el("div", { class: "dlg-sub", text: this._t("cl_orph") }),
+        this._el("div", { class: "muted small", style: "margin-bottom:6px;line-height:1.45", text: this._t("cl_orph_h") }),
+        pendPk.node,
+        this._el("div", { class: "dlg-sub", text: this._t("cl_pend_scopes") }),
+        sState.node, sShort.node, sLong.node,
+      );
+    });
+    body.append(this._el("div", { class: "dlg-sub", text: this._t("cl_mode") }), this._el("div", { class: "cl-mode" }, [mRepack.node, orphBox, mPurge.node]), sizeLine);
+    const purgeBox = this._el("div", {}, [intro]);
     const days = this._el("select", { class: "ov-select" });
     [3, 7, 10, 14, 30, 60, 90, 180, 365].forEach((n) => {
       const o = this._el("option", { text: this._ti("dlg_keep_n", { n }), attrs: { value: String(n) } });
@@ -5508,8 +6238,9 @@ class HaPercytaPanel extends HTMLElement {
     });
     const repack = this._check(this._t("cl_repack"), false);
     const pv = this._el("div", { class: "dlg-preview cl-preview" });
-    body.append(this._el("div", { class: "dlg-field" }, [this._el("span", { text: this._t("cl_days") }), days]), pv, repack.node,
+    purgeBox.append(this._el("div", { class: "dlg-field" }, [this._el("span", { text: this._t("cl_days") }), days]), pv, repack.node,
       this._el("div", { class: "hint-line", text: this._t("cl_note") }));
+    body.append(purgeBox, repackNote);
     // Vorschau: was mit der gewählten Zeit gelöscht würde (Zeilen, betroffene Entitäten, Platz ca.).
     let pvSeq = 0;
     const loadPv = async () => {
@@ -5524,12 +6255,23 @@ class HaPercytaPanel extends HTMLElement {
       pv.replaceChildren(this._cleanupPreview(res));
     };
     days.addEventListener("change", loadPv);
-    loadPv();
+    let pvLoaded = false;
+    const isRepack = () => mRepack.r.checked;
+    const applyMode = () => {
+      purgeBox.hidden = isRepack();
+      orphBox.hidden = !isRepack();
+      repackNote.hidden = !isRepack() && !repack.cb.checked;
+      // Die Vorschau lädt erst, wenn wirklich nach Zeitraum gelöscht werden soll.
+      if (!isRepack() && !pvLoaded) { pvLoaded = true; loadPv(); }
+    };
+    [mRepack.r, mPurge.r].forEach((r) => r.addEventListener("change", applyMode));
+    repack.cb.addEventListener("change", applyMode);
+    applyMode();
     const backupSlot = this._el("div", {});
     const nsSlot = this._el("div", {});
     let backup = this._backupChooser(null);
     backupSlot.appendChild(backup);
-    const confirm = this._check(this._t("dlg_confirm"), false);
+    const confirm = this._confirmCheck(this._t("dlg_confirm"));
     const status = this._el("div", { class: "dlg-status" });
     body.append(backupSlot, nsSlot, confirm.node, status);
     const backupApi = {
@@ -5552,10 +6294,21 @@ class HaPercytaPanel extends HTMLElement {
     confirm.cb.addEventListener("change", () => { run.disabled = !confirm.cb.checked || this._modalBusy; });
     this._openModal(this._t("cl_title"), body, [cancel, run]);
     backupApi.refresh();
+    this._ws({ type: "ha_percyta/db_info", ids: [] }).then((info) => {
+      const size = info && info.space && info.space.db_size;
+      sizeLine.textContent = size ? this._ti("cl_db_size", { s: this._fmtBytes(size) }) : "";
+    });
     run.addEventListener("click", () => {
       nsSlot.replaceChildren();
       this._runModalAction(
-        { type: "ha_percyta/db_cleanup", keep_days: parseInt(days.value, 10), repack: repack.cb.checked, backup: backup.value(), confirm: true },
+        // „Nur verkleinern“ = Zeitgrenze 10 Jahre + Verkleinern: so alt ist nichts, es wird nichts nach Alter gelöscht.
+        Object.assign({ type: "ha_percyta/db_cleanup", keep_days: isRepack() ? 3650 : parseInt(days.value, 10), repack: isRepack() || repack.cb.checked,
+          backup: backup.value(), confirm: true }, (() => {
+          if (!isRepack() || !pendPk) return {};
+          const ids = pendPk.values();
+          const scopes = [[sState, "states"], [sShort, "statistics_short"], [sLong, "statistics_long"]].filter(([c]) => c.cb.checked).map(([, k]) => k);
+          return ids.length && scopes.length ? { purge_ids: ids, purge_scopes: scopes } : {};
+        })()),
         { run, cancel, status }, async () => { this._dbList = null; confirm.cb.checked = false; this._refreshSoon(); },
         (err) => {
           run.disabled = !confirm.cb.checked;
@@ -5603,7 +6356,7 @@ class HaPercytaPanel extends HTMLElement {
       this._el("p", { class: "dlg-intro", text: this._ti("tk_intro", { u: token.user || "?", c: token.client_name || "—" }) }),
       this._el("div", { class: "dlg-warn", text: this._t("tk_warn") }),
     ]);
-    const confirm = this._check(this._t("tk_confirm"), false);
+    const confirm = this._confirmCheck(this._t("tk_confirm"));
     const status = this._el("div", { class: "dlg-status" });
     body.append(confirm.node, status);
     const cancel = this._el("button", { class: "vb-btn", text: this._t("dlg_cancel") });
@@ -5708,7 +6461,7 @@ class HaPercytaPanel extends HTMLElement {
     const db = d.database || {};
     const states = (this._hass && this._hass.states) || {};
     const restored = Object.keys(states).filter((k) => states[k].attributes && states[k].attributes.restored);
-    const unavailable = Object.keys(states).filter((k) => states[k].state === "unavailable" && !(states[k].attributes || {}).restored && !/^(automation|script)\./.test(k));
+    const unavailable = { length: this._unavCount(d) };
     const fnd = (type) => (d.findings || []).find((f) => f.type === type && f.status !== "hidden");
     const fall = (type) => (d.findings || []).filter((f) => f.type === type && f.status !== "hidden");
     const autoProblems = this._autoProblems(d);
@@ -5731,6 +6484,8 @@ class HaPercytaPanel extends HTMLElement {
       { key: "int", icon: "🔌", n: failing.length, title: "cc_int", desc: this._t("cc_int_d"), btn: "cc_btn_reload", fn: () => this._reloadDialog(failing) },
       { key: "auto", icon: "🤖", n: autoProblems.length, title: "cc_auto", desc: this._t("cc_auto_d"), btn: "cc_btn_show",
         fn: () => this._showFindings("automations") },
+      { key: "conf", icon: "🧩", n: (d.findings || []).filter((f) => f.category === "config" && f.status === "open").reduce((a, f) => a + (f.items_total || 0), 0),
+        title: "cc_conf", desc: this._t("cc_conf_d"), btn: "cc_btn_show", fn: () => this._showFindings("config"), soft: true, noTodo: true, hide: !Array.isArray(d.findings) },
       { key: "off", icon: "⏸️", n: off ? off.items_total : 0, title: "cc_off", desc: this._t("cc_off_d"), btn: "cc_btn_show", fn: () => this._openLink("#finding:automations_off"), soft: true, noTodo: true },
       { key: "fnd", icon: "🧭", n: c.findings_open || 0, title: "cc_fnd", desc: this._t("cc_fnd_d"), btn: "cc_btn_show", fn: () => this._showFindings("all"), soft: true,
         hide: !Array.isArray(d.findings) },
@@ -5802,6 +6557,22 @@ class HaPercytaPanel extends HTMLElement {
     if (wasPage) this.scrollTop = 0;
   }
 
+  // Zur Kachel in „Aufräumen & Prüfen“ springen und sie kurz hervorheben.
+  _careJump(key) {
+    const flash = () => {
+      const tile = this.shadowRoot.querySelector(`.care-page .cc-tile[data-key="${key}"]`);
+      if (!tile) return;
+      tile.scrollIntoView({ behavior: "smooth", block: "center" });
+      tile.classList.remove("flash");
+      void tile.offsetWidth;
+      tile.classList.add("flash");
+    };
+    if (this._page !== "care") {
+      this._openCarePage();
+      requestAnimationFrame(() => requestAnimationFrame(flash));
+    } else flash();
+  }
+
   _openCarePage() {
     const content = this.shadowRoot.getElementById("content");
     const view = content && this._captureView(content);
@@ -5820,6 +6591,16 @@ class HaPercytaPanel extends HTMLElement {
   // Jeder Bereich wird im Verhältnis zur Größe der Installation bewertet (z. B. nicht
   // verfügbare Entitäten im Verhältnis zu allen Entitäten) und mit einem festen Gewicht
   // gezählt. "r" = 1 bedeutet: der Bereich erreicht sein volles Gewicht.
+  // Nicht verfügbare Entitäten: aus den offenen Befunden (beachtet ignorierte Labels und „Erlaubt“);
+  // ältere Scans ohne Befunde → Live-Zählung.
+  _unavCount(d) {
+    if (Array.isArray(d.findings)) {
+      return d.findings.filter((f) => f.type === "unavailable_entities" && f.status === "open").reduce((a, f) => a + (f.items_total || 0), 0);
+    }
+    const states = (this._hass && this._hass.states) || {};
+    return Object.keys(states).filter((k) => states[k].state === "unavailable" && !(states[k].attributes || {}).restored && !/^(automation|script)\./.test(k)).length;
+  }
+
   _careScore(d) {
     const c = d.counts || {};
     const inv = d.inventory || {};
@@ -5829,7 +6610,7 @@ class HaPercytaPanel extends HTMLElement {
     const devs = c.total_devices || 1;
     const open = (d.findings || []).filter((f) => f.status === "open");
     const restored = Object.keys(states).filter((k) => states[k].attributes && states[k].attributes.restored).length;
-    const unavailable = inv.unavailable != null ? inv.unavailable : Object.keys(states).filter((k) => states[k].state === "unavailable").length;
+    const unavailable = this._unavCount(d);
     const failing = open.filter((f) => f.type === "integration_not_loaded").length;
     const integ = c.integrations || 1;
     const autos = (inv.automations || 0) + (inv.scripts || 0) || 1;
@@ -5873,23 +6654,49 @@ class HaPercytaPanel extends HTMLElement {
   // „Warum?“-Knopf samt ausklappbarer Erklärung, wie sich der Pflegebedarf zusammensetzt.
   _scoreWhy(sc) {
     const btn = this._el("button", { class: "why-btn sc-btn", text: this._t("why"), attrs: { type: "button" } });
-    const rows = sc.parts.map((p) => this._el("div", { class: "sc-row" + (p.pts < 0.05 ? " ok" : "") }, [
-      this._el("span", { class: "cc-p-ico", text: p.icon }),
-      this._el("span", { class: "sc-lbl", text: this._t(p.key) }),
-      this._el("span", { class: "sc-val muted", text: p.v }),
-      this._el("div", { class: "sc-bar lvl-" + (p.r < 0.34 ? "low" : p.r < 0.67 ? "mid" : "high"), attrs: { title: this._ti("sc_full", { f: p.full }) } }, [this._el("span", { style: `width:${p.r * 100}%` })]),
-      this._el("span", { class: "sc-pts", text: `${p.pts.toLocaleString(this._lang(), { maximumFractionDigits: 1 })} / ${p.w}` }),
-    ]));
+    const d = (this._data && this._data.data) || {};
+    const tiles = Array.isArray(d.findings) || d.database ? this._careItems(d) : [];
+    const rows = sc.parts.map((p) => {
+      const key = SCORE_TILE[p.key];
+      const tile = key ? tiles.find((t) => t.key === key) : null;
+      let act = this._el("span");
+      if (tile && !tile.clean) {
+        act = tile.href ? this._linkBtn(this._t(tile.btn), tile.href, "vb-btn small sc-act")
+          : this._el("button", { class: "vb-btn small sc-act", text: this._t(tile.btn), attrs: { type: "button" } });
+        if (!tile.href) act.addEventListener("click", (e) => { e.stopPropagation(); tile.fn(); });
+        else act.addEventListener("click", (e) => e.stopPropagation());
+      }
+      const row = this._el("div", { class: "sc-row sc-link" + (p.pts < 0.05 ? " ok" : ""),
+        attrs: { role: "button", tabindex: "0", title: this._t(p.key === "sc_disk" ? "sc_row_disk_t" : "sc_row_t") } }, [
+        this._el("span", { class: "cc-p-ico", text: p.icon }),
+        this._el("span", { class: "sc-lbl", text: this._t(p.key) }),
+        this._el("span", { class: "sc-val muted", text: p.v }),
+        this._el("div", { class: "sc-bar lvl-" + (p.r < 0.34 ? "low" : p.r < 0.67 ? "mid" : "high"), attrs: { title: this._ti("sc_full", { f: p.full }) } }, [this._el("span", { style: `width:${p.r * 100}%` })]),
+        this._el("span", { class: "sc-pts", text: `${p.pts.toLocaleString(this._lang(), { maximumFractionDigits: 1 })} / ${p.w}` }),
+        act,
+      ]);
+      const go = () => (p.key === "sc_disk" ? this._goReport("system") : this._careJump(key));
+      row.addEventListener("click", go);
+      row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+      return row;
+    });
     const panel = this._el("div", { class: "sc-why" }, [
       this._el("div", { class: "muted", style: "margin-bottom:8px;line-height:1.5", text: this._t("sc_intro") }),
       this._el("div", { class: "sc-row sc-head muted" }, [
         this._el("span", { class: "cc-p-ico" }), this._el("span", { class: "sc-lbl", text: this._t("sc_h_area") }),
         this._el("span", { class: "sc-val", text: this._t("sc_h_val") }), this._el("span", { class: "sc-bar-h" }),
-        this._el("span", { class: "sc-pts", text: this._t("sc_h_pts") }),
+        this._el("span", { class: "sc-pts", text: this._t("sc_h_pts") }), this._el("span"),
       ]),
       ...rows,
       this._el("div", { class: "sc-total", text: this._ti("sc_total", { n: sc.score }) }),
       this._el("div", { class: "note", text: this._t("sc_scale") }),
+      this._el("div", { class: "note", text: this._t("sc_vs_todo") }),
+      this._el("div", { class: "note", text: this._t("sc_click") }),
+      (() => {
+        const b = this._el("button", { class: "vb-btn small", text: this._t("sc_db_btn"), attrs: { type: "button" } });
+        b.addEventListener("click", (e) => { e.stopPropagation(); this._cleanupDialog({ mode: "repack" }); });
+        return this._el("div", { class: "sc-db" }, [this._el("div", { text: this._t("sc_db_note") }), b]);
+      })(),
     ]);
     panel.hidden = !this._scoreWhyOpen;
     if (!panel.hidden) { btn.classList.add("active"); btn.textContent = this._t("why_hide"); }
@@ -5962,7 +6769,7 @@ class HaPercytaPanel extends HTMLElement {
         btn.disabled = t.clean;
         btn.addEventListener("click", t.fn);
       }
-      grid.appendChild(this._el("div", { class: "cc-tile" + (t.clean ? " ok" : t.warnState ? " warn" : "") }, [
+      grid.appendChild(this._el("div", { class: "cc-tile" + (t.clean ? " ok" : t.warnState ? " warn" : "") + (t.todo ? " todo" : ""), attrs: { "data-key": t.key } }, [
         this._el("div", { class: "cc-top" }, [this._el("span", { class: "cc-ico", text: t.icon }), this._el("span", { class: "cc-n", text: t.clean ? "✓" : String(t.n) })]),
         this._el("div", { class: "cc-title", text: this._t(t.title) }),
         this._el("div", { class: "cc-desc", text: t.desc }),
@@ -6000,8 +6807,14 @@ class HaPercytaPanel extends HTMLElement {
       this._jobViews = (this._jobViews || []).concat([view]);
       wrap.appendChild(this._el("div", { class: "fd-card cc-block" }, [this._el("h3", { text: "⏳ " + this._t("jv_title") }), view]));
     }
-    const sec = (title, node) => this._el("div", { class: "fd-card cc-block" }, [this._el("h3", { text: title }), node]);
-    wrap.appendChild(sec(this._t("cc_h_todo"), this._careTileGrid(items.filter((t) => !t.info))));
+    const sec = (title, node, aside) => this._el("div", { class: "fd-card cc-block" }, [
+      this._el("h3", { class: "cc-block-h" }, [this._el("span", { text: title }), aside ? this._el("span", { class: "cc-block-aside muted", text: aside }) : null]),
+      node,
+    ]);
+    // Erst die Aufgaben, am Ende was du selbst entscheidest (zählt nicht zur Bewertung).
+    const todoTiles = items.filter((t) => !t.info);
+    const ordered = todoTiles.filter((t) => !t.noTodo).concat(todoTiles.filter((t) => t.noTodo));
+    wrap.appendChild(sec(this._t("cc_h_todo"), this._careTileGrid(ordered), todo ? this._ti("cc_todo", { n: todo }) : this._t("cc_all_ok")));
     wrap.appendChild(sec(this._t("cc_h_system"), this._careTileGrid(items.filter((t) => t.info))));
     // Reports (Befunde) auch hier – dieselbe Box wie auf der Hauptseite.
     const reports = this._sectionFindings(d, true);
@@ -6050,13 +6863,44 @@ class HaPercytaPanel extends HTMLElement {
   }
 
   _jobLineText(l) {
-    const p = Object.assign({}, l.p || {});
-    if (p.size != null) p.size = this._fmtBytes(p.size);
-    ["rows", "left", "done", "n"].forEach((k) => { if (p[k] != null) p[k] = this._fmtInt(p[k]); });
+    const raw = l.p || {};
+    const p = Object.assign({}, raw);
+    ["before", "after", "freed"].forEach((k) => { if (p[k] != null) p[k] = this._fmtBytes(p[k]); });
+    ["rows", "left", "done", "n", "states", "events", "short", "long"].forEach((k) => { if (p[k] != null) p[k] = this._fmtInt(p[k]); });
     if (p.action) p.action = this._t("ja_" + p.action);
     if (p.code) p.code = this._errText({ error: p.code });
     if (p.scopes) p.scopes = String(p.scopes).split(",").map((x) => this._t("js_" + x)).join(", ");
-    return this._ti("jl_" + l.k, p);
+    if (l.k === "item") {
+      const parts = [["states", "jl_p_states"], ["short", "jl_p_short"], ["long", "jl_p_long"]]
+        .filter(([k]) => raw[k]).map(([k, key]) => this._ti(key, { n: this._fmtInt(raw[k]) }));
+      return this._ti("jl_item", { id: p.id, parts: parts.join(" · ") || "—", size: raw.size ? " (≈ " + this._fmtBytes(raw.size) + ")" : "" });
+    }
+    if (l.k === "cl_file") {
+      return this._ti("jl_cl_file", { size: this._fmtBytes(raw.size), free: raw.free ? this._ti("jl_cl_file_free", { free: this._fmtBytes(raw.free) }) : "" });
+    }
+    if (l.k === "repack_tick") {
+      let detail = "";
+      if (raw.stage === "transfer") detail = this._ti("jl_repack_wal", { wal: this._fmtBytes(raw.wal || 0) });
+      else if (raw.stage === "copy") detail = this._ti("jl_repack_detail", { used: this._fmtBytes(raw.used || 0) });
+      return this._ti("jl_repack_tick", { t: this._fmtDur((raw.min || 0) * 60 + (raw.sec || 0)), detail });
+    }
+    if (l.k === "cl_size") {
+      return this._ti("jl_cl_size", { before: p.before, after: p.after, freed: p.freed,
+        wal: raw.wal && raw.wal > 50 * 1024 * 1024 ? this._ti("jl_cl_size_wal", { wal: this._fmtBytes(raw.wal) }) : "" });
+    }
+    if (l.k === "cl_pending") return this._ti("jl_cl_orphans", { n: p.n });
+    if (l.k === "cl_keep_long") return this._t("jl_cl_orphans_none");
+    if (l.k === "result") {
+      return this._ti("jl_result", { rows: p.rows, size: raw.size ? this._ti("jl_result_size", { size: this._fmtBytes(raw.size) }) : "" });
+    }
+    if (p.size != null) p.size = this._fmtBytes(p.size);
+    let text = this._ti("jl_" + l.k, p);
+    if (l.k === "failed") {
+      if (raw.msg) text += "\n" + this._ti("jl_failed_msg", { msg: raw.msg });
+      if (raw.ids) text += "\n" + this._ti("jl_failed_ids", { ids: raw.ids });
+      text += "\n" + this._t("jl_failed_hint");
+    }
+    return text;
   }
 
   // Fortschritts-Ansicht; update(job) aktualisiert sie (wird von _trackJob aufgerufen).
@@ -6075,12 +6919,20 @@ class HaPercytaPanel extends HTMLElement {
       if (!term.hidden) term.scrollTop = term.scrollHeight;
     });
     const hint = this._el("div", { class: "jv-hint muted" });
+    const shrink = this._el("button", { class: "vb-btn small jv-shrink", text: this._t("jv_repack"), attrs: { type: "button" } });
+    shrink.hidden = true;
+    shrink.addEventListener("click", () => { this._closeModal(); this._cleanupDialog({ mode: "repack" }); });
     const node = this._el("div", { class: "jv" }, [
-      this._el("div", { class: "jv-head" }, [phase, toggle]), bar, meta, term, hint,
+      this._el("div", { class: "jv-head" }, [phase, toggle]), bar, meta, term, hint, shrink,
     ]);
     node.update = (job) => {
       if (!job) return;
       const running = job.status === "running";
+      if (job.status === "error" && term.hidden) {
+        // Fehler sichtbar machen: Protokoll aufklappen.
+        term.hidden = false;
+        toggle.textContent = "▾ " + this._t("jv_details");
+      }
       node.className = "jv " + job.status;
       phase.textContent = running
         ? `⏳ ${this._t("jp_" + (job.phase || "start"))}`
@@ -6097,9 +6949,13 @@ class HaPercytaPanel extends HTMLElement {
       }
       meta.textContent = parts.join("  ·  ");
       const atBottom = term.scrollTop + term.clientHeight >= term.scrollHeight - 8;
-      term.textContent = (job.lines || []).map((l) => `[${this._fmtDur(l.t).replace(/ (min|h)$/, "")}] ${this._jobLineText(l)}`).join("\n");
+      term.replaceChildren(...(job.lines || []).map((l) => this._el("span", {
+        class: "jv-l" + (l.kind === "err" ? " err" : l.kind === "warn" ? " warn" : l.kind === "ok" ? " ok" : ""),
+        text: `[${this._fmtDur(l.t).replace(/ (min|h)$/, "")}] ${this._jobLineText(l)}\n`,
+      })));
       if (atBottom) term.scrollTop = term.scrollHeight;
       hint.textContent = running ? this._t("jv_hint") : "";
+      shrink.hidden = job.status !== "done" || !(job.lines || []).some((l) => l.k === "repack_hint");
     };
     return node;
   }
@@ -6221,7 +7077,7 @@ class HaPercytaPanel extends HTMLElement {
       },
     };
     const removeOpts = this._el("div", {}, [purgeData.node, backupSlot, nsSlot]);
-    const confirm = this._check(this._t("ed_confirm"), false);
+    const confirm = this._confirmCheck(this._t("ed_confirm"));
     const status = this._el("div", { class: "dlg-status" });
     const body = this._el("div", { class: "dlg" }, [
       explainDisable, explainRemove,
@@ -6287,7 +7143,7 @@ class HaPercytaPanel extends HTMLElement {
     backup.querySelectorAll(".dlg-warn").forEach((n) => n.remove());
     const copy = backup.querySelector('input[value="db_copy"]');
     if (copy) copy.closest("label").remove();
-    const confirm = this._check(this._t("dlg_confirm"), false);
+    const confirm = this._confirmCheck(this._t("dlg_confirm"));
     const status = this._el("div", { class: "dlg-status" });
     body.append(backup, confirm.node, status);
     const cancel = this._el("button", { class: "vb-btn", text: this._t("dlg_cancel") });
@@ -6300,6 +7156,35 @@ class HaPercytaPanel extends HTMLElement {
     this._openModal(this._t("dv_title"), body, [cancel, run]);
     run.addEventListener("click", () => this._runModalAction({ type: "ha_percyta/device_remove", ids: pk.values(), backup: backup.value(), confirm: true },
       { run, cancel, status }, async () => this._refreshSoon(), upd));
+  }
+
+  // Leere Bereiche/Etagen, ungenutzte Labels/Blueprints löschen (wie „Löschen“ in HA).
+  _configDeleteDialog(finding) {
+    const kind = CONFIG_DELETE[finding.type];
+    const items = (finding.items || []).map((i) => ({ id: i.ref, name: i.name, exists: true, note: this._t("kind_" + kind) }));
+    const body = this._el("div", { class: "dlg" }, [
+      this._explain(this._t("cfd_what"), [this._t("cfd_w1"), this._t("cfd_w2"), this._t("cfd_w3")]),
+    ]);
+    const pk = this._picker({ multi: true, items, preset: items.map((i) => i.id), placeholder: this._t("pk_search"), chipName: true });
+    body.appendChild(this._el("div", { class: "dlg-field" }, [this._el("span", { text: this._t("cfd_pick") }), pk.node]));
+    const backup = this._backupChooser({ sqlite: false, backup_services: ["x"] }, true);
+    backup.querySelectorAll(".dlg-warn").forEach((n) => n.remove());
+    const copy = backup.querySelector('input[value="db_copy"]');
+    if (copy) copy.closest("label").remove();
+    const confirm = this._confirmCheck(this._t("cfd_confirm"));
+    const status = this._el("div", { class: "dlg-status" });
+    body.append(backup, confirm.node, status);
+    const cancel = this._el("button", { class: "vb-btn", text: this._t("dlg_cancel") });
+    const run = this._el("button", { class: "fd-open danger", text: this._t("cfd_run") });
+    run.disabled = true;
+    const upd = () => { run.disabled = !confirm.cb.checked || !pk.values().length || this._modalBusy; };
+    confirm.cb.addEventListener("change", upd);
+    pk.onChange(upd);
+    cancel.addEventListener("click", () => this._closeModal());
+    this._openModal(this._t("cfd_title_" + kind), body, [cancel, run]);
+    run.addEventListener("click", () => this._runModalAction(
+      { type: "ha_percyta/config_delete", kind, ids: pk.values(), backup: backup.value(), confirm: true },
+      { run, cancel, status }, async () => { confirm.cb.checked = false; upd(); this._refreshSoon(); }, upd));
   }
 
   // Integrationen, die nicht laufen, neu laden.

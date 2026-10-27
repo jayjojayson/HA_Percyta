@@ -15,7 +15,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 
-from .const import DOMAIN, SERVICE_EXPORT, SERVICE_SCAN
+from .const import CONF_IGNORE_LABELS, DOMAIN, SERVICE_EXPORT, SERVICE_SCAN
 from .coordinator import HAPercytaCoordinator
 from .panel_setup import async_remove_frontend, async_setup_frontend
 from .report import generate_report
@@ -32,9 +32,28 @@ def _has_coordinator(hass: HomeAssistant) -> bool:
     )
 
 
+async def _async_frontend(hass: HomeAssistant) -> None:
+    """Panel, WebSocket-Befehle und Datenbank-Werkzeuge bereitstellen.
+
+    Ein Fehler hier darf die Integration nie stoppen – er wird aber deutlich protokolliert.
+    """
+    try:
+        await async_setup_frontend(hass)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("HA Percyta: Panel konnte nicht eingerichtet werden")
+
+
+def _options_key(options: dict) -> dict:
+    """Optionen ohne die, die keinen Neustart der Integration brauchen."""
+    return {k: v for k, v in dict(options).items() if k != CONF_IGNORE_LABELS}
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Integration aus einem Config-Entry aufsetzen."""
+    # Panel zuerst: Es bleibt so auch erreichbar, wenn der erste Scan scheitert.
+    await _async_frontend(hass)
     coordinator = HAPercytaCoordinator(hass, entry)
+    coordinator.options_seen = _options_key(entry.options)
     await coordinator.async_load_overrides()
     await coordinator.async_load_baseline()
     await coordinator.async_load_finding_states()
@@ -46,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     _register_services(hass)
-    await async_setup_frontend(hass)
+    await _async_frontend(hass)  # falls das Panel zwischenzeitlich entfernt wurde
     return True
 
 
@@ -58,12 +77,29 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not _has_coordinator(hass):
             hass.services.async_remove(DOMAIN, SERVICE_SCAN)
             hass.services.async_remove(DOMAIN, SERVICE_EXPORT)
-            async_remove_frontend(hass)
+            # Beim Neuladen bleibt das Panel stehen (sonst verschwindet es kurz aus der
+            # Seitenleiste – oder ganz, wenn das erneute Einrichten scheitert). Entfernt
+            # wird es nur, wenn die Integration deaktiviert oder gelöscht wird.
+            if entry.disabled_by:
+                async_remove_frontend(hass)
     return unloaded
 
 
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Integration gelöscht → Panel aus der Seitenleiste entfernen."""
+    if not _has_coordinator(hass):
+        async_remove_frontend(hass)
+
+
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Nach Options-Änderung neu laden (z. B. Intervall/Auto-Scan)."""
+    """Nach Options-Änderung neu laden (z. B. Intervall/Auto-Scan).
+
+    Ändern sich nur die ignorierten Labels, genügt ein neuer Scan – ohne Neuladen.
+    """
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if isinstance(coordinator, HAPercytaCoordinator) and coordinator.options_seen == _options_key(entry.options):
+        await coordinator.async_request_refresh()
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ha_percyta"
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
 # Konfigurations-/Options-Keys
 CONF_OUTPUT_DIR = "output_dir"
@@ -15,6 +15,7 @@ CONF_INCLUDE_ERRORS = "include_errors"
 CONF_INCLUDE_STORAGE = "include_storage"
 CONF_WRITE_REPORT = "write_report"
 CONF_ALLOW_REVEAL = "allow_reveal"
+CONF_IGNORE_LABELS = "ignore_labels"  # HA-Labels, deren Objekte nicht bewertet werden
 
 # Standard-Werte
 DEFAULT_OUTPUT_DIR = "custom_components/ha_percyta/output"
@@ -66,6 +67,9 @@ WS_TYPE_DB_PURGE = "ha_percyta/db_purge"
 WS_TYPE_DB_RENAME = "ha_percyta/db_rename"
 WS_TYPE_DB_REPLACE = "ha_percyta/db_replace"
 WS_TYPE_DB_LOG = "ha_percyta/db_log"
+WS_TYPE_SET_IGNORE_LABELS = "ha_percyta/set_ignore_labels"
+WS_TYPE_CONFIG_DELETE = "ha_percyta/config_delete"
+WS_TYPE_PENDING_CLEANUP = "ha_percyta/pending_cleanup"
 WS_TYPE_DB_LIST = "ha_percyta/db_list"
 WS_TYPE_DB_CLEANUP = "ha_percyta/db_cleanup"
 WS_TYPE_DB_CLEANUP_PREVIEW = "ha_percyta/db_cleanup_preview"

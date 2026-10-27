@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.2-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.3-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -73,7 +73,8 @@ system from one panel.
       (e.g. a deleted script or an uninstalled integration) and entities used in **templates**
       (`states('…')`, `is_state(…)`, `states.domain.object` …) – each with the part (trigger,
       condition, action) and the exact location. Missing entities link to the matching
-      *broken reference* finding.
+      *broken reference* finding. Also: a **“Triggered by” condition** (trigger ID) that names an ID none
+      of the automation's triggers has – that branch can never run.
     - **Turned off** – automations that are switched off and therefore never run.
     - **Not triggered for 90+ days** – now with the reason from the traces when the trigger fired but
       the conditions blocked it.
@@ -83,6 +84,15 @@ system from one panel.
     registered, no longer provided).
   - **Storage & upkeep** – storage almost full, database hotspots, **orphaned database data**
     (history/statistics of entities that no longer exist), updates available.
+  - **🧩 Configuration** (new in 1.2.3) – **dashboards** whose cards point to entities or areas that no longer
+    exist (with view › card), **dashboard resources** listed more than once (e.g. an old `?v=` version of a
+    custom card) or whose local file is missing, the **energy dashboard** using sensors that no longer exist,
+    **areas** whose temperature/humidity sensor is gone, **empty areas** and **floors**, **unused labels** (labels
+    HA Percyta ignores count as used) and **unused blueprints**. Empty areas/floors and unused labels/blueprints
+    can be deleted right from the finding (*🗑️ Delete …*, works like “Delete” in HA, checked again before, HA
+    backup pre-selected). The care center shows a tile *Configuration & dashboards* – it does **not** count
+    towards the maintenance need. Idea credit: these checks were inspired by the community project
+    [Spook](https://github.com/frenck/spook); HA Percyta implements them independently (no code taken over).
   - **Manage:** mark as *allowed*, *snooze* (7/30/90 days), *hide* or *reopen* – for single
     findings or a whole selection, with an optional note. Status is stored **only in
     HA Percyta**; nothing is changed in Home Assistant. A collapsible note *“What do Open, Allowed, Snoozed and
@@ -217,6 +227,7 @@ Or add `https://github.com/jayjojayson/HA_Percyta` manually in HACS as a custom 
 | Errors from system log | Include important errors (no warnings) | ✅ |
 | Analyse storage, CPU & RAM | Capture system/storage usage | ✅ |
 | Allow showing secrets | Admins may show/copy a single secret in plain text in the panel (logged). Values are always masked everywhere else. | ✅ |
+| Labels whose objects are not rated | Home Assistant labels (e.g. *Seasonal*); entities, devices, areas, automations and scripts with one of them create no findings | – |
 | Write report | Save a Markdown report per scan (the last 20 are kept) | ✅ |
 | Output directory | Destination of report files | `custom_components/ha_percyta/output` |
 | Auto scan | Scan automatically on a schedule | ❌ |
@@ -258,6 +269,27 @@ Options can be changed at any time via **Configure** on the integration.
   storage ≥ 85 %, a database entity with ≥ 10 % of all state rows (min. 50,000). Findings are only
   shown when their data source could be read in the scan; the reference check is skipped while Home
   Assistant is still starting.
+- **Intended states & large installations** – HA Percyta only uses Home Assistant's own mechanisms, no
+  tool-specific exception lists:
+  - **Disabled** integration entries, devices and entities are never rated. A device that is off or in the drawer on
+    purpose: disable its integration entry in HA.
+  - **Labels:** the Reports box explains it step by step under **“🏷️ Intended exceptions with labels”**: create a
+    label in HA (e.g. *Seasonal*), assign it to the device, entity, area, automation or script, tick it there and
+    choose **“Save & rescan”** (same setting as *“Labels whose objects are not rated”* in the options). Entities,
+    devices, areas, automations and scripts with such a label create no findings (a label on the device or the area
+    is enough). The Reports box says how many objects were not rated. The label filter lists all HA labels with the
+    number of findings.
+  - **Safety automations** (triggers on a water, smoke, gas, CO, safety, problem, tamper, heat or cold sensor or an
+    alarm panel) are not reported as *not triggered for 90+ days* – they should ideally never fire.
+  - **Rating:** unavailable entities are always *low*; an integration that HA keeps retrying (`setup_retry`,
+    usually the device is offline) is *medium* instead of *high*.
+  - **Area and label filters** in the Reports box show only the findings of one room or label; the affected
+    objects have an *Area* column.
+  - **Shorter texts:** the detail shows the observation and *What to do*; cause and impact open with
+    *Why & impact*. A note *“Intended?”* explains how to mark an intended state with HA's own means.
+  - **Buttons say what they open** – *Open entity*, *Edit automation*, *Open trace*, *Open integration*,
+    *Open device list* … (hover shows the exact target). Groups with exactly one object open that object;
+    a link to the whole entity list is no longer used.
 - **💾 Storage & System:** dedicated section with cards for disk usage, free space, RAM and
   CPU, the system storage by category, and the breakdown of the largest consumers.
 - **Cloud data flow:** dedicated section showing which integrations send data to
@@ -314,6 +346,28 @@ percentage, elapsed time and an estimate of the remaining time; **“Details (lo
 log of every step (rows counted, backup copied and verified, rows still left while the recorder deletes
 in batches). You may **close the window** – the action keeps running. A badge in the top bar (⏳ … %)
 shows the progress and reopens the window at any time.
+When deleting, the log lists **each entity with its rows per data type** (history, short-/long-term statistics)
+and the approximate space, then the **result** (rows deleted, approx. space freed inside the database). If an
+action fails, the log opens on its own and shows the **error in red with the original message** and what to do.
+
+**Clean up leftovers & shrink:** *🧹 Clean up & shrink the database* now asks first:
+- **“Clean up leftovers & shrink”** (default) – for after cleaning up in the care center: lists **only the entities you
+  removed in HA Percyta** (single or with their device) that still have data in the database. You choose which of them
+  and **which data types** – history ✓, short-term statistics ✓, **long-term statistics ☐ (unticked by default, e.g. for
+  the energy dashboard)** – are deleted; then the file is shrunk, so the space is really freed. Other orphaned data is
+  never touched here (for that, use *Delete data* / *Orphaned data* with your own selection).
+- **“Delete old data”** – everything older than the chosen period, with preview, optionally shrinking.
+
+The log shows the file size and the unused space inside it, each chosen entity with its rows, the result, and while
+shrinking **every 30 seconds** the elapsed time and the step (1/2: writing the copy, 2/2: transferring it via the WAL
+file). SQLite reports no percentage for this, so the bar runs without one. At the end: file size before/after and the
+space freed. Please
+don't restart Home Assistant while shrinking. After deleting data, the job window offers *“🧹 Clean up & shrink now …”*.
+
+**Database size:** deleted data does not make the database file smaller right away – the space is freed inside the
+database and reused by new data. The file only shrinks after **“🧹 Clean up & shrink the database”** (with *shrink*)
+or when Home Assistant repacks it itself – automatically on the **second Sunday of each month** after the nightly
+purge (recorder option `auto_repack`). The space figures are estimates (file size ÷ counted rows, SQLite only).
 
 Before running, the **preview** loads automatically as soon as you select entities. It shows the number of
 states and statistic rows, the time range per data type (history, long-term and short-term statistics),
@@ -356,6 +410,11 @@ findings live in the care center), on the right a compact **care center preview*
 right away) and quick links to *Findings*, *Database*, *Replace entity*, *Delete data* and *Log*.
 **“Open care center”** leads to its own page with all tiles, the **Reports** box (the same findings box as
 on the main page), the database tools, any running action and the most recent actions.
+The heading *Clean up & check* shows **“N open tasks”**; tasks come first, *Configuration & dashboards* and
+*Turned-off automations* (not part of the rating) last. In the **“Why?”** list a click on an area jumps to its tile, the
+button on the right opens the matching window.
+**Recent actions** are shown 10 per page; **“Clear history”** empties the list and **“Delete automatically”**
+(never / 7 / 14 / 30 / 90 / 180 days) removes old entries on its own. The security log for secrets (show/copy) is kept.
 
 **Maintenance need (0–100 %).** The ring shows how much there is to do – **0 % = everything is fine**
 (green ring); the higher the value, the more care your system needs. The colour follows the value:

@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant, callback
 from .const import (
     APP_NAME,
     CONF_ALLOW_REVEAL,
+    CONF_IGNORE_LABELS,
     DB_MAX_IDS,
     DEFAULT_ALLOW_REVEAL,
     DOMAIN,
@@ -45,6 +46,9 @@ from .const import (
     WS_TYPE_REVEAL_SECRET,
     WS_TYPE_SET_FINDING_STATE,
     WS_TYPE_SET_OVERRIDE,
+    WS_TYPE_SET_IGNORE_LABELS,
+    WS_TYPE_CONFIG_DELETE,
+    WS_TYPE_PENDING_CLEANUP,
 )
 from .coordinator import HAPercytaCoordinator
 from .db_tools import DbToolError, DbTools
@@ -206,7 +210,9 @@ def _register_ws(hass: HomeAssistant) -> None:
         try:
             if msg.get("background"):
                 # Als Hintergrund-Auftrag starten; das Panel fragt den Fortschritt ab.
-                params = {k: v for k, v in msg.items() if k in ("ids", "old", "new", "kind", "keep_days", "scopes", "repack")}
+                params = {k: v for k, v in msg.items() if k in ("ids", "old", "new", "kind", "keep_days", "scopes", "repack", "mode", "purge_scopes")}
+                if msg.get("purge_ids"):
+                    params["count"] = len(msg["purge_ids"])
                 if "ids" in params:
                     params["count"] = len(params["ids"])
                     params["ids"] = params["ids"][:20]
@@ -279,6 +285,13 @@ def _register_ws(hass: HomeAssistant) -> None:
             vol.Required("type"): WS_TYPE_DB_CLEANUP, vol.Optional("background", default=False): bool,
             vol.Required("keep_days"): vol.All(int, vol.Range(min=1, max=3650)),
             vol.Optional("repack", default=False): bool,
+            vol.Optional("mode", default="purge"): vol.In(["purge", "repack"]),
+            # Veraltet (löschte alle Datenleichen) – wird ignoriert, nur noch aus Kompatibilität erlaubt.
+            vol.Optional("purge_orphans", default=False): bool,
+            vol.Optional("purge_ids", default=[]): vol.All([vol.All(str, vol.Length(min=3, max=255))], vol.Length(max=2000)),
+            vol.Optional("purge_scopes", default=[]): vol.All(
+                [vol.In(["states", "statistics_short", "statistics_long"])], vol.Length(max=3)
+            ),
             vol.Required("backup"): backup_choice,
             vol.Required("confirm"): True,
         }
@@ -286,7 +299,10 @@ def _register_ws(hass: HomeAssistant) -> None:
     @websocket_api.require_admin
     @websocket_api.async_response
     async def ws_db_cleanup(hass, connection, msg):
-        await _run(connection, msg, lambda t, u: t.async_cleanup(msg["keep_days"], msg["repack"], msg["backup"], u))
+        await _run(connection, msg, lambda t, u: t.async_cleanup(msg["keep_days"], msg["repack"], msg["backup"], u,
+                                                              repack_only=msg.get("mode") == "repack",
+                                                              purge_ids=msg.get("purge_ids") or [],
+                                                              purge_scopes=msg.get("purge_scopes") or []))
 
     @websocket_api.websocket_command(
         {vol.Required("type"): WS_TYPE_DB_CLEANUP_PREVIEW, vol.Required("keep_days"): vol.All(int, vol.Range(min=1, max=3650))}
@@ -369,12 +385,50 @@ def _register_ws(hass: HomeAssistant) -> None:
 
     websocket_api.async_register_command(hass, ws_job_status)
 
-    @websocket_api.websocket_command({vol.Required("type"): WS_TYPE_DB_LOG})
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): WS_TYPE_DB_LOG,
+            vol.Optional("clear"): True,
+            vol.Optional("keep_days"): vol.All(vol.Coerce(int), vol.Range(min=0, max=365)),
+        }
+    )
     @websocket_api.require_admin
-    @callback
-    def ws_db_log(hass, connection, msg):
+    @websocket_api.async_response
+    async def ws_db_log(hass, connection, msg):
         tools = _get_tools(hass)
-        connection.send_result(msg["id"], {"entries": list(reversed(tools.audit)) if tools else []})
+        if tools is None:
+            connection.send_result(msg["id"], {"entries": [], "keep_days": 0})
+            return
+        removed = None
+        if msg.get("clear"):
+            removed = await tools.async_log_clear()
+        if "keep_days" in msg:
+            await tools.async_log_keep(msg["keep_days"])
+        connection.send_result(msg["id"], {"entries": list(reversed(tools.audit)), "keep_days": tools.log_keep_days,
+                                           "removed": removed})
+
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): WS_TYPE_SET_IGNORE_LABELS,
+            vol.Required("labels"): vol.All([vol.All(str, vol.Length(min=1, max=100))], vol.Length(max=50)),
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_set_ignore_labels(hass, connection, msg):
+        """Labels, deren Objekte nicht bewertet werden – wie in den Optionen der Integration."""
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            connection.send_error(msg["id"], "not_ready", "HA Percyta ist nicht eingerichtet.")
+            return
+        entry = entries[0]
+        labels = list(dict.fromkeys(msg["labels"]))
+        options = dict(entry.options)
+        options[CONF_IGNORE_LABELS] = labels
+        # Gespeichert wie über „Konfigurieren“. Nur die Labels geändert → kein Neuladen der
+        # Integration, der Update-Listener startet lediglich einen neuen Scan.
+        hass.config_entries.async_update_entry(entry, options=options)
+        connection.send_result(msg["id"], {"success": True, "labels": labels})
 
     @websocket_api.websocket_command(
         {vol.Required("type"): WS_TYPE_ENTITY_DISABLE, vol.Required("ids"): entity_list, vol.Required("confirm"): True}
@@ -405,7 +459,27 @@ def _register_ws(hass: HomeAssistant) -> None:
     async def ws_device_remove(hass, connection, msg):
         await _run(connection, msg, lambda t, u: t.async_remove_devices(msg["ids"], msg["backup"], u))
 
-    for handler in (ws_entity_disable, ws_entry_reload, ws_device_remove):
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): WS_TYPE_CONFIG_DELETE,
+            vol.Required("kind"): vol.In(["area", "floor", "label", "blueprint"]),
+            vol.Required("ids"): vol.All([vol.All(str, vol.Length(min=1, max=255))], vol.Length(min=1, max=200)),
+            vol.Required("backup"): vol.In(["ha_backup", "skip"]),
+            vol.Required("confirm"): True,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_config_delete(hass, connection, msg):
+        await _run(connection, msg, lambda t, u: t.async_config_delete(msg["kind"], msg["ids"], msg["backup"], u))
+
+    @websocket_api.websocket_command({vol.Required("type"): WS_TYPE_PENDING_CLEANUP})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_pending_cleanup(hass, connection, msg):
+        await _run(connection, msg, lambda t, u: t.async_pending_info())
+
+    for handler in (ws_entity_disable, ws_entry_reload, ws_device_remove, ws_config_delete, ws_pending_cleanup):
         websocket_api.async_register_command(hass, handler)
 
     for handler in (ws_db_info, ws_db_backup, ws_db_backup_delete, ws_db_purge, ws_db_rename, ws_db_replace, ws_db_log,
@@ -416,6 +490,7 @@ def _register_ws(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_finding_state)
     websocket_api.async_register_command(hass, ws_reveal_secret)
     websocket_api.async_register_command(hass, ws_set_override)
+    websocket_api.async_register_command(hass, ws_set_ignore_labels)
     hass.data.setdefault(DOMAIN, {})[_WS_FLAG] = True
 
 
@@ -433,9 +508,15 @@ async def async_setup_frontend(hass: HomeAssistant) -> None:
                 hass.async_create_task(coordinator.async_request_refresh())
 
         tools = DbTools(hass, on_change=_changed)
-        await tools.async_load()
+        try:
+            await tools.async_load()
+        except Exception:  # noqa: BLE001 – Protokoll kaputt? Panel trotzdem bereitstellen.
+            _LOGGER.exception("HA Percyta: Aktionen-Protokoll nicht ladbar")
         hass.data.setdefault(DOMAIN, {})[_TOOLS] = tools
-    _register_ws(hass)
+    try:
+        _register_ws(hass)
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("HA Percyta: WebSocket-Befehle nicht registrierbar")
 
     js_path = os.path.join(
         os.path.dirname(__file__), "panel", "ha_percyta_panel.js"
@@ -443,23 +524,27 @@ async def async_setup_frontend(hass: HomeAssistant) -> None:
 
     logo_path = os.path.join(os.path.dirname(__file__), "brand", "icon.png")
 
-    # Statische Ressourcen bereitstellen (Panel-Skript + Logo für die Überschrift).
-    static_paths = [(PANEL_STATIC_URL, js_path)]
-    if os.path.isfile(logo_path):
+    # Statische Ressourcen bereitstellen (Panel-Skript + Logo für die Überschrift) – nur einmal.
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    static_paths = [] if domain_data.get("_static_ok") else [(PANEL_STATIC_URL, js_path)]
+    if static_paths and os.path.isfile(logo_path):
         static_paths.append((PANEL_LOGO_URL, logo_path))
-    try:
-        from homeassistant.components.http import StaticPathConfig
+    if static_paths:
+        try:
+            from homeassistant.components.http import StaticPathConfig
 
-        await hass.http.async_register_static_paths(
-            [StaticPathConfig(url, path, False) for url, path in static_paths]
-        )
-    except (ImportError, RuntimeError):
-        # Ältere Cores oder bereits registriert – Fallback / ignorieren.
-        for url, path in static_paths:
-            try:
-                hass.http.register_static_path(url, path, False)
-            except Exception:  # noqa: BLE001
-                pass
+            await hass.http.async_register_static_paths(
+                [StaticPathConfig(url, path, False) for url, path in static_paths]
+            )
+        except Exception:  # noqa: BLE001
+            # Ältere Cores oder bereits registriert – Fallback / ignorieren.
+            for url, path in static_paths:
+                try:
+                    hass.http.register_static_path(url, path, False)
+                except Exception:  # noqa: BLE001
+                    pass
+
+    domain_data["_static_ok"] = True
 
     # Panel nur registrieren, wenn noch nicht vorhanden.
     if PANEL_URL_PATH in hass.data.get("frontend_panels", {}):

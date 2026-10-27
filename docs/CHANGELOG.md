@@ -3,6 +3,90 @@
 All notable changes to **HA Percyta**. German version: [CHANGELOG_de.md](CHANGELOG_de.md).
 Older versions: see the [GitHub releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.3
+
+Follow-up to 1.2.2, mostly from community feedback: intended states via Home Assistant labels, a new
+category of configuration checks, a safer way to clean up leftovers, more detailed job logs and a clearer
+care center.
+
+### 🏷️ Intended states & large installations
+- **Only Home Assistant's own mechanisms:** new option **“Labels whose objects are not rated”** – choose HA labels
+  (e.g. *Seasonal*); entities, devices, areas, automations and scripts with such a label create no findings. The
+  Reports box shows how many objects were not rated. Disabled entries were already excluded.
+- **Safety automations** (water, smoke, gas, CO, safety, problem, tamper, heat/cold sensors, alarm panels as trigger)
+  are no longer reported as *not triggered for 90+ days*.
+- **Calmer rating:** unavailable entities are always *low*; `setup_retry` (HA keeps retrying, device usually offline)
+  is *medium* instead of *high*.
+- **Area and label filters** in the Reports box (with the number of findings; the label filter lists all HA labels);
+  *Area* column for affected objects.
+- New box **“🏷️ Intended exceptions with labels – how it works”** in Reports: explanation in 4 steps and the label
+  choice right there (**Save & rescan**, same as the option).
+- **Shorter detail:** observation and *What to do* first, cause and impact under *Why & impact*; new note
+  **“Intended?”** with the HA way to mark intended states.
+- **Buttons say what they open** (*Open entity*, *Edit automation*, *Open trace*, *Open integration*, *Open device
+  list* …, hover shows the target). Groups with one object open that object; links to the whole entity list
+  were removed. The care center counts unavailable entities from the findings (labels and *Allowed* respected).
+
+### 🧩 Configuration checks (new category)
+- **Dashboards:** cards pointing to entities or areas that no longer exist (per dashboard, with view › card).
+- **Dashboard resources:** listed more than once (e.g. old `?v=` version) or local file missing.
+- **Energy dashboard:** sensors that no longer exist.
+- **Areas:** missing temperature/humidity sensor, **empty areas** and **empty floors**; **unused labels** and
+  **unused blueprints** – with **🗑️ Delete …** right at the finding (like “Delete” in HA, checked again before, HA
+  backup pre-selected).
+- **Automations:** condition *Triggered by* with a trigger ID none of the triggers has.
+- Care center tile **Configuration & dashboards** – not part of the maintenance need.
+- **Topic at a glance:** every row in the findings table shows a coloured topic chip (e.g. *🖼️ Dashboard*,
+  *📘 Blueprints*, *🤖 Automation*, *🏠 Areas*) in the colour of its category.
+- Idea credit: inspired by the community project [Spook](https://github.com/frenck/spook); implemented independently.
+
+### 🧹 Clean up leftovers & shrink
+- **Clean up & shrink the database: new choice “Clean up leftovers & shrink”** (default) – offers **only entities
+  removed in HA Percyta** (single or with their device; earlier removals are taken from the log). You choose the
+  entities and the data types; **long-term statistics are unticked by default**. The server refuses any other ID.
+  Then the file is shrunk; nothing is deleted by age. After deleting data, the job window offers **“🧹 Clean up &
+  shrink now …”**, and the *Why?* hint opens this mode.
+- **Shrinking shows its status:** file size and unused space before, every chosen entity with its rows, then every
+  30 s the elapsed time and the step (copy / transfer via WAL) – no invented percentage – and at the end the size
+  before/after and the space freed.
+
+### 🖥️ Job log, database size & history
+- **More detailed log when deleting:** each entity with its rows per data type and approx. space, an estimate before
+  and the **result** after (rows deleted, approx. space freed). Clean-up shows the rows per type and – with shrink – the
+  file size before/after. Removing entities/devices lists every removed object.
+- **Errors in the log:** a failed action opens the log by itself and shows the error in red with the **original
+  message**, affected objects and what to do.
+- **“Why?”** in the care center explains that deleted data only shrinks the file after **“🧹 Clean up & shrink the
+  database”** or HA's automatic repack on the second Sunday of the month (button to clean up right there).
+- **Recent actions:** 10 per page, **“Clear history”** and **“Delete automatically”** after 7–180 days (the security
+  log for secrets is kept).
+
+### 🐞 Fixes
+- **Confirmation in dialogs moved to the bottom left**, next to *Close* / *Run* – tick it and run without scrolling. Now in
+  every dialog, also those that add the confirmation after loading (delete data, remove orphaned entities, rename,
+  replace entity).
+- Single selection fields (rename, replace) showed “nullnull” above the field.
+- **Care center: “7 items to clean up” is now “7 open tasks”**, also shown in small grey text next to the heading
+  *Clean up & check*. In that box the tasks come first; *Configuration & dashboards* and *Turned-off automations* (your
+  own decision, not part of the rating) are listed last, after *Available updates*.
+- **“Why?” list is clickable:** a click on an area jumps to its tile (and highlights it), the button on the right opens
+  the matching window directly (e.g. *Remove …*, *Check …*). *Why?* also explains the difference between open tasks and
+  maintenance-need points.
+- Code review: removed unused texts (*Open in Home Assistant* label, status labels in the Markdown report); the
+  Markdown report now names the new configuration findings.
+- **Panel could vanish from the sidebar after saving options:** saving reloaded the integration, which removed the
+  panel first. Now changing only the labels just starts a new scan (no reload). A reload for other options keeps the
+  panel; it is only removed when the integration is disabled or deleted. The panel is set up first, every step is
+  protected, and an error is written to the Home Assistant log (*“HA Percyta: Panel konnte nicht eingerichtet
+  werden”*).
+
+### ⚠️ Notes
+- **Restart Home Assistant after updating.** Otherwise the browser already uses the new panel while HA still runs
+  the old code (e.g. error *not a valid option*).
+- *Clean up leftovers* only offers entities removed with HA Percyta. Removals from 1.2.2 are taken from *Recent
+  actions* – entries you cleared there can no longer be offered.
+- Long-term statistics are unticked by default. Data that has been deleted can only be restored from a backup.
+
 ## v1.2.2
 
 HA Percyta becomes a **maintenance tool**: besides the scan you can now inspect, clean up and maintain your

@@ -37,7 +37,7 @@ from .const import (
     SYSTEM_ACCESS_MAP,
     VERSION,
 )
-from .findings import build_findings
+from .findings import build_findings, collect_dashboard_refs, collect_energy_refs
 from .system import (
     collect_system_stats,
     measure_blueprint_sizes,
@@ -220,6 +220,34 @@ def _mask(value: Any) -> str:
     return "••••••••"
 
 
+def _check_resources(config_dir: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Doppelte Dashboard-Ressourcen und lokale Dateien, die fehlen (im Executor)."""
+    out: list[dict[str, Any]] = []
+    seen: dict[str, int] = {}
+    for item in items:
+        url = str(item.get("url") or "")
+        base = url.split("?", 1)[0]
+        seen[base] = seen.get(base, 0) + 1
+    for item in items:
+        url = str(item.get("url") or "")
+        base = url.split("?", 1)[0]
+        row = {"id": item.get("id"), "url": url, "type": item.get("type")}
+        if seen.get(base, 0) > 1:
+            row["duplicate"] = seen[base]
+        local = None
+        if base.startswith("/local/"):
+            local = os.path.join(config_dir, "www", base[len("/local/"):])
+        elif base.startswith("/hacsfiles/"):
+            local = os.path.join(config_dir, "www", "community", base[len("/hacsfiles/"):])
+        if local is not None:
+            real = os.path.realpath(local)
+            www = os.path.realpath(os.path.join(config_dir, "www"))
+            if real.startswith(www + os.sep) and not os.path.exists(real) and not os.path.exists(real + ".gz"):
+                row["missing_file"] = True
+        out.append(row)
+    return out
+
+
 class HAPercytaScanner:
     """Scannt Home Assistant und sammelt Permissions-/Datenschutz-Daten."""
 
@@ -232,8 +260,10 @@ class HAPercytaScanner:
         include_errors: bool = True,
         include_storage: bool = True,
         overrides: dict[str, str] | None = None,
+        ignore_labels: list[str] | None = None,
     ) -> None:
         self.hass = hass
+        self.ignore_labels = list(ignore_labels or [])
         self.include_addons = include_addons
         self.include_secrets = include_secrets
         self.include_errors = include_errors
@@ -246,6 +276,7 @@ class HAPercytaScanner:
         addons = await self._scan_addons() if self.include_addons else []
         custom_cards = await self._scan_custom_cards()
         blueprints = await self._scan_blueprints()
+        config_refs = await self._scan_config_refs()
         users, tokens = await self._scan_users_and_tokens()
         errors = self._scan_errors() if self.include_errors else []
         system = await self._scan_system()
@@ -334,6 +365,7 @@ class HAPercytaScanner:
             "addons": addons,
             "custom_cards": custom_cards,
             "blueprints": blueprints,
+            "config_refs": config_refs,
             "users": users,
             "tokens": tokens,
             "errors": errors,
@@ -369,11 +401,15 @@ class HAPercytaScanner:
 
         # Befunde ableiten (eigene Auswertung; Fehler hier dürfen den Scan nie stoppen).
         try:
-            findings, evaluated = build_findings(self.hass, result)
+            meta: dict[str, Any] = {}
+            findings, evaluated = build_findings(
+                self.hass, result, ignore_labels=self.ignore_labels, meta=meta
+            )
         except Exception as err:  # noqa: BLE001
             _LOGGER.debug("Befunde nicht ermittelbar: %s", err)
-            findings, evaluated = [], []
+            findings, evaluated, meta = [], [], {}
         result["findings"] = findings
+        result["findings_meta"] = meta
         result["findings_evaluated"] = evaluated
         return result
 
@@ -1190,6 +1226,61 @@ class HAPercytaScanner:
                 card["size_path"] = info.get("path")
 
         return cards
+
+    # ------------------------------------------------------------------ #
+    # Dashboards, Dashboard-Ressourcen, Energie: Verweise (nur lesend)
+    # ------------------------------------------------------------------ #
+    async def _scan_config_refs(self) -> dict[str, Any]:
+        """Sammelt Verweise aus Dashboards und dem Energie-Dashboard.
+
+        Liefert je Quelle ``None``, wenn sie nicht lesbar war (dann gibt es dafür
+        auch keine Befunde – und nichts gilt als „behoben“).
+        """
+        out: dict[str, Any] = {"dashboards": None, "resources": None, "energy": None}
+        lovelace = self.hass.data.get("lovelace")
+        if lovelace is not None:
+            dashboards = getattr(lovelace, "dashboards", None)
+            if dashboards is None and isinstance(lovelace, dict):
+                dashboards = lovelace.get("dashboards")
+            if isinstance(dashboards, Mapping):
+                found: list[dict[str, Any]] = []
+                for key, dash in list(dashboards.items()):
+                    try:
+                        cfg = await dash.async_load(False)
+                    except Exception:  # noqa: BLE001 – automatisch erzeugtes Dashboard o. Ä.
+                        continue
+                    if not isinstance(cfg, Mapping) or cfg.get("strategy"):
+                        continue
+                    meta = getattr(dash, "config", None) or {}
+                    url_path = getattr(dash, "url_path", None) or key or "lovelace"
+                    found.append({
+                        "id": str(url_path),
+                        "title": str((meta.get("title") if isinstance(meta, Mapping) else None) or cfg.get("title") or url_path),
+                        "refs": collect_dashboard_refs(cfg),
+                    })
+                out["dashboards"] = found
+            resources = getattr(lovelace, "resources", None)
+            if resources is None and isinstance(lovelace, dict):
+                resources = lovelace.get("resources")
+            if resources is not None:
+                try:
+                    if hasattr(resources, "async_get_info"):
+                        await resources.async_get_info()
+                    items = [dict(i) for i in resources.async_items()]
+                    out["resources"] = await self.hass.async_add_executor_job(
+                        _check_resources, self.hass.config.config_dir, items
+                    )
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("Dashboard-Ressourcen nicht prüfbar: %s", err)
+        if "energy" in self.hass.config.components:
+            try:
+                from homeassistant.components.energy.data import async_get_manager  # noqa: PLC0415
+
+                manager = await async_get_manager(self.hass)
+                out["energy"] = collect_energy_refs(manager.data or {})
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.debug("Energie-Einstellungen nicht lesbar: %s", err)
+        return out
 
     # ------------------------------------------------------------------ #
     # Blueprints

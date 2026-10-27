@@ -3,6 +3,94 @@
 Alle wichtigen Änderungen an **HA Percyta**. English version: [CHANGELOG.md](CHANGELOG.md).
 Ältere Versionen: siehe [GitHub-Releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.3
+
+Gewollte Zustände über Home-Assistant-Labels, in Percyta ausblenden/nicht berücksichtigen
+Neue Kategorie Konfigurations-Prüfungen, sicheres Bereinigen von Aufgeräumtem, ausführlichere Auftrags-Protokolle und ein übersichtlicheres Pflege-Center.
+
+### 🏷️ Gewollte Zustände & große Installationen
+- **Nur Home-Assistant-eigene Mechanismen:** neue Option **„Labels, deren Objekte nicht bewertet werden“** –
+  HA-Labels wählen (z. B. *Saisonal*); Entitäten, Geräte, Bereiche, Automationen und Skripte mit so einem Label
+  erzeugen keine Befunde. Die Reports-Box zeigt, wie viele Objekte nicht bewertet wurden. Deaktivierte Einträge
+  waren schon ausgenommen.
+- **Schutz-Automationen** (Wasser-, Rauch-, Gas-, CO-, Sicherheits-, Problem-, Sabotage-, Hitze-/Kälte-Sensoren,
+  Alarmanlagen als Auslöser) erscheinen nicht mehr als *seit 90+ Tagen nicht ausgelöst*.
+- **Ruhigere Einstufung:** nicht verfügbare Entitäten sind immer *niedrig*; `setup_retry` (HA versucht es weiter,
+  Gerät meist offline) ist *mittel* statt *hoch*.
+- **Filter Bereich und Label** in der Reports-Box (mit Anzahl der Befunde; der Label-Filter listet alle HA-Labels);
+  Spalte *Bereich* bei den betroffenen Objekten.
+- Neue Box **„🏷️ Gewollte Ausnahmen mit Labels – so geht's“** in Reports: Erklärung in 4 Schritten und die
+  Label-Auswahl direkt dort (**Speichern & neu scannen**, wie die Option).
+- **Kürzeres Detail:** Beobachtung und *So gehst du vor* zuerst, Ursache und Auswirkung unter *Warum & Auswirkung*;
+  neuer Hinweis **„Gewollt so?“** mit dem HA-Weg, gewollte Zustände zu kennzeichnen.
+- **Buttons sagen, was sie öffnen** (*Entität öffnen*, *Automation bearbeiten*, *Ablaufverfolgung öffnen*,
+  *Integration öffnen*, *Geräteliste öffnen* …, beim Darüberfahren steht das Ziel). Gruppen mit einem Objekt
+  öffnen dieses Objekt; Links auf die gesamte Entitätenliste entfallen. Das Pflege-Center zählt nicht verfügbare
+  Entitäten aus den Befunden (Labels und *Erlaubt* werden beachtet).
+
+### 🧩 Konfigurations-Prüfungen (neue Kategorie)
+- **Dashboards:** Karten, die auf Entitäten oder Bereiche zeigen, die es nicht mehr gibt (je Dashboard, mit Ansicht › Karte).
+- **Dashboard-Ressourcen:** doppelt eingetragen (z. B. alte `?v=`-Version) oder lokale Datei fehlt.
+- **Energie-Dashboard:** Sensoren, die es nicht mehr gibt.
+- **Bereiche:** fehlender Temperatur-/Feuchte-Sensor, **leere Bereiche** und **leere Etagen**; **ungenutzte Labels**
+  und **ungenutzte Blueprints** – mit **🗑️ Löschen …** direkt am Befund (wie „Löschen“ in HA, vorher erneut geprüft,
+  HA-Backup vorausgewählt).
+- **Automationen:** Bedingung *Ausgelöst durch* mit einer Trigger-ID, die kein Auslöser hat.
+- Pflege-Center-Kachel **Konfiguration & Dashboards** – zählt nicht zum Pflegebedarf.
+- **Thema auf einen Blick:** Jede Zeile der Befund-Tabelle zeigt einen farbigen Themen-Chip (z. B. *🖼️ Dashboard*,
+  *📘 Blueprints*, *🤖 Automation*, *🏠 Bereiche*) in der Farbe ihrer Kategorie.
+- Idee: angeregt durch das Community-Projekt [Spook](https://github.com/frenck/spook); eigenständig umgesetzt.
+
+### 🧹 Aufgeräumtes bereinigen & verkleinern
+- **Datenbank aufräumen & verkleinern: neue Auswahl „Aufgeräumtes bereinigen & verkleinern“** (Standard) – bietet
+  **nur Entitäten an, die in HA Percyta entfernt wurden** (einzeln oder mit ihrem Gerät; frühere Entfernungen werden
+  aus dem Protokoll übernommen). Du wählst die Entitäten und die Datenarten; **Langzeitstatistik ist standardmäßig
+  aus**. Andere IDs lehnt der Server ab. Danach wird die Datei verkleinert; nach Alter wird nichts gelöscht. Nach dem
+  Löschen von Daten bietet das Auftragsfenster **„🧹 Jetzt bereinigen & verkleinern …“** an, der Hinweis unter
+  *Warum?* öffnet diesen Modus.
+- **Verkleinern zeigt den Stand:** vorher Dateigröße und ungenutzter Platz, jede gewählte Entität mit ihren Zeilen,
+  dann alle 30 s die Dauer und den Schritt (Kopie / Übertrag über WAL) – ohne erfundenen Prozentwert – und zum Schluss
+  Größe vorher/nachher und der freie Platz.
+
+### 🖥️ Auftrags-Protokoll, Datenbankgröße & Verlauf
+- **Ausführlicheres Protokoll beim Löschen:** jede Entität mit ihren Zeilen je Datenart und ca. Platz, vorher eine
+  Schätzung und danach das **Ergebnis** (gelöschte Zeilen, ca. freier Platz). Aufräumen zeigt die Zeilen je Art und –
+  mit Verkleinern – die Dateigröße vorher/nachher. Beim Entfernen von Entitäten/Geräten steht jedes entfernte Objekt da.
+- **Fehler im Protokoll:** Eine fehlgeschlagene Aktion klappt das Protokoll von selbst auf und zeigt den Fehler rot mit
+  der **Original-Meldung**, den betroffenen Objekten und was zu tun ist.
+- **„Warum?“** im Pflege-Center erklärt, dass gelöschte Daten die Datei erst nach **„🧹 Datenbank aufräumen &
+  verkleinern“** oder der automatischen Verkleinerung durch HA am zweiten Sonntag im Monat kleiner machen (Button zum
+  Aufräumen direkt dort).
+- **Letzte Aktionen:** 10 je Seite, **„Verlauf leeren“** und **„Automatisch löschen“** nach 7–180 Tagen (das
+  Sicherheitsprotokoll zu Secrets bleibt).
+
+### 🐞 Fehlerbehebungen
+- **Bestätigung in den Dialogen unten links**, neben *Schließen* / *Ausführen* – ankreuzen und ausführen ohne Scrollen.
+  Jetzt in allen Dialogen, auch in denen, die die Bestätigung erst nach dem Laden einfügen (Daten löschen, verwaiste
+  Entitäten entfernen, Umbenennen, Entität ersetzen).
+- Einzel-Auswahlfelder (Umbenennen, Ersetzen) zeigten „nullnull“ über dem Feld.
+- **Pflege-Center: „7 Punkte zum Aufräumen“ heißt jetzt „7 Aufgaben offen“** – zusätzlich in kleiner grauer Schrift
+  neben der Überschrift *Aufräumen & Prüfen*. In dieser Box stehen die Aufgaben zuerst; *Konfiguration & Dashboards* und
+  *Ausgeschaltete Automationen* (deine Entscheidung, fließen nicht in die Bewertung ein) stehen am Ende, hinter
+  *Verfügbare Updates*.
+- **Liste unter „Warum?“ anklickbar:** Ein Klick auf einen Bereich springt zur passenden Kachel (und hebt sie hervor), der
+  Button rechts öffnet direkt das passende Fenster (z. B. *Entfernen …*, *Prüfen …*). *Warum?* erklärt außerdem den
+  Unterschied zwischen offenen Aufgaben und Punkten des Pflegebedarfs.
+- Code-Durchsicht: ungenutzte Texte entfernt (Beschriftung *In Home Assistant öffnen*, Status-Texte im Markdown-Report);
+  der Markdown-Report nennt jetzt auch die neuen Konfigurations-Befunde.
+- **Panel konnte nach dem Speichern der Optionen aus der Seitenleiste verschwinden:** Das Speichern lud die Integration neu und
+  entfernte dabei zuerst das Panel. Jetzt startet eine reine Label-Änderung nur einen neuen Scan (kein Neuladen). Beim
+  Neuladen wegen anderer Optionen bleibt das Panel stehen; entfernt wird es nur, wenn die Integration deaktiviert oder
+  gelöscht wird. Das Panel wird als Erstes eingerichtet, jeder Schritt ist abgesichert, und ein Fehler steht im
+  Home-Assistant-Protokoll („HA Percyta: Panel konnte nicht eingerichtet werden“).
+
+### ⚠️ Hinweise
+- **Nach dem Update Home Assistant neu starten.** Sonst nutzt der Browser schon das neue Panel, HA aber noch den
+  alten Code (z. B. Fehler *not a valid option*).
+- *Aufgeräumtes bereinigen* bietet nur Entitäten an, die mit HA Percyta entfernt wurden. Entfernungen aus 1.2.2
+  werden aus *Letzte Aktionen* übernommen – dort bereits gelöschte Einträge können nicht mehr angeboten werden.
+- Langzeitstatistik ist standardmäßig nicht angehakt. Gelöschte Daten lassen sich nur aus einer Sicherung zurückholen.
+
 ## v1.2.2
 
 HA Percyta wird zum **Wartungs-Werkzeug**: Neben dem Scan kannst du dein komplettes Home-Assistant-System jetzt aus

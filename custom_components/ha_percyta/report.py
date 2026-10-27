@@ -243,14 +243,16 @@ FINDING_TYPE_LABELS = {
     "automations_off": "Ausgeschaltete Automationen",
     "db_orphans": "Datenleichen in der Datenbank",
     "orphaned_devices": "Verwaiste Geräte",
+    "dashboard_refs": "Dashboard mit fehlenden Entitäten",
+    "dashboard_resources": "Dashboard-Ressourcen prüfen",
+    "energy_refs": "Energie-Dashboard: Sensor fehlt",
+    "area_sensor_refs": "Bereichs-Sensor fehlt",
+    "empty_areas": "Leere Bereiche",
+    "empty_floors": "Leere Etagen",
+    "unused_labels": "Ungenutzte Labels",
+    "unused_blueprints": "Ungenutzte Blueprints",
 }
 FINDING_SEVERITY_EMOJI = {"high": "🔴", "medium": "🟡", "low": "🟢", "info": "🔵"}
-FINDING_STATUS_LABELS = {
-    "open": "offen",
-    "known": "erlaubt",
-    "snoozed": "zurückgestellt",
-    "hidden": "ausgeblendet",
-}
 
 
 def _append_findings(lines: list[str], data: dict[str, Any]) -> None:

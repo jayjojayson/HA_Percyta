@@ -17,6 +17,7 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 
 from .const import (
     CONF_INCLUDE_ADDONS,
@@ -24,6 +25,7 @@ from .const import (
     CONF_INCLUDE_SECRETS,
     CONF_INCLUDE_STORAGE,
     CONF_ALLOW_REVEAL,
+    CONF_IGNORE_LABELS,
     CONF_OUTPUT_DIR,
     CONF_SCAN_AUTO_ENABLED,
     CONF_SCAN_AUTO_INTERVAL,
@@ -40,6 +42,14 @@ from .const import (
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
+
+
+def _label_selector() -> Any:
+    """Auswahl vorhandener Home-Assistant-Labels (Fallback: Komma-Liste)."""
+    try:
+        return selector.LabelSelector(selector.LabelSelectorConfig(multiple=True))
+    except AttributeError:  # sehr alte Home-Assistant-Version ohne Labels
+        return vol.All(vol.Coerce(list), [str])
 
 
 def _build_schema(defaults: dict[str, Any]) -> vol.Schema:
@@ -66,6 +76,10 @@ def _build_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_ALLOW_REVEAL,
                 default=defaults.get(CONF_ALLOW_REVEAL, DEFAULT_ALLOW_REVEAL),
             ): bool,
+            vol.Optional(
+                CONF_IGNORE_LABELS,
+                default=list(defaults.get(CONF_IGNORE_LABELS) or []),
+            ): _label_selector(),
             vol.Optional(
                 CONF_WRITE_REPORT,
                 default=defaults.get(CONF_WRITE_REPORT, DEFAULT_WRITE_REPORT),

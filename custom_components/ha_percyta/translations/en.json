@@ -10,10 +10,14 @@
           "include_errors": "Include important errors from the HA system log (no warnings)",
           "include_storage": "Analyse storage, CPU & RAM",
           "allow_reveal": "Allow showing secrets in plain text in the panel (admins only, logged)",
+          "ignore_labels": "Labels whose objects are not rated",
           "write_report": "Write Markdown report to file",
           "output_dir": "Output directory for reports",
           "scan_auto_enabled": "Enable automatic scan",
           "scan_auto_interval": "Interval for automatic scans (seconds)"
+        },
+        "data_description": {
+          "ignore_labels": "Choose Home Assistant labels (e.g. “Seasonal” or “Not in use”). Entities, devices, areas, automations and scripts with one of these labels create no findings – e.g. a printer that is usually off. You assign the labels in Home Assistant as usual."
         }
       }
     },
@@ -31,10 +35,14 @@
           "include_errors": "Include important errors from the HA system log (no warnings)",
           "include_storage": "Analyse storage, CPU & RAM",
           "allow_reveal": "Allow showing secrets in plain text in the panel (admins only, logged)",
+          "ignore_labels": "Labels whose objects are not rated",
           "write_report": "Write Markdown report to file",
           "output_dir": "Output directory for reports",
           "scan_auto_enabled": "Enable automatic scan",
           "scan_auto_interval": "Interval for automatic scans (seconds)"
+        },
+        "data_description": {
+          "ignore_labels": "Choose Home Assistant labels (e.g. “Seasonal” or “Not in use”). Entities, devices, areas, automations and scripts with one of these labels create no findings – e.g. a printer that is usually off. You assign the labels in Home Assistant as usual."
         }
       }
     }

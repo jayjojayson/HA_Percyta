@@ -59,6 +59,10 @@ RECORDER_WAIT = 90  # Sekunden, die auf den Recorder gewartet wird
 JOB_MAX_LINES = 300
 PURGE_WATCH_MAX = 3600  # so lange wird der Löschfortschritt höchstens beobachtet (s)
 PURGE_POLL = 3
+REPACK_WATCH_MAX = 3600  # so lange wird auf das Verkleinern gewartet (s)
+REPACK_POLL = 5
+REPACK_TICK = 30  # alle 30 s eine Zeile mit dem Stand
+REPACK_ONLY_KEEP_DAYS = 3650  # „nur verkleinern“: so alt ist nichts – es wird nichts gelöscht
 WATCH_MARGIN = 3600  # neue Werte/Nachberechnungen der letzten Stunde zählen beim Beobachten nicht mit (s)
 
 
@@ -232,6 +236,53 @@ def db_file_size(src: str) -> int:
     if os.path.exists(src + "-wal"):
         size += os.path.getsize(src + "-wal")
     return size
+
+
+def sqlite_free_info(path: str | None) -> dict[str, int]:
+    """Ungenutzter Platz in der SQLite-Datei (freie Seiten) – nur lesend."""
+    if not path:
+        return {}
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+    except sqlite3.Error:
+        return {}
+    try:
+        page_size = int(con.execute("PRAGMA page_size").fetchone()[0])
+        free_pages = int(con.execute("PRAGMA freelist_count").fetchone()[0])
+        return {"page_size": page_size, "free_pages": free_pages, "free_bytes": page_size * free_pages}
+    except sqlite3.Error:
+        return {}
+    finally:
+        con.close()
+
+
+def _temp_dirs(path: str | None) -> list[str]:
+    """Ordner, in denen SQLite beim Verkleinern schreibt (Datenbank-Ordner + Temp-Ordner)."""
+    dirs = [os.path.dirname(path)] if path else []
+    for cand in (os.environ.get("SQLITE_TMPDIR"), os.environ.get("TMPDIR"), "/var/tmp", "/usr/tmp", "/tmp"):
+        if cand and os.path.isdir(cand):
+            dirs.append(cand)
+            break
+    return dirs
+
+
+def _free_by_fs(dirs: list[str]) -> dict[int, int]:
+    """Freier Speicher je Dateisystem (Schlüssel: Geräte-ID)."""
+    out: dict[int, int] = {}
+    for d in dirs:
+        try:
+            out[os.stat(d).st_dev] = shutil.disk_usage(d).free
+        except OSError:
+            continue
+    return out
+
+
+def _repack_probe(path: str | None, dirs: list[str], free0: dict[int, int]) -> dict[str, int]:
+    """Stand beim Verkleinern: zusätzlich belegter Speicher und Größe der WAL-Datei."""
+    now = _free_by_fs(dirs)
+    used = sum(max(0, free0.get(dev, free) - free) for dev, free in now.items())
+    wal = file_size(path + "-wal") if path else 0
+    return {"used": used, "wal": wal}
 
 
 def file_size(path: str) -> int:
@@ -486,6 +537,10 @@ class DbTools:
         self.audit: list[dict[str, Any]] = []
         self._on_change = on_change
         self.job: dict[str, Any] | None = None  # laufender oder zuletzt beendeter Auftrag
+        self._purge_left: int = 0
+        # In HA Percyta entfernte Entitäten, deren Verlauf/Statistik noch in der Datenbank liegt
+        # (entity_id -> {"at", "source"}). Nur diese bietet „Aufgeräumtes bereinigen“ zum Löschen an.
+        self.pending: dict[str, dict[str, Any]] = {}
 
     # ---------------- Hintergrund-Aufträge mit Fortschritt ----------------
     def job_public(self) -> dict[str, Any] | None:
@@ -538,12 +593,14 @@ class DbTools:
                 self._step("done_bg" if isinstance(result, dict) and result.get("done") is False else "done", "ok")
                 job["status"] = "done"
             except DbToolError as err:
-                self._step("failed", "err", code=err.code)
+                text = str(err)
+                self._step("failed", "err", code=err.code, msg=text[:400] if text and text != err.code else None,
+                           ids=", ".join(str(x) for x in (err.params or {}).get("ids", [])[:10]) or None)
                 job["status"] = "error"
                 job["error"] = {"error": err.code, "message": str(err), "params": err.params}
             except Exception as err:  # noqa: BLE001
                 _LOGGER.exception("HA Percyta: Hintergrund-Auftrag fehlgeschlagen")
-                self._step("failed", "err", code="action_failed")
+                self._step("failed", "err", code="action_failed", msg=f"{type(err).__name__}: {err}"[:400])
                 job["status"] = "error"
                 job["error"] = {"error": "action_failed", "message": str(err)}
             finally:
@@ -566,16 +623,110 @@ class DbTools:
             data = None
         entries = (data or {}).get("entries") if isinstance(data, dict) else None
         self.audit = [e for e in entries or [] if isinstance(e, dict)][-MAX_AUDIT:]
+        try:
+            self.log_keep_days = max(0, int((data or {}).get("keep_days") or 0)) if isinstance(data, dict) else 0
+        except (TypeError, ValueError):
+            self.log_keep_days = 0
+        stored = data.get("pending") if isinstance(data, dict) else None
+        if isinstance(stored, dict):
+            self.pending = {k: v for k, v in stored.items() if isinstance(k, str) and isinstance(v, dict)}
+        else:
+            # Erstmals: aus dem Protokoll übernehmen (entfernt ohne „Verlauf und Statistik löschen“).
+            for entry in self.audit:
+                if entry.get("action") == "registry_remove" and entry.get("ok") and not entry.get("purge"):
+                    for eid in entry.get("ids") or []:
+                        if isinstance(eid, str) and ENTITY_RE.match(eid):
+                            self.pending[eid] = {"at": entry.get("at"), "source": "entity"}
+        if self._prune_log():
+            await self._save_log()
+
+    log_keep_days: int = 0  # 0 = Aktionen-Verlauf nicht automatisch leeren
+
+    @staticmethod
+    def _is_security_entry(entry: dict[str, Any]) -> bool:
+        """Einträge zum Anzeigen/Kopieren von Secrets bleiben als Sicherheitsprotokoll erhalten."""
+        return str(entry.get("action", "")).startswith("secret_")
+
+    def _prune_log(self) -> bool:
+        """Entfernt Aktionen, die älter als die eingestellte Aufbewahrung sind."""
+        if not self.log_keep_days:
+            return False
+        limit = _now() - timedelta(days=self.log_keep_days)
+        keep = []
+        for entry in self.audit:
+            try:
+                at = datetime.fromisoformat(str(entry.get("at")))
+            except (TypeError, ValueError):
+                at = None
+            if self._is_security_entry(entry) or at is None or at >= limit:
+                keep.append(entry)
+        changed = len(keep) != len(self.audit)
+        self.audit = keep
+        return changed
+
+    async def _save_log(self) -> None:
+        try:
+            await self._store.async_save({"entries": self.audit, "keep_days": self.log_keep_days,
+                                          "pending": self.pending})
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Protokoll nicht speicherbar: %s", err)
+
+    # ---------------- Merkliste: in Percyta entfernte Entitäten ----------------
+    def _mark_pending(self, ids: list[str], source: str) -> None:
+        now = _now().isoformat()
+        for eid in ids:
+            if isinstance(eid, str) and ENTITY_RE.match(eid):
+                self.pending[eid] = {"at": now, "source": source}
+
+    def _clear_pending(self, ids: list[str]) -> None:
+        for eid in ids:
+            self.pending.pop(eid, None)
+
+    def _pending_ids(self) -> list[str]:
+        """Merkliste ohne Entitäten, die es inzwischen wieder gibt."""
+        ent_reg = er.async_get(self.hass)
+        return sorted(
+            eid for eid in self.pending
+            if self.hass.states.get(eid) is None and ent_reg.async_get(eid) is None
+        )
+
+    async def async_pending_info(self) -> dict[str, Any]:
+        """Entfernte Entitäten mit noch vorhandenen Daten (Zeilen je Datenart)."""
+        ids = self._pending_ids()
+        rows: dict[str, dict[str, Any]] = {}
+        if ids:
+            instance = self._instance()
+            for i in range(0, len(ids), 500):
+                rows.update(await self._info(instance, ids[i:i + 500]))
+        items = []
+        for eid in ids:
+            r = rows.get(eid) or {}
+            st, sh, lo = int(r.get("states", 0) or 0), int(r.get("stats_short", 0) or 0), int(r.get("stats_long", 0) or 0)
+            if not (st or sh or lo):
+                continue  # keine Daten mehr → nichts zu tun
+            items.append({"id": eid, "at": self.pending[eid].get("at"), "source": self.pending[eid].get("source"),
+                          "states": st, "stats_short": sh, "stats_long": lo})
+        return {"items": items}
+
+    async def async_log_clear(self) -> int:
+        """Leert den Aktionen-Verlauf (das Sicherheitsprotokoll zu Secrets bleibt)."""
+        before = len(self.audit)
+        self.audit = [e for e in self.audit if self._is_security_entry(e)]
+        await self._save_log()
+        return before - len(self.audit)
+
+    async def async_log_keep(self, days: int) -> None:
+        self.log_keep_days = max(0, min(365, int(days)))
+        self._prune_log()
+        await self._save_log()
 
     async def async_log(self, user: str | None, action: str, ok: bool, **fields: Any) -> None:
         entry = {"at": _now().isoformat(), "user": user or "?", "action": action, "ok": ok}
         entry.update({k: v for k, v in fields.items() if v not in (None, "", [])})
         self.audit.append(entry)
         self.audit = self.audit[-MAX_AUDIT:]
-        try:
-            await self._store.async_save({"entries": self.audit})
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.debug("Protokoll nicht speicherbar: %s", err)
+        self._prune_log()
+        await self._save_log()
 
     # ---------------- Hilfen ----------------
     @property
@@ -632,6 +783,40 @@ class DbTools:
 
     async def _info(self, instance, ids: list[str], before_ts: float | None = None) -> dict[str, dict[str, Any]]:
         return await instance.async_add_executor_job(query_entity_info, instance, ids, before_ts)
+
+    async def _bytes_per_row(self, instance) -> tuple[float | None, int | None]:
+        """Grober Platz je Zeile: Dateigröße ÷ gezählte Zeilen (nur SQLite) – und die Dateigröße."""
+        path = _sqlite_path(instance)
+        if not path:
+            return None, None
+        try:
+            size = await self.hass.async_add_executor_job(db_file_size, path)
+        except Exception:  # noqa: BLE001 – nur eine Schätzung, darf nie stören
+            return None, None
+        cache = self.hass.data.get(DB_CACHE_KEY)
+        data = cache.get("data") if isinstance(cache, dict) else None
+        rows = 0
+        if isinstance(data, dict):
+            rows = sum(int(data.get(k) or 0) for k in ("states_total", "statistics_short_total", "statistics_long_total"))
+        return (size / rows if rows and size else None), size
+
+    def _detail_lines(self, info: dict[str, dict[str, Any]], scopes: list[str], keep_days: int,
+                      bpr: float | None, limit: int = 15) -> None:
+        """Je ID eine Zeile: was gelöscht wird (Zeilen je Datenart, ca. Platz)."""
+        suffix = "_old" if keep_days > 0 else ""
+        rows = []
+        for sid, row in (info or {}).items():
+            row = row or {}
+            st = int(row.get("states" + suffix, 0) or 0) if "states" in scopes else 0
+            sh = int(row.get("stats_short" + suffix, 0) or 0) if "statistics_short" in scopes else 0
+            lo = int(row.get("stats_long" + suffix, 0) or 0) if "statistics_long" in scopes else 0
+            rows.append((st + sh + lo, sid, st, sh, lo))
+        rows.sort(reverse=True)
+        for total, sid, st, sh, lo in rows[:limit]:
+            self._step("item", id=sid, states=st, short=sh, long=lo,
+                       size=int(total * bpr) if bpr and total else None)
+        if len(rows) > limit:
+            self._step("item_more", n=len(rows) - limit)
 
     # ---------------- Vorschau ----------------
     async def async_info(self, ids: list[str]) -> dict[str, Any]:
@@ -817,7 +1002,11 @@ class DbTools:
             self._step("count", n=len(ids))
             initial = await self._info(instance, ids, before_ts)
             todo = self._purge_amount(initial, scopes, keep_days)
+            bpr, _size = await self._bytes_per_row(instance)
             self._step("count_done", rows=todo)
+            self._detail_lines(initial, scopes, keep_days, bpr)
+            if bpr and todo:
+                self._step("est_space", size=int(todo * bpr))
             backup_result = await self._maybe_backup(backup, user)
             state_ids = [i for i in ids if ENTITY_RE.match(i)]
             # Beobachtet werden nur Zeilen von VOR dem Löschen: Eine laufende Entität schreibt
@@ -847,6 +1036,12 @@ class DbTools:
                 await self.async_log(user, "purge", False, ids=ids[:50], scopes=scopes, error=str(err)[:200])
                 raise DbToolError("action_failed", str(err)) from err
             done = await self._watch_purge(instance, ids, scopes, watch_ts, todo)
+            if keep_days <= 0 and {"states", "statistics_short", "statistics_long"} <= set(scopes):
+                self._clear_pending(ids)
+            removed_rows = todo if done else max(0, todo - (self._purge_left or 0))
+            self._step("result", rows=removed_rows, size=int(removed_rows * bpr) if bpr and removed_rows else None)
+            if removed_rows:
+                self._step("repack_hint")
             await self.async_log(user, "purge", True, ids=ids[:50], count=len(ids), scopes=scopes,
                                  keep_days=keep_days or None,
                                  backup=(backup_result or {}).get("name") or backup)
@@ -874,9 +1069,11 @@ class DbTools:
 
         Gezählt werden nur Zeilen vor ``watch_ts`` – neue Werte einer laufenden Entität
         zählen nicht als „noch übrig“."""
+        self._purge_left = todo
         if todo <= 0:
             await self._wait_recorder(instance)
             self._phase("purge", 100)
+            self._purge_left = 0
             return True
         start = time.monotonic()
         last = None
@@ -888,6 +1085,7 @@ class DbTools:
             except Exception:  # noqa: BLE001
                 continue
             left = min(todo, self._purge_amount(now_info, scopes, 0, old=True))
+            self._purge_left = left
             self._phase("purge", (todo - left) * 100 / todo)
             if left != last:
                 self._step("purge_left", left=left, done=max(0, todo - left))
@@ -1132,37 +1330,183 @@ class DbTools:
         result["keep_days"] = keep_days
         return result
 
-    async def async_cleanup(self, keep_days: int, repack: bool, backup: str, user: str | None) -> dict[str, Any]:
-        """Gesamte Datenbank: alles älter als ``keep_days`` löschen, optional verkleinern.
+    async def _purge_pending(self, instance, ids: list[str], scopes: list[str], bpr: float | None,
+                             user: str | None) -> dict[str, dict[str, Any]]:
+        """Löscht die gewählten Datenarten der gewählten, in Percyta entfernten Entitäten."""
+        self._phase("count")
+        self._step("cl_pending", n=len(ids))
+        info: dict[str, dict[str, Any]] = {}
+        for i in range(0, len(ids), 500):
+            info.update(await self._info(instance, ids[i:i + 500]))
+        todo = self._purge_amount(info, scopes, 0)
+        self._detail_lines(info, scopes, 0, bpr)
+        if "statistics_long" not in scopes:
+            self._step("cl_keep_long")
+        if bpr and todo:
+            self._step("est_space", size=int(todo * bpr))
+        if not todo:
+            self._clear_pending(ids)
+            return info
+        short, long = "statistics_short" in scopes, "statistics_long" in scopes
+        stats_task = make_clear_stats_task(ids, short, long, None) if (short or long) and not (short and long) else None
+        self._phase("purge", 0)
+        self._step("purge_start", rows=todo, scopes=",".join(scopes))
+        if "states" in scopes:
+            for i in range(0, len(ids), 500):
+                await self.hass.services.async_call(
+                    "recorder", "purge_entities", {"entity_id": ids[i:i + 500], "keep_days": 0}, blocking=True
+                )
+        if short and long:
+            instance.async_clear_statistics(ids)
+        elif stats_task is not None:
+            instance.queue_task(stats_task)
+        done = await self._watch_purge(instance, ids, scopes, time.time() + 60, todo)
+        removed = todo if done else max(0, todo - (self._purge_left or 0))
+        self._step("result", rows=removed, size=int(removed * bpr) if bpr and removed else None)
+        self._clear_pending(ids)
+        await self.async_log(user, "purge", True, ids=ids[:50], count=len(ids), scopes=scopes, source="cleanup")
+        return info
 
-        Nutzt ``recorder.purge``. Langzeitstatistiken bleiben dabei erhalten
-        (so arbeitet der Recorder). ``repack`` gibt den Platz frei (VACUUM) –
-        das braucht vorübergehend freien Speicher in Größe der Datenbank.
+    async def _watch_repack(self, instance, path: str | None) -> bool:
+        """Wartet auf das Verkleinern und meldet alle 30 s den Stand.
+
+        SQLite meldet beim VACUUM keinen Fortschritt. Es schreibt zuerst eine temporäre
+        Kopie und überträgt sie danach über die WAL-Datei in die Datenbank. Gezeigt werden
+        deshalb nur Dauer, Phase und die Mengen – ohne erfundenen Prozentwert.
         """
+        waiter = asyncio.ensure_future(self._wait_recorder(instance, REPACK_WATCH_MAX))
+        start = time.monotonic()
+        last = 0.0
+        dirs = _temp_dirs(path)
+        try:
+            free0 = await self.hass.async_add_executor_job(_free_by_fs, dirs)
+            wal0 = file_size(path + "-wal") if path else 0
+        except Exception:  # noqa: BLE001
+            free0, wal0 = {}, 0
+        self._phase("repack", None)
+        while not waiter.done():
+            await asyncio.wait({waiter}, timeout=REPACK_POLL)
+            if waiter.done():
+                break
+            elapsed = time.monotonic() - start
+            if elapsed - last < REPACK_TICK:
+                continue
+            last = elapsed
+            try:
+                probe = await self.hass.async_add_executor_job(_repack_probe, path, dirs, free0)
+            except Exception:  # noqa: BLE001
+                probe = {}
+            wal = probe.get("wal") or 0
+            stage = "transfer" if wal > wal0 + 50 * 1024 * 1024 else "copy"
+            self._step("repack_tick", min=int(elapsed // 60), sec=int(elapsed % 60), stage=stage if path else None,
+                       used=probe.get("used") if path else None, wal=wal if path and stage == "transfer" else None)
+        ok = bool(waiter.result())
+        if not ok:
+            self._step("repack_timeout", "warn")
+        self._phase("repack", 100 if ok else None)
+        return ok
+
+    async def async_cleanup(self, keep_days: int, repack: bool, backup: str, user: str | None,
+                            repack_only: bool = False, purge_ids: list[str] | None = None,
+                            purge_scopes: list[str] | None = None) -> dict[str, Any]:
+        """Gesamte Datenbank aufräumen.
+
+        - ``repack_only``: nichts nach Alter löschen. Optional vorher die Daten der in
+          HA Percyta entfernten Entitäten löschen (``purge_ids`` – nur IDs von der Merkliste,
+          nur die gewählten Datenarten ``purge_scopes``) – und dann die Datei verkleinern.
+        - sonst: alles älter als ``keep_days`` löschen (``recorder.purge``; Langzeitstatistik
+          bleibt), optional verkleinern.
+
+        Verkleinern (VACUUM) braucht vorübergehend freien Speicher in Größe der Datenbank.
+        """
+        if repack and keep_days >= REPACK_ONLY_KEEP_DAYS:
+            repack_only = True  # so sendet das Panel „Bereinigen & verkleinern“ (auch an ältere Versionen)
+        if repack_only:
+            keep_days, repack = REPACK_ONLY_KEEP_DAYS, True
         if keep_days < 1:
             raise DbToolError("invalid_days")
+        purge_ids = list(dict.fromkeys(purge_ids or [])) if repack_only else []
+        purge_scopes = [x for x in ("states", "statistics_short", "statistics_long") if x in (purge_scopes or [])]
+        if purge_ids:
+            allowed = set(self._pending_ids())
+            bad = [i for i in purge_ids if i not in allowed]
+            if bad:
+                raise DbToolError("not_pending", ids=bad[:20])  # nur, was in Percyta entfernt wurde
+            if not purge_scopes:
+                raise DbToolError("no_scope")
         if self._lock.locked():
             raise DbToolError("busy")
+        deltas: dict[str, dict[str, int]] | None = None
         async with self._lock:
             instance = self._instance()
+            path = _sqlite_path(instance)
+            bpr, size_before = await self._bytes_per_row(instance)
+            free_info = await self.hass.async_add_executor_job(sqlite_free_info, path) if path else {}
+            main_before = file_size(path) if path else 0
+            if main_before:
+                self._step("cl_file", size=main_before, free=free_info.get("free_bytes"))
+            self._phase("count")
+            est_rows = 0
+            if not repack_only:
+                try:
+                    before = (_now() - timedelta(days=keep_days)).timestamp()
+                    pv = await instance.async_add_executor_job(query_cleanup_preview, instance, before)
+                    est_rows = int(pv.get("states") or 0) + int(pv.get("events") or 0) + int(pv.get("stats_short") or 0)
+                    self._step("cl_count", states=int(pv.get("states") or 0), events=int(pv.get("events") or 0),
+                               short=int(pv.get("stats_short") or 0))
+                    for row in (pv.get("top") or [])[:10]:
+                        self._step("item", id=row.get("id"), states=int(row.get("rows") or 0),
+                                   size=int(int(row.get("rows") or 0) * bpr) if bpr else None)
+                    if bpr and est_rows:
+                        self._step("est_space", size=int(est_rows * bpr))
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug("Aufräumen: Vorab-Zählung nicht möglich: %s", err)
             backup_result = await self._maybe_backup(backup, user)
-            self._phase("cleanup")
-            self._step("cl_purge", days=keep_days)
-            if repack:
-                self._step("cl_repack")
             try:
+                if purge_ids:
+                    info = await self._purge_pending(instance, purge_ids, purge_scopes, bpr, user)
+                    if info:
+                        deltas = purge_deltas(info, purge_scopes, 0)
+                self._phase("cleanup")
+                if repack_only:
+                    self._step("cl_repack_only", size=size_before)
+                else:
+                    self._step("cl_purge", days=keep_days)
+                    if repack:
+                        self._step("cl_repack")
                 await self.hass.services.async_call(
                     "recorder", "purge", {"keep_days": keep_days, "repack": repack}, blocking=True
                 )
+            except DbToolError:
+                raise
             except Exception as err:  # noqa: BLE001
                 await self.async_log(user, "cleanup", False, keep_days=keep_days, error=str(err)[:200])
                 raise DbToolError("action_failed", str(err)) from err
-            done = await self._wait_recorder(instance, 1800)
-            await self.async_log(user, "cleanup", True, keep_days=keep_days, repack=repack,
+            if repack:
+                done = await self._watch_repack(instance, path)
+            else:
+                done = await self._wait_recorder(instance, 1800)
+            if repack and path and main_before:
+                try:
+                    main_after = file_size(path)
+                    wal_after = file_size(path + "-wal")
+                    self._step("cl_size", before=main_before, after=main_after,
+                               freed=max(0, main_before - main_after), wal=wal_after or None)
+                except Exception:  # noqa: BLE001
+                    pass
+            elif est_rows:
+                self._step("result", rows=est_rows, size=int(est_rows * bpr) if bpr else None)
+                self._step("repack_hint")
+            await self.async_log(user, "cleanup", True, keep_days=None if repack_only else keep_days, repack=repack,
+                                 purged=len(purge_ids) or None,
                                  backup=(backup_result or {}).get("name") or backup)
-            _LOGGER.warning("HA Percyta: Datenbank aufgeräumt (älter als %d Tage, repack=%s) durch %s",
-                            keep_days, repack, user)
-        self._invalidate()
+            if repack_only:
+                _LOGGER.warning("HA Percyta: Datenbank bereinigt (%d entfernte Entitäten) und verkleinert durch %s",
+                                len(purge_ids), user)
+            else:
+                _LOGGER.warning("HA Percyta: Datenbank aufgeräumt (älter als %d Tage, repack=%s) durch %s",
+                                keep_days, repack, user)
+        self._invalidate(deltas)
         return {"success": True, "done": done, "backup": backup_result}
 
     # ---------------- Verwaiste Entitäten aus der Registry ----------------
@@ -1199,6 +1543,12 @@ class DbTools:
                 if ent_reg.async_get(i) is not None:
                     ent_reg.async_remove(i)
                     removed.append(i)
+                    if len(removed) <= 25:
+                        self._step("rg_item", id=i)
+                else:
+                    self._step("rg_missing", "warn", id=i)
+            if len(removed) > 25:
+                self._step("item_more", n=len(removed) - 25)
             await asyncio.sleep(0.2)
             for i in removed:
                 left = self.hass.states.get(i)
@@ -1207,12 +1557,21 @@ class DbTools:
             pre: dict[str, dict[str, Any]] = {}
             if purge_data and instance is not None:
                 pre = await self._info(instance, ids)
+                bpr, _size = await self._bytes_per_row(instance)
+                rows = self._purge_amount(pre, ["states", "statistics_short", "statistics_long"], 0)
                 self._step("rg_purge")
                 await self.hass.services.async_call(
                     "recorder", "purge_entities", {"entity_id": ids, "keep_days": 0}, blocking=True
                 )
                 instance.async_clear_statistics(ids)
                 await self._wait_recorder(instance)
+                if rows:
+                    self._step("result", rows=rows, size=int(rows * bpr) if bpr else None)
+                    self._step("repack_hint")
+            if purge_data:
+                self._clear_pending(ids)
+            else:
+                self._mark_pending(removed, "entity")
             await self.async_log(user, "registry_remove", True, ids=ids[:50], count=len(removed),
                                  purge=purge_data, backup=(backup_result or {}).get("name") or backup)
             _LOGGER.warning("HA Percyta: %d Entität(en) aus der Registry entfernt durch %s", len(removed), user)
@@ -1279,6 +1638,98 @@ class DbTools:
             self._on_change()
         return {"success": bool(ok), "state": state, "error": None if ok else "reload_failed"}
 
+    # ---------------- Konfiguration: leere Bereiche/Etagen, ungenutzte Labels/Blueprints ----------------
+    def _scan_data(self) -> dict[str, Any]:
+        for value in self.hass.data.get(DOMAIN, {}).values():
+            data = getattr(value, "data", None)
+            if isinstance(data, dict) and "findings" in data:
+                return data
+        return {}
+
+    def _ignored_labels(self) -> set[str]:
+        for value in self.hass.data.get(DOMAIN, {}).values():
+            entry = getattr(value, "entry", None)
+            if entry is not None:
+                return set(getattr(entry, "options", {}).get("ignore_labels") or [])
+        return set()
+
+    async def async_config_delete(self, kind: str, ids: list[str], backup: str, user: str | None) -> dict[str, Any]:
+        """Löscht leere Bereiche/Etagen bzw. ungenutzte Labels/Blueprints – wie „Löschen“ in HA.
+
+        Vorher wird erneut geprüft, ob das Objekt inzwischen verwendet wird; dann bleibt es.
+        """
+        from homeassistant.helpers import area_registry as ar  # noqa: PLC0415
+
+        from .findings import config_usage  # noqa: PLC0415
+
+        ids = [i for i in dict.fromkeys(ids) if isinstance(i, str) and i]
+        if not ids:
+            raise DbToolError("invalid_id")
+        if self._lock.locked():
+            raise DbToolError("busy")
+        ent_reg = er.async_get(self.hass)
+        from homeassistant.helpers import device_registry as dr  # noqa: PLC0415
+
+        dev_reg = dr.async_get(self.hass)
+        area_reg = ar.async_get(self.hass)
+        usage = config_usage(self.hass)
+        devices = list(dev_reg.devices.values())
+        entities = list(ent_reg.entities.values())
+        areas = list(area_reg.async_list_areas()) if hasattr(area_reg, "async_list_areas") else list(getattr(area_reg, "areas", {}).values())
+        dash = ((self._scan_data().get("config_refs") or {}).get("dashboards")) or []
+        dash_areas = {r.get("ref") for d in dash for r in d.get("refs") or [] if r.get("kind") == "area"}
+
+        def in_use(obj_id: str) -> bool:
+            if kind == "area":
+                return (obj_id in usage["area"] or obj_id in dash_areas
+                        or any(getattr(x, "area_id", None) == obj_id for x in devices + entities))
+            if kind == "floor":
+                return obj_id in usage["floor"] or any(getattr(a, "floor_id", None) == obj_id for a in areas)
+            if kind == "label":
+                return (obj_id in usage["label"] or obj_id in self._ignored_labels()
+                        or any(obj_id in (getattr(x, "labels", None) or ()) for x in devices + entities + areas))
+            return obj_id in usage["blueprint"]
+
+        blocked = [i for i in ids if in_use(i)]
+        if blocked:
+            raise DbToolError("in_use", ids=blocked)
+        async with self._lock:
+            backup_result = await self._maybe_backup(backup, user)
+            removed: list[str] = []
+            self._phase("apply")
+            for obj_id in ids:
+                try:
+                    if kind == "area":
+                        area_reg.async_delete(obj_id)
+                    elif kind == "floor":
+                        from homeassistant.helpers import floor_registry as fr  # noqa: PLC0415
+
+                        fr.async_get(self.hass).async_delete(obj_id)
+                    elif kind == "label":
+                        from homeassistant.helpers import label_registry as lr  # noqa: PLC0415
+
+                        lr.async_get(self.hass).async_delete(obj_id)
+                    elif kind == "blueprint":
+                        domain, _, path = obj_id.partition(":")
+                        domain_bp = (self.hass.data.get("blueprint") or {}).get(domain)
+                        if domain_bp is None or not path:
+                            raise DbToolError("not_found", ids=[obj_id])
+                        await domain_bp.async_remove_blueprint(path)
+                    else:
+                        raise DbToolError("invalid_id", ids=[obj_id])
+                except DbToolError:
+                    raise
+                except Exception as err:  # noqa: BLE001
+                    await self.async_log(user, "config_delete", False, kind=kind, ids=ids[:50], error=str(err)[:200])
+                    raise DbToolError("action_failed", f"{obj_id}: {err}", ids=[obj_id]) from err
+                removed.append(obj_id)
+            await self.async_log(user, "config_delete", True, kind=kind, ids=removed[:50], count=len(removed),
+                                 backup=(backup_result or {}).get("name") or backup)
+            _LOGGER.warning("HA Percyta: %d %s gelöscht durch %s", len(removed), kind, user)
+        if self._on_change is not None:
+            self._on_change()
+        return {"success": True, "removed": removed, "backup": backup_result}
+
     # ---------------- Verwaiste Geräte entfernen ----------------
     async def async_remove_devices(self, ids: list[str], backup: str, user: str | None) -> dict[str, Any]:
         """Entfernt Geräte, deren Integration es nicht mehr gibt (verwaist).
@@ -1310,8 +1761,16 @@ class DbTools:
                 device = dev_reg.async_get(i)
                 if device is None:
                     continue
+                try:
+                    dev_entities = [e.entity_id for e in er.async_entries_for_device(
+                        er.async_get(self.hass), i, include_disabled_entities=True)]
+                except Exception:  # noqa: BLE001
+                    dev_entities = []
                 dev_reg.async_remove_device(i)
+                self._mark_pending(dev_entities, "device")
                 removed.append(getattr(device, "name_by_user", None) or device.name or i)
+                if len(removed) <= 25:
+                    self._step("dv_item", name=removed[-1])
             await self.async_log(user, "device_remove", True, ids=removed[:50], count=len(removed),
                                  backup=(backup_result or {}).get("name") or backup)
             _LOGGER.warning("HA Percyta: %d verwaiste(s) Gerät(e) entfernt durch %s", len(removed), user)

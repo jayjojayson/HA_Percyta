@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.2-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.3-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -75,7 +75,8 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
       **unbekannte Aktionen** (z. B. gelöschtes Skript, deinstallierte Integration) sowie Entitäten in
       **Templates** (`states('…')`, `is_state(…)`, `states.domain.objekt` …) – jeweils mit Teil
       (Auslöser, Bedingung, Aktion) und genauer Fundstelle. Fehlende Entitäten verlinken auf den
-      passenden Befund *Defekte Referenz*.
+      passenden Befund *Defekte Referenz*. Außerdem: eine Bedingung **„Ausgelöst durch“ (Trigger-ID)** mit
+      einer ID, die kein Auslöser der Automation hat – dieser Zweig läuft nie.
     - **Ausgeschaltet** – Automationen, die aus sind und deshalb nie laufen.
     - **Seit über 90 Tagen nicht ausgelöst** – jetzt mit dem Grund aus den Traces, wenn der Auslöser
       zwar feuerte, die Bedingungen ihn aber blockiert haben.
@@ -85,6 +86,16 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
     (noch registriert, nicht mehr bereitgestellt).
   - **Speicher & Wartung** – Speicher fast voll, Datenbank-Hotspots, **Datenleichen in der Datenbank**
     (Verlauf/Statistik von Entitäten, die es nicht mehr gibt), verfügbare Updates.
+  - **🧩 Konfiguration** (neu in 1.2.3) – **Dashboards**, deren Karten auf Entitäten oder Bereiche zeigen, die es
+    nicht mehr gibt (mit Ansicht › Karte), **Dashboard-Ressourcen**, die doppelt eingetragen sind (z. B. eine alte
+    `?v=`-Version einer Custom Card) oder deren lokale Datei fehlt, das **Energie-Dashboard** mit Sensoren, die es
+    nicht mehr gibt, **Bereiche**, deren Temperatur-/Feuchte-Sensor fehlt, **leere Bereiche** und **Etagen**,
+    **ungenutzte Labels** (Labels, die HA Percyta ignoriert, gelten als genutzt) und **ungenutzte Blueprints**. Leere
+    Bereiche/Etagen und ungenutzte Labels/Blueprints lassen sich direkt am Befund löschen (*🗑️ Löschen …*, wirkt wie
+    „Löschen“ in HA, vorher erneut geprüft, HA-Backup vorausgewählt). Das Pflege-Center zeigt dazu die Kachel
+    *Konfiguration & Dashboards* – sie zählt **nicht** zum Pflegebedarf. Die Idee zu diesen Prüfungen stammt aus dem
+    Community-Projekt [Spook](https://github.com/frenck/spook); HA Percyta setzt sie eigenständig um (kein Code
+    übernommen).
   - **Verwalten:** als *erlaubt* markieren, *zurückstellen* (7/30/90 Tage), *ausblenden* oder
     *wieder öffnen* – für einzelne Befunde oder eine ganze Auswahl, optional mit Notiz. Der Status
     wird **nur in HA Percyta** gespeichert; in Home Assistant wird nichts verändert. Ein aufklappbarer Hinweis
@@ -197,6 +208,7 @@ Oder `https://github.com/jayjojayson/HA_Percyta` in HACS manuell als benutzerdef
 | Fehler aus System-Log | Wichtige Fehler (keine Warnungen) aufnehmen | ✅ |
 | Speicher, CPU & RAM analysieren | System-/Speicher-Auslastung erfassen | ✅ |
 | Klartext-Anzeige von Secrets erlauben | Admins dürfen im Panel einzelne Secrets anzeigen/kopieren (protokolliert). Überall sonst sind Werte immer maskiert. | ✅ |
+| Labels, deren Objekte nicht bewertet werden | Home-Assistant-Labels (z. B. *Saisonal*); Entitäten, Geräte, Bereiche, Automationen und Skripte mit einem davon erzeugen keine Befunde | – |
 | Report schreiben | Markdown-Report je Scan speichern (die letzten 20 bleiben erhalten) | ✅ |
 | Ausgabeverzeichnis | Ziel der Report-Dateien | `custom_components/ha_percyta/output` |
 | Auto-Scan | Regelmäßig automatisch scannen | ❌ |
@@ -237,6 +249,29 @@ Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ä
   Speicher ≥ 85 %, eine Datenbank-Entität mit ≥ 10 % aller Zustandszeilen (mind. 50.000). Befunde
   erscheinen nur, wenn ihre Datenquelle im Scan lesbar war; die Verweis-Prüfung entfällt, solange
   Home Assistant noch startet.
+- **Gewollte Zustände & große Installationen** – HA Percyta nutzt nur Home-Assistant-eigene Mechanismen,
+  keine werkzeugeigenen Ausnahmelisten:
+  - **Deaktivierte** Integrationseinträge, Geräte und Entitäten werden nie bewertet. Ein Gerät, das absichtlich aus
+    ist oder in der Schublade liegt: Integrationseintrag in HA deaktivieren.
+  - **Labels:** Die Reports-Box erklärt es Schritt für Schritt unter **„🏷️ Gewollte Ausnahmen mit Labels“**: Label in
+    HA anlegen (z. B. *Saisonal*), an Gerät, Entität, Bereich, Automation oder Skript vergeben, dort ankreuzen und
+    **„Speichern & neu scannen“** wählen (dieselbe Einstellung wie *„Labels, deren Objekte nicht bewertet werden“* in
+    den Optionen). Entitäten, Geräte, Bereiche, Automationen und Skripte mit so einem Label erzeugen keine Befunde (ein
+    Label am Gerät oder Bereich genügt). Die Reports-Box nennt, wie viele Objekte nicht bewertet wurden. Der
+    Label-Filter listet alle HA-Labels mit der Zahl ihrer Befunde.
+  - **Schutz-Automationen** (Auslöser an einem Wasser-, Rauch-, Gas-, CO-, Sicherheits-, Problem-, Sabotage-,
+    Hitze- oder Kälte-Sensor oder einer Alarmanlage) gelten nicht als *seit 90+ Tagen nicht ausgelöst* – sie
+    sollen möglichst nie auslösen.
+  - **Einstufung:** Nicht verfügbare Entitäten sind immer *niedrig*; eine Integration, die HA selbst weiter
+    versucht (`setup_retry`, meist Gerät offline), ist *mittel* statt *hoch*.
+  - **Filter Bereich und Label** in der Reports-Box zeigen nur die Befunde eines Raums oder Labels; die betroffenen
+    Objekte haben eine Spalte *Bereich*.
+  - **Kürzere Texte:** Das Detail zeigt Beobachtung und *So gehst du vor*; Ursache und Auswirkung öffnen sich über
+    *Warum & Auswirkung*. Ein Hinweis *„Gewollt so?“* erklärt, wie man einen gewollten Zustand mit HA-Mitteln
+    kennzeichnet.
+  - **Buttons sagen, was sie öffnen** – *Entität öffnen*, *Automation bearbeiten*, *Ablaufverfolgung öffnen*,
+    *Integration öffnen*, *Geräteliste öffnen* … (beim Darüberfahren steht das genaue Ziel). Gruppen mit genau
+    einem Objekt öffnen dieses Objekt; ein Link auf die gesamte Entitätenliste wird nicht mehr verwendet.
 - **💾 Speicher & System:** eigener Abschnitt mit Karten für Speicher-Belegung, freien
   Speicher, RAM und CPU, dem Systemspeicher nach Kategorie sowie der Aufschlüsselung der
   größten Verbraucher.
@@ -296,6 +331,30 @@ mit Prozent, die bisherige Dauer und eine Schätzung der Restzeit; **„Details 
 Protokoll im Terminal-Stil mit jedem Schritt (gezählte Zeilen, Sicherung kopiert und geprüft, verbleibende
 Zeilen, während der Recorder in Etappen löscht). Du darfst das **Fenster schließen** – die Aktion läuft
 weiter. Eine Anzeige oben in der Leiste (⏳ … %) zeigt den Fortschritt und öffnet das Fenster jederzeit wieder.
+Beim Löschen listet das Protokoll **jede Entität mit ihren Zeilen je Datenart** (Verlauf, Kurz-/Langzeitstatistik)
+und dem ungefähren Platz, danach das **Ergebnis** (gelöschte Zeilen, ca. freier Platz in der Datenbank). Schlägt eine
+Aktion fehl, klappt das Protokoll von selbst auf und zeigt den **Fehler rot mit der Original-Meldung** und was zu tun ist.
+
+**Aufgeräumtes bereinigen & verkleinern:** *🧹 Datenbank aufräumen & verkleinern* fragt jetzt zuerst:
+- **„Aufgeräumtes bereinigen & verkleinern“** (Standard) – für nach dem Aufräumen im Pflege-Center: zeigt **nur die
+  Entitäten, die du in HA Percyta entfernt hast** (einzeln oder mit ihrem Gerät) und die noch Daten in der Datenbank
+  haben. Du wählst, welche davon und **welche Datenarten** gelöscht werden – Verlauf ✓, Kurzzeitstatistik ✓,
+  **Langzeitstatistik ☐ (standardmäßig aus, z. B. fürs Energie-Dashboard)** – danach wird die Datei verkleinert, erst
+  dann wird der Platz wirklich frei. Andere verwaiste Daten werden hier nie angefasst (dafür *Daten löschen* /
+  *Datenleichen* mit eigener Auswahl).
+- **„Alte Daten löschen“** – alles älter als der gewählte Zeitraum, mit Vorschau, optional mit Verkleinern.
+
+Das Protokoll zeigt Dateigröße und ungenutzten Platz darin, jede gewählte Entität mit ihren Zeilen, das Ergebnis und
+während des Verkleinerns **alle 30 Sekunden** die Dauer und den Schritt (1/2: Kopie wird geschrieben, 2/2: Übertrag über
+die WAL-Datei). SQLite meldet dabei keinen Prozentwert, deshalb läuft der Balken ohne. Zum Schluss: Dateigröße
+vorher/nachher und der freigegebene Platz. Während des Verkleinerns Home Assistant bitte nicht neu starten. Nach dem Löschen von Daten bietet
+das Auftragsfenster *„🧹 Jetzt bereinigen & verkleinern …“* an.
+
+**Datenbankgröße:** Gelöschte Daten machen die Datenbank-Datei nicht sofort kleiner – der Platz wird intern frei und
+von neuen Daten wiederverwendet. Kleiner wird die Datei erst nach **„🧹 Datenbank aufräumen & verkleinern“** (mit
+*Verkleinern*) oder wenn Home Assistant sie selbst verkleinert – automatisch am **zweiten Sonntag jedes Monats** nach
+dem nächtlichen Aufräumen (Recorder-Option `auto_repack`). Die Platzangaben sind Schätzungen (Dateigröße ÷ gezählte
+Zeilen, nur SQLite).
 
 Vor dem Ausführen lädt die **Vorschau** automatisch, sobald du Entitäten auswählst. Sie zeigt je ID die Anzahl der
 Zustände und Statistikzeilen, den Zeitraum je Datenart (Verlauf, Lang- und Kurzzeitstatistik), die Einheit und den
@@ -337,6 +396,12 @@ Befunde stehen im Pflege-Center), rechts eine kompakte **Vorschau des Pflege-Cen
 Aktion) und Schnell-Links zu *Befunde*, *Datenbank*, *Entität ersetzen*, *Daten löschen* und *Protokoll*.
 **„Pflege-Center öffnen“** führt auf eine eigene Seite mit allen Kacheln, der Box **Reports** (dieselbe
 Befunde-Box wie auf der Hauptseite), den Datenbank-Werkzeugen, einer laufenden Aktion und den letzten Aktionen.
+Die Überschrift *Aufräumen & Prüfen* zeigt **„N Aufgaben offen“**; die Aufgaben stehen zuerst, *Konfiguration &
+Dashboards* und *Ausgeschaltete Automationen* (zählen nicht zur Bewertung) am Ende. In der Liste unter **„Warum?“**
+springt ein Klick auf einen Bereich zur Kachel, der Button rechts öffnet direkt das passende Fenster.
+**Letzte Aktionen** stehen zu 10 je Seite; **„Verlauf leeren“** leert die Liste, **„Automatisch löschen“** (nie / 7 /
+14 / 30 / 90 / 180 Tage) entfernt alte Einträge von selbst. Das Sicherheitsprotokoll zu Secrets (Anzeigen/Kopieren)
+bleibt erhalten.
 
 **Pflegebedarf (0–100 %).** Der Ring zeigt, wie viel zu tun ist – **0 % = alles in Ordnung** (grüner
 Ring); je höher der Wert, desto mehr Pflege braucht dein System. Die Farbe richtet sich nach dem Wert:

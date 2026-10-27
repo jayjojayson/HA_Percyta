@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_ALLOW_REVEAL,
+    CONF_IGNORE_LABELS,
     CONF_INCLUDE_ADDONS,
     CONF_INCLUDE_ERRORS,
     CONF_INCLUDE_SECRETS,
@@ -65,6 +66,7 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.entry = entry
         options = entry.options
+        self.options_seen: dict[str, Any] = {}  # Optionen beim Einrichten (ohne ignorierte Labels)
 
         # Manuelle Risiko-Overrides (entry_id -> "low"/"medium"/"high").
         self._store: Store = Store(
@@ -532,6 +534,7 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 CONF_INCLUDE_STORAGE, DEFAULT_INCLUDE_STORAGE
             ),
             overrides=self.overrides,
+            ignore_labels=options.get(CONF_IGNORE_LABELS) or [],
         )
 
         try:

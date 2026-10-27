@@ -26,6 +26,15 @@ from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
+try:  # Labels gibt es seit Home Assistant 2024.4
+    from homeassistant.helpers import label_registry as lr
+except ImportError:  # pragma: no cover
+    lr = None
+try:  # Etagen ebenso
+    from homeassistant.helpers import floor_registry as fr
+except ImportError:  # pragma: no cover
+    fr = None
+
 from .const import (
     BACKUP_MAX_AGE_DAYS,
     CRITICAL_DOMAINS,
@@ -78,7 +87,159 @@ TYPE_SOURCES = {
     "disk_high": "disk",
     "db_hotspot": "database",
     "updates_available": "updates",
+    "dashboard_refs": "dashboards",
+    "dashboard_resources": "resources",
+    "energy_refs": "energy",
+    "area_sensor_refs": "areas",
+    "empty_areas": "areas",
+    "empty_floors": "areas",
+    "unused_labels": "areas",
+    "unused_blueprints": "blueprints",
 }
+
+
+# Automationen, die bewusst selten oder nie auslösen (Wasser, Rauch, Alarm …):
+# Erkannt über HA-eigene Geräteklassen bzw. Domains der Trigger-Entitäten.
+SAFETY_DEVICE_CLASSES = frozenset({
+    "moisture", "smoke", "gas", "carbon_monoxide", "safety", "problem", "tamper", "heat", "cold",
+})
+SAFETY_DOMAINS = frozenset({"alarm_control_panel", "siren"})
+
+
+# ---------------------------------------------------------------------- #
+# Kontext: Registries, Bereiche/Labels und HA-eigene Ausschlüsse
+# ---------------------------------------------------------------------- #
+class _Ctx:
+    """Registry-Zugriff für alle Befunde.
+
+    Ausschlüsse folgen nur Home-Assistant-eigenen Mechanismen: deaktivierte
+    Einträge (wie bisher) und – optional – Labels, die in den Optionen von
+    HA Percyta als „nicht bewerten“ gewählt wurden. Ein Label wirkt auf
+    Entität, Gerät, Bereich, Automation und Skript.
+    """
+
+    def __init__(self, hass: HomeAssistant, ignore_labels: Any = None) -> None:
+        self.hass = hass
+        self.ent_reg = er.async_get(hass)
+        self.dev_reg = dr.async_get(hass)
+        try:
+            self.area_reg = ar.async_get(hass)
+        except Exception:  # noqa: BLE001
+            self.area_reg = None
+        self.label_reg = None
+        if lr is not None:
+            try:
+                self.label_reg = lr.async_get(hass)
+            except Exception:  # noqa: BLE001
+                self.label_reg = None
+        self.ignore = {str(x) for x in (ignore_labels or []) if x}
+        self.suppressed: dict[str, int] = {"label": 0, "safety": 0}
+        self.hidden: set[str] = set()  # Objekte, die wegen eines Labels nicht bewertet wurden
+        self._ent: dict[str, tuple[str | None, frozenset[str]]] = {}
+        self._dev: dict[str, tuple[str | None, frozenset[str]]] = {}
+
+    # --- Bereiche & Labels ---
+    def _area_labels(self, area_id: str | None) -> set[str]:
+        if not area_id or self.area_reg is None:
+            return set()
+        try:
+            area = self.area_reg.async_get_area(area_id)
+        except Exception:  # noqa: BLE001
+            return set()
+        return set(getattr(area, "labels", None) or [])
+
+    def _device_raw(self, device_id: str) -> tuple[str | None, set[str]]:
+        try:
+            dev = self.dev_reg.async_get(device_id)
+        except Exception:  # noqa: BLE001
+            dev = None
+        if dev is None:
+            return None, set()
+        return getattr(dev, "area_id", None), set(getattr(dev, "labels", None) or [])
+
+    def device_meta(self, device_id: str) -> tuple[str | None, frozenset[str]]:
+        if device_id not in self._dev:
+            area, labels = self._device_raw(device_id)
+            self._dev[device_id] = (area, frozenset(labels | self._area_labels(area)))
+        return self._dev[device_id]
+
+    def entity_meta(self, entity_id: str) -> tuple[str | None, frozenset[str]]:
+        if entity_id not in self._ent:
+            reg = self.ent_reg.async_get(entity_id)
+            labels = set(getattr(reg, "labels", None) or []) if reg else set()
+            area = getattr(reg, "area_id", None) if reg else None
+            device_id = getattr(reg, "device_id", None) if reg else None
+            if device_id:
+                d_area, d_labels = self._device_raw(device_id)
+                labels |= d_labels
+                area = area or d_area
+            self._ent[entity_id] = (area, frozenset(labels | self._area_labels(area)))
+        return self._ent[entity_id]
+
+    def area_name(self, area_id: str | None) -> str | None:
+        if not area_id or self.area_reg is None:
+            return None
+        try:
+            area = self.area_reg.async_get_area(area_id)
+        except Exception:  # noqa: BLE001
+            area = None
+        return str(getattr(area, "name", None) or area_id)
+
+    def label_name(self, label_id: str) -> str:
+        if self.label_reg is not None:
+            try:
+                label = self.label_reg.async_get_label(label_id)
+                if label is not None and getattr(label, "name", None):
+                    return str(label.name)
+            except Exception:  # noqa: BLE001
+                pass
+        return label_id
+
+    # --- Ausschlüsse über Labels ---
+    def ignored_entity(self, entity_id: str) -> bool:
+        if not self.ignore or not entity_id:
+            return False
+        if self.entity_meta(entity_id)[1] & self.ignore:
+            self.hidden.add(entity_id)
+            self.suppressed["label"] = len(self.hidden)
+            return True
+        return False
+
+    def ignored_device(self, device_id: str) -> bool:
+        if not self.ignore or not device_id:
+            return False
+        if self.device_meta(device_id)[1] & self.ignore:
+            self.hidden.add("device:" + device_id)
+            self.suppressed["label"] = len(self.hidden)
+            return True
+        return False
+
+    # --- Schutz-Automationen ---
+    def is_safety_config(self, config: Any) -> bool:
+        """True, wenn die Trigger auf Alarm-/Wasser-/Rauch-Sensoren o. Ä. zeigen."""
+        if not isinstance(config, Mapping):
+            return False
+        refs: list[tuple[str, str]] = []
+        known = SAFETY_DOMAINS | {"binary_sensor"}
+        for key in ("triggers", "trigger"):
+            if key in config:
+                _collect_refs(config.get(key), key, refs, known)
+        if "use_blueprint" in config:
+            _collect_refs(config.get("use_blueprint"), "use_blueprint", refs, known, True)
+        for eid, _path in refs:
+            domain = eid.split(".")[0]
+            if domain in SAFETY_DOMAINS:
+                return True
+            if domain != "binary_sensor":
+                continue
+            st = self.hass.states.get(eid)
+            dc = st.attributes.get("device_class") if st is not None else None
+            if not dc:
+                reg = self.ent_reg.async_get(eid)
+                dc = (getattr(reg, "device_class", None) or getattr(reg, "original_device_class", None)) if reg else None
+            if str(dc or "") in SAFETY_DEVICE_CLASSES:
+                return True
+        return False
 
 
 # ---------------------------------------------------------------------- #
@@ -125,7 +286,7 @@ def _finding(
         "subject_ref": subject_ref,
         "params": params or {},
         "items_total": len(items),
-        "items": items[:MAX_FINDING_ITEMS],
+        "items": items,  # gekürzt wird erst am Ende (nach Bereich/Label-Auswertung)
         "link": link,
         "details": {k: v for k, v in (details or {}).items() if v not in (None, "")},
     }
@@ -203,7 +364,7 @@ def _object_link(kind: str, entity: Any) -> str:
     return f"/config/script/edit/{entity_id.split('.', 1)[-1]}" if entity_id else "/config/script/dashboard"
 
 
-def _find_broken_refs(hass: HomeAssistant) -> list[dict[str, Any]] | None:
+def _find_broken_refs(hass: HomeAssistant, ctx: _Ctx | None = None) -> list[dict[str, Any]] | None:
     """Findet Entitäten, auf die Automationen/Skripte zeigen, die es nicht gibt.
 
     Gibt None zurück, wenn die Konfigurationen nicht lesbar sind.
@@ -228,6 +389,8 @@ def _find_broken_refs(hass: HomeAssistant) -> list[dict[str, Any]] | None:
         if not refs:
             continue
         entity_id = str(getattr(entity, "entity_id", "") or "")
+        if ctx is not None and ctx.ignored_entity(entity_id):
+            continue
         state = hass.states.get(entity_id)
         by_target: dict[str, list[str]] = {}
         for eid, path in refs:
@@ -278,9 +441,11 @@ def _find_broken_refs(hass: HomeAssistant) -> list[dict[str, Any]] | None:
 # ---------------------------------------------------------------------- #
 # Entitäten: nicht verfügbar / verwaist / ungenutzt
 # ---------------------------------------------------------------------- #
-def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]:
+def _entity_findings(hass: HomeAssistant, now: datetime, ctx: _Ctx | None = None) -> list[dict[str, Any]]:
     ent_reg = er.async_get(hass)
+    ctx = ctx or _Ctx(hass)
     findings: list[dict[str, Any]] = []
+    entry_domains: set[str] = set()
 
     # Config-Entries, die nicht laufen → gemeinsame Ursache für ihre Entitäten.
     broken_entries: dict[str, Any] = {}
@@ -288,23 +453,35 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
         state = str(getattr(entry.state, "value", entry.state))
         if entry.source == "ignore":
             continue  # ignorierte Entdeckung – keine installierte Integration
+        entry_domains.add(entry.domain)
         if state in NOT_RUNNING_STATES and not entry.disabled_by:
             broken_entries[entry.entry_id] = (entry, state)
 
     covered: set[str] = set()  # Entitäten, die schon durch "Integration läuft nicht" erklärt sind
     for entry_id, (entry, state_name) in broken_entries.items():
         items = []
+        hidden = 0
         for ent in er.async_entries_for_config_entry(ent_reg, entry_id):
             st = hass.states.get(ent.entity_id)
             if st is not None and st.state == "unavailable":
                 covered.add(ent.entity_id)
+                if ctx.ignored_entity(ent.entity_id):
+                    hidden += 1
+                    continue
                 items.append(
                     {"name": _name(st, ent.entity_id), "ref": ent.entity_id, "kind": "entity"}
                 )
+        if hidden and not items:
+            continue  # alle Entitäten tragen ein ignoriertes Label → bewusst so gewollt
+        # setup_retry: HA versucht es selbst weiter (meist Gerät aus/offline) → mittel.
+        if state_name == "setup_retry":
+            severity = "medium"
+        else:
+            severity = "high" if items else "medium"
         findings.append(
             _finding(
                 f"integration_not_loaded:{entry_id}", "integration_not_loaded",
-                "integrity", "high" if items else "medium", 90,
+                "integrity", severity, 90,
                 entry.title or entry.domain, "integration", subject_ref=entry_id,
                 params={"state": state_name, "count": len(items), "domain": entry.domain},
                 items=items,
@@ -321,6 +498,8 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
             continue
         if st.domain in ("automation", "script"):
             continue  # eigene Befunde unter "Automationen & Skripte"
+        if ctx.ignored_entity(st.entity_id):
+            continue
         reg = ent_reg.async_get(st.entity_id)
         platform = (reg.platform if reg else None) or st.domain
         item = {"name": _name(st, st.entity_id), "ref": st.entity_id, "kind": "entity"}
@@ -329,16 +508,23 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
         else:
             unavailable.setdefault(platform, []).append(item)
 
+    def _group_link(platform: str, items: list[dict[str, Any]]) -> str | None:
+        """Genau ein Objekt → dessen Detail-Dialog; sonst die Integration (falls es sie als Eintrag gibt)."""
+        if len(items) == 1:
+            return f"#entity:{items[0]['ref']}"
+        return f"/config/integrations/integration/{platform}" if platform in entry_domains else None
+
     for platform, items in unavailable.items():
         items.sort(key=lambda i: i["name"].lower())
         findings.append(
             _finding(
+                # Nicht verfügbar ist oft gewollt (Gerät zeitweise aus) → immer nur „niedrig“.
                 f"unavailable_entities:{platform}", "unavailable_entities", "orphans",
-                "medium" if len(items) >= 10 else "low", 75,
+                "low", 75,
                 platform, "integration", subject_ref=platform,
                 params={"count": len(items), "domain": platform},
                 items=items,
-                link=f"/config/integrations/integration/{platform}",
+                link=_group_link(platform, items),
                 details={"domain": platform, "unavailable": len(items)},
             )
         )
@@ -350,13 +536,16 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
                 "low", 85, platform, "integration", subject_ref=platform,
                 params={"count": len(items), "domain": platform},
                 items=items,
-                link="/config/entities",
+                link=f"#entity:{items[0]['ref']}" if len(items) == 1 else None,
                 details={"domain": platform, "orphaned": len(items)},
             )
         )
 
     # Ungenutzte Automationen / Skripte (lange nicht ausgelöst).
     limit = timedelta(days=UNUSED_AFTER_DAYS)
+    configs: dict[str, Any] = {}
+    for _kind, obj in _config_objects(hass):
+        configs[str(getattr(obj, "entity_id", "") or "")] = getattr(obj, "raw_config", None)
     for st in hass.states.async_all():
         if st.domain == "automation":
             if st.state != "on":
@@ -365,6 +554,8 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
         elif st.domain == "script":
             ftype, kind = "unused_script", "script"
         else:
+            continue
+        if ctx.ignored_entity(st.entity_id):
             continue
         last = _as_dt(st.attributes.get("last_triggered"))
         never = last is None
@@ -378,6 +569,10 @@ def _entity_findings(hass: HomeAssistant, now: datetime) -> list[dict[str, Any]]
             if now - last < limit:
                 continue
             reference, confidence = last, 60
+        if kind == "automation" and ctx.is_safety_config(configs.get(st.entity_id)):
+            # Wasser-/Rauch-/Alarm-Automationen sollen möglichst nie auslösen.
+            ctx.suppressed["safety"] += 1
+            continue
         days = (now - reference).days
         if kind == "automation":
             uid = st.attributes.get("id")
@@ -489,6 +684,11 @@ def _collect_extra_refs(
                     if "{" not in area:
                         out.setdefault("area", []).append((area, sub))
                 continue
+            if skey in ("floor_id", "label_id"):
+                for ref in _split_ids(value):
+                    if "{" not in ref:
+                        out.setdefault(skey[:-3], []).append((ref, sub))
+                continue
             if skey in ("service", "action") and not in_data and isinstance(value, str):
                 svc = value.strip()
                 if ENTITY_RE.match(svc):
@@ -546,11 +746,48 @@ def _entity_issue(
 _ISSUE_WEIGHT = {
     "missing": 2, "disabled": 2, "missing_device": 2, "missing_area": 1,
     "unknown_action": 2, "orphaned": 1, "no_state": 1, "unavailable": 0,
+    "unknown_trigger_id": 2,
 }
 
 
+def _trigger_ids(config: Mapping[str, Any]) -> set[str] | None:
+    """IDs, die die Trigger einer Automation liefern (ohne eigene ID: ihre Position)."""
+    triggers = config.get("triggers", config.get("trigger"))
+    if triggers is None:
+        return None
+    if isinstance(triggers, Mapping):
+        triggers = [triggers]
+    if not isinstance(triggers, (list, tuple)):
+        return None
+    ids: set[str] = set()
+    for idx, trig in enumerate(triggers):
+        if not isinstance(trig, Mapping):
+            return None  # Trigger aus Vorlagen/Templates – nicht sicher auswertbar
+        tid = trig.get("id")
+        ids.add(str(idx) if tid is None else str(tid))
+    return ids
+
+
+def _trigger_id_conditions(node: Any, path: str, out: list[tuple[str, str]]) -> None:
+    """Bedingungen „Trigger-ID“ (condition: trigger) mit ihren IDs und Pfaden."""
+    if isinstance(node, Mapping):
+        if node.get("condition") == "trigger" and "id" in node:
+            raw = node.get("id")
+            values = raw if isinstance(raw, (list, tuple)) else [raw]
+            for val in values:
+                if val is not None and "{" not in str(val):
+                    out.append((str(val), path))
+        for key, value in node.items():
+            if key in ("triggers", "trigger"):
+                continue
+            _trigger_id_conditions(value, f"{path}/{key}" if path else str(key), out)
+    elif isinstance(node, (list, tuple)):
+        for idx, value in enumerate(node):
+            _trigger_id_conditions(value, f"{path}/{idx}", out)
+
+
 def _automation_findings(
-    hass: HomeAssistant, traces: dict[str, list[dict[str, Any]]] | None
+    hass: HomeAssistant, traces: dict[str, list[dict[str, Any]]] | None, ctx: _Ctx | None = None
 ) -> dict[str, list[dict[str, Any]]]:
     """Analysiert jede Automation und jedes Skript.
 
@@ -579,6 +816,8 @@ def _automation_findings(
         seen = True
         entity_id = str(getattr(entity, "entity_id", "") or "")
         if not entity_id:
+            continue
+        if ctx is not None and ctx.ignored_entity(entity_id):
             continue
         state = hass.states.get(entity_id)
         name = _name(state, entity_id)
@@ -690,6 +929,8 @@ def _automation_findings(
             issue = _entity_issue(hass, ent_reg, eid)
             if issue is None:
                 continue
+            if ctx is not None and issue != "missing" and ctx.ignored_entity(eid):
+                continue
             st = hass.states.get(eid)
             # "#entity:" öffnet im Panel den Detail-Dialog der Entität (Einstellungen, Verlauf).
             link = f"#entity:{eid}" if issue != "missing" else f"#finding:broken_reference:{eid}"
@@ -700,7 +941,7 @@ def _automation_findings(
                 add("device", dev, "missing_device", path)
             else:
                 device = dev_reg.async_get(dev)
-                if getattr(device, "disabled_by", None):
+                if getattr(device, "disabled_by", None) and not (ctx is not None and ctx.ignored_device(dev)):
                     add("device", dev, "disabled", path,
                         getattr(device, "name_by_user", None) or getattr(device, "name", None) or dev,
                         f"/config/devices/device/{dev}")
@@ -712,6 +953,14 @@ def _automation_findings(
             domain, service = svc.split(".", 1)
             if not hass.services.has_service(domain, service):
                 add("action", svc, "unknown_action", path)
+        if kind == "automation" and "use_blueprint" not in config:
+            defined = _trigger_ids(config)
+            if defined is not None:
+                used: list[tuple[str, str]] = []
+                _trigger_id_conditions(config, "", used)
+                for tid, path in used:
+                    if tid not in defined:
+                        add("trigger_id", tid, "unknown_trigger_id", path)
 
         if not problems:
             continue
@@ -962,7 +1211,7 @@ def _db_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
                     f"db_hotspot:{eid}", "db_hotspot", "storage", "low", 85,
                     str(eid), "entity", subject_ref=str(eid),
                     params={"rows": rows, "share": share},
-                    link=f"/history?entity_id={eid}",
+                    link=f"#entity:{eid}",
                     details={"entity_id": eid, "rows": rows, "share_percent": share,
                              "states_total": total},
                 )
@@ -970,7 +1219,7 @@ def _db_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
     return findings
 
 
-def _device_findings(hass: HomeAssistant) -> list[dict[str, Any]]:
+def _device_findings(hass: HomeAssistant, ctx: _Ctx | None = None) -> list[dict[str, Any]]:
     """Geräte, deren Integration (Config-Entry) es nicht mehr gibt."""
     dev_reg = dr.async_get(hass)
     ent_reg = er.async_get(hass)
@@ -984,6 +1233,8 @@ def _device_findings(hass: HomeAssistant) -> list[dict[str, Any]]:
         if not entries:
             continue
         if any(hass.config_entries.async_get_entry(e) is not None for e in entries):
+            continue
+        if ctx is not None and ctx.ignored_device(device.id):
             continue
         items.append({
             "name": getattr(device, "name_by_user", None) or device.name or device.id,
@@ -1053,13 +1304,354 @@ def _update_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
 
 
 # ---------------------------------------------------------------------- #
+# Konfiguration: Dashboards, Ressourcen, Energie, Bereiche, Etagen, Labels, Blueprints
+# ---------------------------------------------------------------------- #
+_DASH_ENTITY_KEYS = ("entity", "entity_id", "camera_image", "image_entity")
+MAX_DASH_REFS = 3000
+
+
+def collect_dashboard_refs(config: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Entitäten und Bereiche, auf die ein Dashboard zeigt (mit Ansicht › Kartentyp)."""
+    out: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    def add(kind: str, ref: str, where: str) -> None:
+        key = (kind, ref, where)
+        if key in seen or len(out) >= MAX_DASH_REFS:
+            return
+        seen.add(key)
+        out.append({"kind": kind, "ref": ref, "where": where})
+
+    def walk(node: Any, view: str, card: str, depth: int) -> None:
+        if depth > 40:
+            return
+        if isinstance(node, Mapping):
+            ctype = node.get("type")
+            if isinstance(ctype, str) and ctype:
+                card = ctype
+            where = f"{view} › {card}" if card else view
+            for key, value in node.items():
+                if key in _DASH_ENTITY_KEYS:
+                    for eid in _split_ids(value):
+                        if ENTITY_RE.match(eid):
+                            add("entity", eid, where)
+                elif key == "entities" and isinstance(value, (list, tuple)):
+                    for item in value:
+                        if isinstance(item, str):
+                            if ENTITY_RE.match(item.strip()):
+                                add("entity", item.strip(), where)
+                        else:
+                            walk(item, view, card, depth + 1)
+                elif key in ("area", "area_id"):
+                    for area in _split_ids(value):
+                        if area and "{" not in area:
+                            add("area", area, where)
+                elif isinstance(value, (Mapping, list, tuple)):
+                    walk(value, view, card, depth + 1)
+        elif isinstance(node, (list, tuple)):
+            for item in node:
+                walk(item, view, card, depth + 1)
+
+    views = config.get("views") if isinstance(config, Mapping) else None
+    for idx, view in enumerate(views or []):
+        if isinstance(view, Mapping):
+            name = view.get("title") or view.get("path") or f"#{idx + 1}"
+            walk(view, str(name), "", 0)
+    return out
+
+
+def collect_energy_refs(prefs: Any) -> list[dict[str, str]]:
+    """Statistik-/Entitäts-IDs aus den Energie-Einstellungen (Netz, Solar, Batterie, Gas, Wasser, Geräte)."""
+    out: list[dict[str, str]] = []
+
+    def walk(node: Any, where: str) -> None:
+        if isinstance(node, Mapping):
+            here = str(node.get("type") or where)
+            for key, value in node.items():
+                if isinstance(value, str):
+                    if (key.startswith("stat_") or key.startswith("entity_")) and ENTITY_RE.match(value):
+                        out.append({"ref": value, "where": f"{here} · {key}"})
+                else:
+                    walk(value, here if key not in ("device_consumption", "device_consumption_water") else key)
+        elif isinstance(node, (list, tuple)):
+            for item in node:
+                walk(item, where)
+
+    walk(prefs, "energy")
+    return out
+
+
+def _entity_known(hass: HomeAssistant, ent_reg: Any, eid: str) -> bool:
+    return hass.states.get(eid) is not None or ent_reg.async_get(eid) is not None
+
+
+def config_usage(hass: HomeAssistant) -> dict[str, set]:
+    """Was Automationen und Skripte verwenden: Bereiche, Etagen, Labels, Blueprints."""
+    used: dict[str, set] = {"area": set(), "floor": set(), "label": set(), "blueprint": set()}
+    for kind, entity in _config_objects(hass):
+        config = getattr(entity, "raw_config", None)
+        if not isinstance(config, Mapping):
+            continue
+        extra: dict[str, list[tuple[str, str]]] = {}
+        _collect_extra_refs(config, "", extra, set())
+        for key in ("area", "floor", "label"):
+            used[key].update(ref for ref, _ in extra.get(key, []))
+        bp = config.get("use_blueprint")
+        if isinstance(bp, Mapping) and bp.get("path"):
+            used["blueprint"].add(f"{kind}:{bp.get('path')}")
+    return used
+
+
+def _registry_list(reg: Any, list_attr: str, dict_attr: str) -> list[Any]:
+    if reg is None:
+        return []
+    fn = getattr(reg, list_attr, None)
+    try:
+        if callable(fn):
+            return list(fn())
+        items = getattr(reg, dict_attr, None) or {}
+        return list(items.values()) if isinstance(items, Mapping) else list(items)
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _dashboard_findings(hass: HomeAssistant, data: dict[str, Any], ctx: _Ctx) -> list[dict[str, Any]] | None:
+    dashboards = (data.get("config_refs") or {}).get("dashboards")
+    if dashboards is None:
+        return None
+    findings: list[dict[str, Any]] = []
+    for dash in dashboards:
+        items: dict[tuple[str, str], dict[str, Any]] = {}
+        for ref in dash.get("refs") or []:
+            kind, rid, where = ref.get("kind"), ref.get("ref"), ref.get("where")
+            if kind == "entity":
+                if _entity_known(hass, ctx.ent_reg, rid):
+                    continue
+                issue = "missing"
+            elif kind == "area":
+                if ctx.area_reg is None or ctx.area_reg.async_get_area(rid) is not None:
+                    continue
+                issue = "missing_area"
+            else:
+                continue
+            item = items.setdefault((kind, rid), {"name": rid, "ref": rid, "kind": kind, "issue": issue, "paths": []})
+            if where and where not in item["paths"] and len(item["paths"]) < 5:
+                item["paths"].append(where)
+        if not items:
+            continue
+        url = "/" + str(dash.get("id") or "lovelace").lstrip("/")
+        findings.append(
+            _finding(
+                f"dashboard_refs:{dash.get('id')}", "dashboard_refs", "config", "low", 90,
+                str(dash.get("title") or dash.get("id")), "dashboard", subject_ref=str(dash.get("id")),
+                params={"count": len(items)},
+                items=sorted(items.values(), key=lambda i: (i["kind"], i["ref"])),
+                link=url,
+                details={"dashboard": dash.get("id"), "missing": len(items)},
+            )
+        )
+    return findings
+
+
+def _resource_findings(data: dict[str, Any]) -> list[dict[str, Any]] | None:
+    resources = (data.get("config_refs") or {}).get("resources")
+    if resources is None:
+        return None
+    items = []
+    for res in resources:
+        if res.get("duplicate"):
+            items.append({"name": res.get("url"), "ref": res.get("url"), "kind": "resource", "issue": "duplicate",
+                          "count": res.get("duplicate")})
+        if res.get("missing_file"):
+            items.append({"name": res.get("url"), "ref": res.get("url"), "kind": "resource", "issue": "missing_file"})
+    if not items:
+        return []
+    return [
+        _finding(
+            "dashboard_resources", "dashboard_resources", "config", "low", 90,
+            "resources", "system", params={"count": len(items)}, items=items,
+            link="/config/lovelace/resources", details={"count": len(items)},
+        )
+    ]
+
+
+def _energy_findings(hass: HomeAssistant, data: dict[str, Any], ctx: _Ctx) -> list[dict[str, Any]] | None:
+    refs = (data.get("config_refs") or {}).get("energy")
+    if refs is None:
+        return None
+    items: dict[str, dict[str, Any]] = {}
+    for ref in refs:
+        rid = ref.get("ref")
+        if not rid or _entity_known(hass, ctx.ent_reg, rid):
+            continue
+        item = items.setdefault(rid, {"name": rid, "ref": rid, "kind": "entity", "issue": "missing", "paths": []})
+        if ref.get("where") and len(item["paths"]) < 5:
+            item["paths"].append(ref["where"])
+    if not items:
+        return []
+    return [
+        _finding(
+            "energy_refs", "energy_refs", "config", "low", 90, "energy", "system",
+            params={"count": len(items)}, items=sorted(items.values(), key=lambda i: i["ref"]),
+            link="/config/energy", details={"count": len(items)},
+        )
+    ]
+
+
+def _area_findings(hass: HomeAssistant, data: dict[str, Any], ctx: _Ctx) -> list[dict[str, Any]] | None:
+    """Fehlende Bereichs-Sensoren, leere Bereiche/Etagen, ungenutzte Labels."""
+    if ctx.area_reg is None or not hass.is_running:
+        return None
+    areas = _registry_list(ctx.area_reg, "async_list_areas", "areas")
+    areas = [a for a in areas if getattr(a, "id", None)]
+    devices = list(getattr(ctx.dev_reg, "devices", {}).values())
+    entities = list(getattr(ctx.ent_reg, "entities", {}).values())
+    usage = config_usage(hass)
+    dash = (data.get("config_refs") or {}).get("dashboards") or []
+    dash_areas = {r.get("ref") for d in dash for r in d.get("refs") or [] if r.get("kind") == "area"}
+    findings: list[dict[str, Any]] = []
+
+    # 1) Temperatur-/Feuchte-Sensor eines Bereichs gibt es nicht mehr.
+    sensor_items = []
+    for area in areas:
+        for attr, issue in (("temperature_entity_id", "missing_temperature"), ("humidity_entity_id", "missing_humidity")):
+            eid = getattr(area, attr, None)
+            if eid and not _entity_known(hass, ctx.ent_reg, eid):
+                sensor_items.append({"name": getattr(area, "name", area.id), "ref": area.id, "kind": "area",
+                                     "issue": issue, "paths": [eid], "link": f"/config/areas/area/{area.id}"})
+    if sensor_items:
+        findings.append(_finding("area_sensor_refs", "area_sensor_refs", "config", "low", 95, "areas", "system",
+                                 params={"count": len(sensor_items)}, items=sensor_items,
+                                 link="/config/areas/dashboard", details={"count": len(sensor_items)}))
+
+    # 2) Leere Bereiche: keine Geräte, keine Entitäten, kein Verweis.
+    used_areas = {getattr(d, "area_id", None) for d in devices} | {getattr(e, "area_id", None) for e in entities}
+    used_areas |= usage["area"] | dash_areas
+    empty = []
+    for area in areas:
+        if area.id in used_areas:
+            continue
+        if ctx.ignore and set(getattr(area, "labels", None) or []) & ctx.ignore:
+            continue
+        empty.append({"name": getattr(area, "name", area.id), "ref": area.id, "kind": "area",
+                      "link": f"/config/areas/area/{area.id}"})
+    if empty:
+        findings.append(_finding("empty_areas", "empty_areas", "config", "info", 80, "areas", "system",
+                                 params={"count": len(empty)}, items=sorted(empty, key=lambda i: str(i["name"]).lower()),
+                                 link="/config/areas/dashboard", details={"count": len(empty)}))
+
+    # 3) Leere Etagen: kein Bereich auf der Etage, kein Verweis.
+    floor_reg = None
+    if fr is not None:
+        try:
+            floor_reg = fr.async_get(hass)
+        except Exception:  # noqa: BLE001
+            floor_reg = None
+    floors = _registry_list(floor_reg, "async_list_floors", "floors")
+    used_floors = {getattr(a, "floor_id", None) for a in areas} | usage["floor"]
+    empty_f = [{"name": getattr(f, "name", f.floor_id), "ref": f.floor_id, "kind": "floor"}
+               for f in floors if getattr(f, "floor_id", None) and f.floor_id not in used_floors]
+    if empty_f:
+        findings.append(_finding("empty_floors", "empty_floors", "config", "info", 80, "floors", "system",
+                                 params={"count": len(empty_f)}, items=sorted(empty_f, key=lambda i: str(i["name"]).lower()),
+                                 link="/config/areas/dashboard", details={"count": len(empty_f)}))
+
+    # 4) Ungenutzte Labels: an nichts vergeben, nirgends verwendet, nicht als „nicht bewerten“ gewählt.
+    if ctx.label_reg is not None:
+        labels = _registry_list(ctx.label_reg, "async_list_labels", "labels")
+        used_labels: set[str] = set(ctx.ignore) | usage["label"]
+        for obj in devices + entities + areas + floors:
+            used_labels |= set(getattr(obj, "labels", None) or [])
+        unused = [{"name": getattr(lab, "name", lab.label_id), "ref": lab.label_id, "kind": "label"}
+                  for lab in labels if getattr(lab, "label_id", None) and lab.label_id not in used_labels]
+        if unused:
+            findings.append(_finding("unused_labels", "unused_labels", "config", "info", 85, "labels", "system",
+                                     params={"count": len(unused)}, items=sorted(unused, key=lambda i: str(i["name"]).lower()),
+                                     link="/config/labels", details={"count": len(unused)}))
+    return findings
+
+
+def _blueprint_findings(hass: HomeAssistant, data: dict[str, Any]) -> list[dict[str, Any]] | None:
+    blueprints = data.get("blueprints")
+    if not isinstance(blueprints, list) or not hass.is_running:
+        return None
+    if not any(True for _ in _config_objects(hass)):
+        return None  # Automationen/Skripte nicht lesbar → keine Aussage möglich
+    used = config_usage(hass)["blueprint"]
+    items = [{"name": b.get("name") or b.get("path"), "ref": f"{b.get('domain')}:{b.get('path')}", "kind": "blueprint",
+              "paths": [f"{b.get('domain')}/{b.get('path')}"]}
+             for b in blueprints if f"{b.get('domain')}:{b.get('path')}" not in used]
+    if not items:
+        return []
+    return [_finding("unused_blueprints", "unused_blueprints", "config", "info", 85, "blueprints", "system",
+                     params={"count": len(items)}, items=sorted(items, key=lambda i: str(i["name"]).lower()),
+                     link="/config/blueprint/dashboard", details={"count": len(items)})]
+
+
+# ---------------------------------------------------------------------- #
 # Einstieg
 # ---------------------------------------------------------------------- #
+def _apply_meta(ctx: _Ctx, findings: list[dict[str, Any]]) -> dict[str, Any]:
+    """Bereiche & Labels je Befund (für Filter im Panel), Bereich je Objekt; kürzt die Objektlisten."""
+    area_ids: set[str] = set()
+    label_ids: set[str] = set()
+    for f in findings:
+        areas: set[str] = set()
+        labels: set[str] = set()
+
+        def take(meta: tuple[str | None, frozenset[str]]) -> str | None:
+            area, labs = meta
+            if area:
+                areas.add(area)
+            labels.update(labs)
+            return area
+
+        ref = f.get("subject_ref")
+        if f.get("subject_type") in ("automation", "script", "entity") and ref and ENTITY_RE.match(str(ref)):
+            take(ctx.entity_meta(str(ref)))
+        for item in f.get("items") or []:
+            kind, iref = item.get("kind"), item.get("ref")
+            if not iref or not isinstance(iref, str):
+                continue
+            area = None
+            if kind in ("entity", "automation", "script") and ENTITY_RE.match(iref):
+                area = take(ctx.entity_meta(iref))
+            elif kind == "device":
+                area = take(ctx.device_meta(iref))
+            if area:
+                item["area"] = ctx.area_name(area)
+        f["areas"] = sorted(areas)
+        f["labels"] = sorted(labels)
+        f["items"] = (f.get("items") or [])[:MAX_FINDING_ITEMS]
+        area_ids |= areas
+        label_ids |= labels
+    all_labels: set[str] = set()
+    if ctx.label_reg is not None:
+        try:
+            all_labels = {str(getattr(lab, "label_id", None) or key) for key, lab in dict(getattr(ctx.label_reg, "labels", {}) or {}).items()}
+        except Exception:  # noqa: BLE001
+            all_labels = set()
+    return {
+        "area_names": {a: ctx.area_name(a) for a in sorted(area_ids)},
+        # Alle Labels aus Home Assistant (auch ohne Befund) – für Filter und Auswahl im Panel.
+        "label_names": {lab: ctx.label_name(lab) for lab in sorted(label_ids | ctx.ignore | all_labels)},
+        "ignore_labels": sorted(ctx.ignore),
+        "suppressed": dict(ctx.suppressed),
+    }
+
+
 def build_findings(
-    hass: HomeAssistant, data: dict[str, Any]
+    hass: HomeAssistant, data: dict[str, Any], *, ignore_labels: Any = None,
+    meta: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Erzeugt die Befundliste und nennt die Typen, die in diesem Scan auswertbar waren."""
+    """Erzeugt die Befundliste und nennt die Typen, die in diesem Scan auswertbar waren.
+
+    ``ignore_labels``: Label-IDs aus Home Assistant, deren Objekte nicht bewertet werden.
+    ``meta`` (optional) wird mit Bereichs-/Label-Namen und den Zählern für nicht
+    gezählte Befunde gefüllt.
+    """
     now = datetime.now(timezone.utc)
+    ctx = _Ctx(hass, ignore_labels)
     findings: list[dict[str, Any]] = []
     sources_ok: set[str] = set()
 
@@ -1074,15 +1666,15 @@ def build_findings(
         sources_ok.add(source)
         findings.extend(result)
 
-    run("refs", _find_broken_refs, hass)
-    run("entities", _entity_findings, hass, now)
+    run("refs", _find_broken_refs, hass, ctx)
+    run("entities", _entity_findings, hass, now, ctx)
     traces = None
     try:
         traces = _collect_traces(hass)
     except Exception as err:  # noqa: BLE001
         _LOGGER.debug("Traces nicht lesbar: %s", err)
     try:
-        for source, result in _automation_findings(hass, traces).items():
+        for source, result in _automation_findings(hass, traces, ctx).items():
             sources_ok.add(source)
             findings.extend(result)
     except Exception as err:  # noqa: BLE001
@@ -1091,7 +1683,7 @@ def build_findings(
         _enrich_unused(findings, traces, hass)
     except Exception as err:  # noqa: BLE001
         _LOGGER.debug("Traces für ungenutzte Automationen nicht auswertbar: %s", err)
-    run("devices", _device_findings, hass)
+    run("devices", _device_findings, hass, ctx)
     run("tokens", _token_findings, data, now)
     run("integrations", _integration_findings, data)
     if data.get("addons"):
@@ -1101,6 +1693,11 @@ def build_findings(
     run("database", _db_findings, data)
     run("database", _db_orphan_findings, data)
     run("updates", _update_findings, data)
+    run("dashboards", _dashboard_findings, hass, data, ctx)
+    run("resources", _resource_findings, data)
+    run("energy", _energy_findings, hass, data, ctx)
+    run("areas", _area_findings, hass, data, ctx)
+    run("blueprints", _blueprint_findings, hass, data)
 
     findings.sort(
         key=lambda f: (
@@ -1110,5 +1707,14 @@ def build_findings(
         )
     )
     findings = findings[:MAX_FINDINGS]
+    try:
+        info = _apply_meta(ctx, findings)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Bereiche/Labels nicht ermittelbar: %s", err)
+        for f in findings:
+            f["items"] = (f.get("items") or [])[:MAX_FINDING_ITEMS]
+        info = {"suppressed": dict(ctx.suppressed)}
+    if meta is not None:
+        meta.update(info)
     evaluated = sorted(t for t, src in TYPE_SOURCES.items() if src in sources_ok)
     return findings, evaluated
