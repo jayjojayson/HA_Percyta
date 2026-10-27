@@ -3,6 +3,7 @@
   "name": "HA Percyta – Permissions, Privacy & Data",
   "after_dependencies": [
     "backup",
+    "energy",
     "recorder"
   ],
   "codeowners": [
