@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ha_percyta"
-VERSION = "1.2.3"
+VERSION = "1.2.4"
 
 # Konfigurations-/Options-Keys
 CONF_OUTPUT_DIR = "output_dir"
@@ -48,7 +48,7 @@ SERVICE_EXPORT = "export"
 
 # Anzeigename / Branding (technische IDs wie DOMAIN bleiben unverändert)
 APP_NAME = "HA Percyta"
-APP_MODEL = "Permissions, Privacy & Data Scanner"
+APP_MODEL = "Permissions, Privacy & Data Center"
 
 # Report-Panel (Custom-Panel in der Seitenleiste)
 PANEL_URL_PATH = "ha_percyta_report"
@@ -79,6 +79,20 @@ WS_TYPE_ENTITY_DISABLE = "ha_percyta/entity_disable"
 WS_TYPE_ENTRY_RELOAD = "ha_percyta/entry_reload"
 WS_TYPE_DEVICE_REMOVE = "ha_percyta/device_remove"
 WS_TYPE_JOB_STATUS = "ha_percyta/job_status"
+WS_TYPE_SCAN_SUBSCRIBE = "ha_percyta/scan_subscribe"
+WS_TYPE_AUTOMATION_TEST = "ha_percyta/automation_test"
+WS_TYPE_RESOLVED_CLEAR = "ha_percyta/resolved_clear"
+
+# Scan-Fortschritt: Schritte in der Reihenfolge des Scans und Startwerte (Sekunden),
+# solange noch kein Scan gemessen wurde. Die Werte sind grobe Annahmen.
+SIGNAL_SCAN_PROGRESS = "ha_percyta_scan_progress"
+SCAN_STEPS: tuple[tuple[str, float], ...] = (
+    ("integrations", 2.0), ("addons", 3.0), ("cards", 1.0), ("blueprints", 1.0),
+    ("config", 1.0), ("users", 0.5), ("errors", 0.5), ("system", 3.0),
+    ("database", 8.0), ("backup", 1.0), ("inventory", 1.0), ("findings", 2.0), ("save", 1.0),
+)
+# Automation testen: so lange auf das Ende des Laufs warten (Sekunden).
+AUTOMATION_TEST_WAIT = 30
 
 # Persistenter Speicher für manuelle Risiko-Overrides (Store-Key)
 OVERRIDES_STORAGE_KEY = "ha_percyta_overrides"

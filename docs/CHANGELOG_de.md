@@ -3,6 +3,70 @@
 Alle wichtigen Änderungen an **HA Percyta**. English version: [CHANGELOG.md](CHANGELOG.md).
 Ältere Versionen: siehe [GitHub-Releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.4
+
+Folgeversion zu 1.2.3 mit Wünschen aus dem Alltag: klarere Zeitangaben auf der Befundseite, ein echtes Ergebnis für *Jetzt testen*, ein sichtbarer Scan-Fortschritt, eine Suche in den Befunden und ein lebendigeres Panel.
+
+### 🕒 Zuletzt beobachtet
+- Die Box *Auf einen Blick* eines Befunds zeigt jetzt **„Zuletzt beobachtet“** statt „Erstmals beobachtet“: bei Automations-Läufen (z. B. *Fehler beim Ausführen*) den Zeitpunkt des letzten fehlerhaften Laufs, sonst den letzten Scan, der den Befund noch gefunden hat.
+- Der Reiter **Verlauf** beginnt mit zwei Kästen **„Erstmals beobachtet“** (hervorgehoben) und **„Zuletzt beobachtet“**. Die Befundliste behält die Spalte *Seit*.
+
+### ▶ Jetzt testen mit Ergebnis
+- *Jetzt testen* hat die Automation bisher nur ausgelöst und danach ein ausgegrautes „✔“ gezeigt – ob der Lauf geklappt hat, war nicht zu sehen. Jetzt wartet HA Percyta auf den neuen Lauf (max. 30 s, erkannt am Kontext, andere gleichzeitige Läufe zählen nicht) und zeigt unter der Kopfkarte eine Ergebnis-Karte: **erfolgreich** (mit Dauer), **fehlgeschlagen** (Meldung und Schritt), **übersprungen** (lief schon), **vorzeitig beendet**, **läuft noch** oder **kein Lauf erkannt** (mit Hinweis, wenn die Automation ausgeschaltet ist) – dazu *Ablauf öffnen*.
+- Nach einem erfolgreichen Test wird der Befund mit einem neuen Scan erneut geprüft.
+- Der Button zeigt beim Warten *⏳ Test läuft …* und danach *▶ Erneut testen*.
+
+### 📊 Scan-Fortschritt in der Kopfzeile
+- Während ein Scan läuft, zeigt eine Anzeige neben *Neu scannen* einen **Fortschrittsring mit Prozentwert**, den **aktuellen Schritt** (z. B. *Datenbank*) und die **ungefähre Restzeit**; der Button *Neu scannen* füllt sich mit.
+- Die Schätzung beruht auf der Dauer der einzelnen Schritte beim vorigen Scan; beim ersten Scan nach einem Neustart steht dort *Schritt x von y*. Der Prozentwert läuft nie rückwärts; dauert ein Schritt länger, steht dort *gleich fertig* statt einer falschen Zeit.
+- Zum Schluss steht *Scan fertig in …*. Ein Scan, der anderswo gestartet wurde (automatischer Scan, Button-Entität), endet mit **„Neuen Stand anzeigen“** – ein Klick lädt das neue Ergebnis.
+- Kleine Bildschirme: Die Kopfzeile blendet Zeitstempel, Version und Downloads aus, damit *Neu scannen* sichtbar bleibt.
+
+### 🔎 Suche in den Befunden
+- Neues Suchfeld in der Box **Reports** neben den Sammel-Aktionen (*Alles auswählen* / *Auswahl leeren* stehen jetzt darunter; *Seite auswählen* heißt jetzt **Alles auswählen** – es wählt alle Befunde, die gerade in der Liste stehen). Gesucht wird im Titel, im betroffenen Objekt (Name und ID), in den **betroffenen Objekten** jedes Befunds (Entitäts-IDs, Namen, Fundstelle in der Konfiguration) und in den technischen Daten. Mehrere Wörter müssen alle vorkommen.
+- Beispiel: Nach einer Entitäts-ID suchen und alle Befunde zu Automationen, Skripten, Dashboards oder Integrationen sehen, die auf sie verweisen.
+- Liegt der Treffer nur in den betroffenen Objekten, zeigt die Zeile **„🔎 Treffer in betroffenen Objekten: …“**; ein Klick öffnet den Befund direkt im Reiter *Betroffene Objekte*, die passenden Zeilen sind hervorgehoben.
+- Anzeige *x von y Befunden passen*; *×* oder *Esc* leert die Suche. Funktioniert zusammen mit den Filtern Kategorie, Status, Schweregrad, Bereich und Label.
+
+### 👉 Direkt zur Lösung
+- Die Diagnose jedes Befunds endet jetzt mit **„Direkt zur Lösung“**: Buttons zur passenden Stelle in Home Assistant –
+  z. B. *Ablaufverfolgung öffnen* bei Automations-Fehlern, *Entität öffnen* / *Gerät öffnen* / *Integration öffnen* für
+  die betroffenen Objekte, *Automation bearbeiten*. Doppelte Ziele werden zusammengefasst; bei mehr als vier gibt es
+  *Alle n betroffenen Objekte ›*.
+
+### 🔗 Link-Menü – im Panel bleiben oder wechseln
+- Jeder Klick auf ein Ziel in Home Assistant (Buttons, IDs, Entitäts-/Geräte-Zahlen, Kacheln, Backup-Zeile) öffnet zuerst ein kleines Menü: **hier öffnen** (verlässt das Panel), **in neuem Tab öffnen**, Link kopieren. Bei Entitäten zusätzlich **Entität öffnen** (Dialog, du bleibst im Panel), Verlauf und Logbuch.
+- Das Menü bietet passende **weitere Ziele**, jeweils mit eigenem *neuer Tab*-Button: z. B. Entitäten-Zahl einer Integration → Geräteliste, die Integration selbst und – wenn die Integration nur ein Gerät bzw. eine Entität hat –  genau dieses; Automation → Ablaufverfolgung und umgekehrt; App → Protokoll der App.
+- **Rechtsklick** auf so ein Ziel öffnet dasselbe Menü (Shift + Rechtsklick zeigt das Menü des Browsers).
+
+### 🧭 Kopfzeile & Navigation
+- Die **Kopfzeile bleibt beim Scrollen stehen** (das Panel ist jetzt selbst der Scroll-Bereich) – Scan- und Datenbank-Fortschritt sind immer im Blick.
+- Zwei neue Icon-Buttons neben dem Menü wechseln schnell zwischen **Übersicht** und **Pflege-Center**; die aktuelle Seite ist hervorgehoben.
+
+### ✔ Zuletzt behoben
+- Die Anzahl ist **grün**, die Liste ist in **Seiten zu 10** aufgeteilt und lässt sich mit **„Verlauf leeren“** leeren (nur die Liste in HA Percyta; offene Befunde bleiben unverändert).
+
+### ✨ Lebendigeres Panel
+- Beim Öffnen blenden Kennzahlen, Übersichts-Boxen und Pflege-Center-Kacheln nacheinander ein, die Balken (Risiko-Verteilung, Speicher, Gewissheit) wachsen, die Zahlen zählen hoch und der Pflegebedarf-Ring füllt sich.
+- Nach einem Scan zählen **geänderte** Zahlen vom alten zum neuen Wert und pulsieren kurz – du siehst auf einen Blick, was sich geändert hat. Ebenso die Kategorie-Kacheln beim Wechsel zwischen *Offen / Erlaubt / …*.
+- Datenbank-Aufträge in der Kopfzeile zeigen jetzt denselben Fortschrittsring wie der Scan.
+- Seiten und Boxen blenden zügig ein: Die großen Hauptboxen kommen zuerst, dicht gestaffelt und sind nach etwa 0,5 s alle da; die kleinen Kacheln folgen direkt dahinter. Balken und Hochzählen laufen ruhig (1–2 s), damit man den Effekt auch sieht.
+- Animationen laufen nur beim Öffnen einer Seite oder wenn sich ein Wert ändert, nicht bei jeder Aktualisierung. Ist im Betriebssystem *Bewegung reduzieren* eingeschaltet, sind sie aus.
+
+### 📖 Dokumentation
+- Neuer README-Abschnitt **„So werden Sicherungen verwaltet“**: wo die Percyta-Datenbankkopien liegen, dass nur die letzten 2 bleiben (ältere werden automatisch entfernt, nie nach Alter), wie man Kopien ersetzt oder von Hand löscht und dass über HA Percyta erstellte Home-Assistant-Backups von HA Percyta nie gelöscht werden.
+- Der Untertitel lautet jetzt **„Permissions, Privacy & Data Center“** (vorher *… Data Scanner*): HA Percyta scannt nicht mehr nur, sondern lässt dich auch bearbeiten und aufräumen. Das in Home Assistant angezeigte Geräte-Modell ändert sich entsprechend.
+
+### 🐞 Fehlerbehebungen
+- **Speicher-Tabellen bündig:** *Systemspeicher nach Kategorie* und *Größte Speicher-Verbraucher* haben dieselbe Spaltenaufteilung – *Belegt* und *Größe* stehen genau untereinander.
+- **Reports:** Die Infobox *Was bedeuten Offen, Erlaubt …* und die Box *Gewollte Ausnahmen mit Labels* sind etwas eingerückt (die Dreiecke kommen besser zur Geltung); die Label-Box ist hervorgehoben, weil du dort aktiv steuerst.
+- **IDs in einer Zeile:** Lange Entitäts-IDs wurden unter *Betroffene Objekte* in schmalen Tabellen in einzelne Zeichen umbrochen; sie bleiben jetzt in einer Zeile (die Tabelle lässt sich bei Bedarf seitlich scrollen).
+- **Ein-/Ausschalten nach Zustand:** Bei einer ausgeschalteten Automation zeigte die Befundseite *Ausschalten*. Der Button richtet sich jetzt nach dem aktuellen Zustand in Home Assistant (*▶ Einschalten* / *⏸ Ausschalten*), wechselt nach dem Klick und die Kopfkarte zeigt den Hinweis *⏸ Ausgeschaltet*.
+
+### ⚠️ Hinweise
+- **Nach dem Update Home Assistant neu starten** – Fortschrittsanzeige, Test und *Verlauf leeren* brauchen den neuen Code. Läuft noch der alte, zeigt das Panel einfach keinen Fortschritt.
+- Die Restzeit ist eine Schätzung von HA Percyta, kein Wert von Home Assistant.
+
 ## v1.2.3
 
 Gewollte Zustände über Home-Assistant-Labels, in Percyta ausblenden/nicht berücksichtigen
@@ -81,14 +145,15 @@ Neue Kategorie Konfigurations-Prüfungen, sicheres Bereinigen von Aufgeräumtem,
 - **Panel konnte nach dem Speichern der Optionen aus der Seitenleiste verschwinden:** Das Speichern lud die Integration neu und
   entfernte dabei zuerst das Panel. Jetzt startet eine reine Label-Änderung nur einen neuen Scan (kein Neuladen). Beim
   Neuladen wegen anderer Optionen bleibt das Panel stehen; entfernt wird es nur, wenn die Integration deaktiviert oder
-  gelöscht wird. Das Panel wird als Erstes eingerichtet, jeder Schritt ist abgesichert, und ein Fehler steht im
+  gelöscht wird. Das Panel wird als Erstes eingerichtet, jeder Schritt ist abgesichert und ein Fehler steht im
   Home-Assistant-Protokoll („HA Percyta: Panel konnte nicht eingerichtet werden“).
 
 ### ⚠️ Hinweise
 - **Nach dem Update Home Assistant neu starten.** Sonst nutzt der Browser schon das neue Panel, HA aber noch den
   alten Code (z. B. Fehler *not a valid option*).
-- *Aufgeräumtes bereinigen* bietet nur Entitäten an, die mit HA Percyta entfernt wurden. Entfernungen aus 1.2.2
-  werden aus *Letzte Aktionen* übernommen – dort bereits gelöschte Einträge können nicht mehr angeboten werden.
+- *Aufgeräumtes bereinigen* bietet nur Entitäten an, die mit HA Percyta entfernt wurden. Mit 1.2.2 entfernte
+  Entitäten werden einmalig aus *Letzte Aktionen* übernommen (letzte 100 Einträge); Entitäten, die in 1.2.2 zusammen
+  mit einem Gerät entfernt wurden, sind nicht dabei.
 - Langzeitstatistik ist standardmäßig nicht angehakt. Gelöschte Daten lassen sich nur aus einer Sicherung zurückholen.
 
 ## v1.2.2
@@ -144,7 +209,7 @@ die du selbst startest, mit Erklärung, Vorschau, Bestätigung und (wo nötig) v
 - Vorschau zeigt Zeilen und den **Zeitraum je Datenart**, Einheit, aktuellen Zustand und Warnungen.
 - **Vorschau repariert**: kein Flackern/keine leere Vorschau mehr – die bisherige Tabelle bleibt beim Laden stehen,
   das Fenster bleibt oben verankert, ohne Auswahl erscheint ein Hinweis, eine eingetippte, nicht bestätigte ID wird
-  übernommen, veraltete Antworten werden verworfen, und nach einem Auftrag wird die Vorschau neu geladen
+  übernommen, veraltete Antworten werden verworfen und nach einem Auftrag wird die Vorschau neu geladen
   (Bestätigung wird zurückgesetzt).
 - **Button „Vorschau laden“ entfernt** – die Vorschau lädt bei jeder Änderung der Auswahl automatisch; der Button hat
   nur die Auswahlliste geschlossen und verwirrt. Neue Spalte **Platz (ca.)** beim Löschen von Daten, dazu die Summe
@@ -212,7 +277,7 @@ die du selbst startest, mit Erklärung, Vorschau, Bestätigung und (wo nötig) v
   eingerichtet. Deaktivierte Einträge waren schon ausgenommen. Im Fenster „Neu laden“ führen der Name und
   **Öffnen ↗** direkt zur Integration in Home Assistant.
 - **Automationen mit Problemen:** Kachel und Pflegebedarf zählen jetzt dasselbe – jede Automation/jedes Skript einmal,
-  nur offene Befunde mit Schweregrad hoch/mittel, und **ausgeschaltete Automationen zählen nicht** (ein alter Fehler
+  nur offene Befunde mit Schweregrad hoch/mittel und **ausgeschaltete Automationen zählen nicht** (ein alter Fehler
   einer ausgeschalteten Automation ist nur noch ein Hinweis mit Schweregrad niedrig). Vorher zählte der Pflegebedarf
   auch niedrige Befunde und ausgeschaltete Automationen mit, deshalb sank er durch Erlauben/Ausschalten nicht.
   Hinweis: Eine Automation kann mehrere Befunde haben (z. B. *Fehler beim Ausführen* und *Problematische

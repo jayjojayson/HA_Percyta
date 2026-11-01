@@ -13,7 +13,7 @@ import os
 import re
 import time
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from typing import Any
 
@@ -261,8 +261,10 @@ class HAPercytaScanner:
         include_storage: bool = True,
         overrides: dict[str, str] | None = None,
         ignore_labels: list[str] | None = None,
+        progress: Callable[[str], None] | None = None,
     ) -> None:
         self.hass = hass
+        self._progress_cb = progress
         self.ignore_labels = list(ignore_labels or [])
         self.include_addons = include_addons
         self.include_secrets = include_secrets
@@ -270,18 +272,38 @@ class HAPercytaScanner:
         self.include_storage = include_storage
         self.overrides = overrides or {}
 
+    def _step(self, key: str) -> None:
+        """Meldet den nächsten Scan-Schritt (für die Fortschrittsanzeige im Panel)."""
+        if self._progress_cb is None:
+            return
+        try:
+            self._progress_cb(key)
+        except Exception as err:  # noqa: BLE001 – Anzeige darf den Scan nie stören
+            _LOGGER.debug("Scan-Fortschritt nicht meldbar: %s", err)
+
     async def scan_all(self) -> dict[str, Any]:
         """Führt einen vollständigen Scan durch und gibt die Ergebnisse zurück."""
+        self._step("integrations")
         integrations = await self._scan_integrations()
+        self._step("addons")
         addons = await self._scan_addons() if self.include_addons else []
+        self._step("cards")
         custom_cards = await self._scan_custom_cards()
+        self._step("blueprints")
         blueprints = await self._scan_blueprints()
+        self._step("config")
         config_refs = await self._scan_config_refs()
+        self._step("users")
         users, tokens = await self._scan_users_and_tokens()
+        self._step("errors")
         errors = self._scan_errors() if self.include_errors else []
+        self._step("system")
         system = await self._scan_system()
+        self._step("database")
         database = await self._scan_database() if self.include_storage else {}
+        self._step("backup")
         backup = await self._scan_backup()
+        self._step("inventory")
         try:
             inventory = self._scan_inventory()
         except Exception as err:  # noqa: BLE001
@@ -400,6 +422,7 @@ class HAPercytaScanner:
         }
 
         # Befunde ableiten (eigene Auswertung; Fehler hier dürfen den Scan nie stoppen).
+        self._step("findings")
         try:
             meta: dict[str, Any] = {}
             findings, evaluated = build_findings(

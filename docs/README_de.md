@@ -4,11 +4,11 @@
 
 <h1 align="center">HA Percyta</h1>
 
-<p align="center">Home Assistant Permissions, Privacy &amp; Data Scanner</p>
+<p align="center">Home Assistant Permissions, Privacy &amp; Data Center</p>
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.3-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.4-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -106,13 +106,19 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
     Befund beim nächsten Scan jeden Status und steht unter *Zuletzt behoben*.
   - **Betroffene Objekte** in den Befund-Details: Die **ID ist anklickbar** – Entitäten öffnen ihren
     Detail-Dialog in Home Assistant (Einstellungen, Verlauf), Geräte und Bereiche ihre HA-Seite; ein
-    **Kopier-Button** kopiert die ID. *In Home Assistant öffnen* und die ID-Links sind echte Links – Rechtsklick
-    oder Strg/Cmd-Klick öffnet sie in einem neuen Tab (bei Entitäten deren Verlauf), so bleibst du in HA Percyta.
+    **Kopier-Button** kopiert die ID. *In Home Assistant öffnen* und die ID-Links sind echte Links – Strg/Cmd-Klick
+    öffnet sie in einem neuen Tab. Seit 1.2.4 öffnet ein Klick oder Rechtsklick auf ein Ziel in Home Assistant ein
+    kleines **Link-Menü**: hier öffnen (verlässt das Panel), in neuem Tab öffnen, kopieren und passende weitere Ziele
+    (z. B. *Entität öffnen* als Dialog, Geräteliste, Integration, Ablaufverfolgung, Logbuch).
   - **Zuletzt behoben (letzte 30 Tage)** – jeder Eintrag ist **anklickbar** (neu in 1.2.2): Er zeigt,
     was das Problem war, die betroffenen Objekte *wie sie damals waren* inkl. Spalte **„Jetzt“** mit dem
     aktuellen Zustand, die technischen Daten und einen **Verlauf** (erstmals beobachtet → welche Objekte
     im Lauf der Zeit hinzukamen oder behoben wurden → behoben) sowie die Dauer. Offene Befunde haben
-    denselben Reiter **Verlauf**.
+    denselben Reiter **Verlauf**; seit 1.2.4 endet die Diagnose mit **Direkt zur Lösung** (Buttons zur
+    Ablaufverfolgung, Entität, Gerät, Integration …), die Liste *Zuletzt behoben* hat Seiten zu 10 und *Verlauf leeren*,
+    und der Reiter Verlauf beginnt mit *Erstmals beobachtet* und *Zuletzt
+    beobachtet*. Die Box *Auf einen Blick* eines offenen Befunds zeigt *Zuletzt beobachtet*: bei
+    Automations-Läufen das letzte Auftreten, sonst den letzten Scan, der ihn noch gefunden hat.
 
 - **🧽 Pflege-Center** – die Wartungs-Ansicht deines Systems: ein **Pflegebedarf** in Prozent (0 % = alles
   in Ordnung) im Verhältnis zur Größe deiner Installation mit Aufschlüsselung per *„Warum?“*, eine Kachel
@@ -137,7 +143,7 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
   - Ein angezeigter Wert **verschwindet nach 20 Sekunden**, beim Anzeigen eines anderen Werts, beim
     Neuaufbau oder Verlassen des Panels und wenn der Browser-Tab in den Hintergrund geht. *Kopieren*
     legt den Wert in die Zwischenablage, ohne ihn anzuzeigen.
-  - Das Panel fügt Daten nie als HTML ein (keine `innerHTML`-Sinks, nur Text), und Links aus den
+  - Das Panel fügt Daten nie als HTML ein (keine `innerHTML`-Sinks, nur Text) und Links aus den
     Scan-Daten werden nur geöffnet, wenn sie interne HA-Pfade oder `http(s)` sind – `javascript:` u. Ä.
     werden ignoriert. Die Klartext-Anzeige lässt sich in den Optionen **komplett abschalten**.
 - **Apps** – über die Supervisor-API: welche Apps haben `full_access`,
@@ -233,12 +239,21 @@ Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ä
   - **Sortierbare Tabellen:** Klick auf einen Spaltenkopf sortiert auf-/absteigend.
   - Buttons für *Neu scannen* und **Download als MD/HTML** sowie ein Button rechts im
     Header zum Ein-/Ausblenden der HA-Seitenleiste sind eingebaut.
+  - **Feste Kopfzeile & Schnell-Navigation** (neu in 1.2.4): Die Kopfzeile bleibt beim Scrollen sichtbar; zwei
+    Icon-Buttons neben dem Menü wechseln zwischen *Übersicht* und *Pflege-Center*.
+  - **Scan-Fortschritt** (neu in 1.2.4): Während ein Scan läuft, zeigt ein Ring neben *Neu scannen*
+    den aktuellen Schritt, den Prozentwert und die ungefähre Restzeit. Die Schätzung beruht auf der
+    Dauer der Schritte beim vorigen Scan (erster Scan nach einem Neustart: Schritt x von y). Ein Scan,
+    der anderswo gestartet wurde (automatischer Scan, Button-Entität), endet mit *Neuen Stand anzeigen*.
   - **Automatischer Scan beim Öffnen:** Beim Aufruf des Panels über die Seitenleiste wird
     automatisch ein frischer Scan ausgeführt; danach greift man bei Bedarf manuell über
     *Neu scannen* ein.
 - **🧭 Reports:** die dritte Box des Reports (nach *Speicher & System* und *Bestand & Zustand*). Die Kategorie-Kacheln filtern die Liste, die Reiter
   wechseln zwischen *Offen / Erlaubt / Zurückgestellt / Ausgeblendet*. Befunde ankreuzen (oder
-  *Seite auswählen*) und mit den Buttons über der Liste gesammelt bearbeiten. Ein Klick auf einen
+  *Alles auswählen*) und mit den Sammel-Buttons bearbeiten. **Suche** (neu in 1.2.4): Das
+  Suchfeld durchsucht auch die betroffenen Objekte und technischen Daten jedes Befunds – z. B. eine
+  Entitäts-ID eingeben und alle Befunde sehen, die auf sie verweisen; ein Treffer in den betroffenen Objekten steht
+  in der Zeile und ist in der Detailansicht hervorgehoben. Ein Klick auf einen
   Befund öffnet die Detailansicht; *Esc* oder der Zurück-Button bringt dich genau an die Stelle zurück,
   an der du warst (offene Boxen, Scroll-Position).
   **Grenzen und Annahmen:** Verweise werden für Automationen und Skripte geprüft
@@ -320,7 +335,7 @@ auswählen“* machen das Aufräumen in einem Rutsch einfach.
 | 🔁 **Entität ersetzen** | Gerätetausch: Die **neue Entität übernimmt die ID der alten**, Verlauf und Langzeitstatistik (z. B. Energie-Dashboard) laufen nahtlos weiter. | Sicherung → alte Entität aus der Entitäten-Registry entfernen → neue Entität auf die alte ID umbenennen → optional den kurzen eigenen Verlauf der neuen Entität löschen. |
 | ✏️ **Umbenennen** | Benennt eine Entität samt Verlauf und Statistik auf eine **freie** ID um. Geht auch nur für den Verlauf (Entität gibt es nicht mehr). | Umbenennen in der Entitäten-Registry (der Recorder zieht die Daten mit) bzw. `async_update_states_metadata` / Statistik-Metadaten. |
 | 🗑️ **Daten löschen** | Drei getrennte Häkchen: **Verlauf** (Zustände & Ereignisse), **Kurzzeitstatistik** (5-Minuten-Werte) und **Langzeitstatistik** (Stundenwerte, z. B. Energie-Dashboard – standardmäßig aus). Alles oder **nur Daten älter als 7/30/90/365 Tage**. | `recorder.purge_entities` (`keep_days`), die Statistik-Löschfunktion des Recorders bzw. – für nur eine Tabelle oder einen Zeitraum – eine Recorder-Aufgabe im Recorder-Thread, genau wie Home Assistant selbst Zeiträume löscht. Die Metadaten bleiben, damit z. B. die Langzeitstatistik weiterläuft. |
-| 🧹 **Aufräumen** | Löscht sofort alle Zustände, Ereignisse und Kurzzeitstatistiken der ganzen Datenbank, die älter als N Tage sind, und kann sie danach **verkleinern** (repack/VACUUM). Langzeitstatistiken bleiben. Eine **Vorschau** zeigt vorher, wie viele Zeilen je Datenart gelöscht werden, die am meisten betroffenen Entitäten und den ungefähren Platz. | `recorder.purge` (`keep_days`, `repack`). |
+| 🧹 **Aufräumen** | Löscht sofort alle Zustände, Ereignisse und Kurzzeitstatistiken der ganzen Datenbank, die älter als N Tage sind und kann sie danach **verkleinern** (repack/VACUUM). Langzeitstatistiken bleiben. Eine **Vorschau** zeigt vorher, wie viele Zeilen je Datenart gelöscht werden, die am meisten betroffenen Entitäten und den ungefähren Platz. | `recorder.purge` (`keep_days`, `repack`). |
 | 👻 **Verwaiste Entitäten** | Entfernt Einträge aus der Entitäten-Registry, die keine Integration mehr bereitstellt – optional samt Verlauf und Statistik. Aktive Entitäten sind gesperrt. | Entitäten-Registry `async_remove` (+ Purge). Die Registry steckt im HA-Backup, nicht in der Datenbank-Kopie. |
 | 💾 **Sicherungen** | Kopie der SQLite-Datenbankdatei (konsistente Online-Kopie, geprüft mit `PRAGMA quick_check`, die letzten 2 bleiben in `/config/ha_percyta_db_backups`) oder ein Home-Assistant-Backup. Zeigt Datenbankgröße, benötigten und freien Speicher; **„Vorhandene Percyta-Kopie ersetzen“** löscht bei knappem Speicher zuerst die alte Kopie. | SQLite-Backup-API · `hassio.backup_partial`/`backup_full` bzw. `backup.create_automatic`. |
 | 📜 **Protokoll** | Wer hat wann was gemacht (inkl. Abrufe von Secrets). | Gespeichert in `.storage/ha_percyta_audit`. |
@@ -379,8 +394,40 @@ Percyta-Kopien in `/config/ha_percyta_db_backups` zu löschen gibt Speicher frei
 wechselt der Button **☰ Liste / ▦ Kacheln** (oben rechts) zwischen kompakten Kacheln und einer **Liste** mit Name,
 ID und Zustand – so lassen sich lange Auswahlen schnell sichten und einzelne Einträge mit × herausnehmen; ab 8
 gewählten Einträgen filtert ein Suchfeld die Liste. Die Ansicht wird gemerkt. Die Vorschau
-behält beim Laden die bisherige Tabelle, zeigt einen Hinweis, wenn noch nichts ausgewählt ist, und
+behält beim Laden die bisherige Tabelle, zeigt einen Hinweis, wenn noch nichts ausgewählt ist und
 übernimmt eine eingetippte, noch nicht mit Enter bestätigte ID.
+
+#### 💾 So werden Sicherungen verwaltet
+
+Es gibt zwei Arten von Sicherung. Sie werden unterschiedlich behandelt:
+
+**1. Percyta-Datenbankkopie** (Option *Kopie der Datenbank-Datei erstellen*, nur SQLite)
+
+| | |
+|---|---|
+| **Wo** | `/config/ha_percyta_db_backups/`, Dateiname `home-assistant_v2_JJJJMMTT_HHMMSS.db` |
+| **Vor dem Kopieren** | Der freie Speicher wird geprüft (Datenbankgröße + 512 MB Reserve). Die Kopie ist ein konsistenter Schnappschuss, während Home Assistant weiterläuft und wird mit `PRAGMA quick_check` geprüft; erst dann bekommt sie ihren endgültigen Namen. Bricht eine Kopie ab, bleibt eine `*.part`-Datei – sie wird beim nächsten Lauf entfernt. |
+| **Wie viele bleiben** | **Die letzten 2 Kopien.** Jede neue Kopie löscht automatisch die älteren – nur eigene Dateien von HA Percyta in diesem Ordner, nie etwas anderes. |
+| **Löschen nach Alter?** | **Nein.** Eine Kopie bleibt, bis eine neuere sie aus den letzten 2 verdrängt oder du sie selbst löschst. |
+| **Speicher knapp** | **„♻️ Vorhandene Percyta-Kopie ersetzen“** löscht die vorhandenen Kopien *vor* der neuen (nur, wenn der Platz danach reicht). |
+| **Von Hand löschen** | **💾 Sicherungen der Datenbank** öffnen (Pflege-Center-Kachel *Letzte Percyta-Sicherung* → *Sichern …*, oder *Datenbank → Datenbank bearbeiten → Sicherungen*). Das Fenster listet jede Kopie mit Datum und Größe und einem **Löschen**-Button. Die Datei selbst zu löschen (Samba, File Editor …) geht auch. Löschen im Fenster steht im **Protokoll** (*Sicherung gelöscht*). |
+| **Zurückspielen** | Siehe *Datenbank-Kopie zurückspielen* weiter unten. |
+
+**2. Home-Assistant-Backup** (Option *Home-Assistant-Backup erstellen*)
+
+HA Percyta **bittet nur Home Assistant, es zu erstellen**:
+- mit **Supervisor** (HA OS / Supervised): ein Teil-Backup *Home Assistant* (Konfiguration inkl. Datenbank) mit dem Namen
+  `HA Percyta JJJJ-MM-TT HH:MM`; bei einer **externen Datenbank** (z. B. MariaDB) ein Voll-Backup, weil nur das sie enthält;
+- ohne Supervisor (Core / Container): der eigene Backup-Dienst von Home Assistant (`backup.create_automatic`); den Namen
+  wählt dann Home Assistant.
+
+**HA Percyta löscht diese Backups nie.** Sie werden in Home Assistant verwaltet (*Einstellungen → System → Backups*),
+auch über dessen eigene Aufbewahrungs-Einstellung. Ob diese Aufbewahrung auch für auf diesem Weg erstellte Backups gilt,
+haben wir nicht geprüft – bitte die Backup-Einstellungen kontrollieren und alte Backups bei Bedarf selbst löschen.
+
+> **Gut zu wissen:** Der Ordner mit den Percyta-Kopien liegt in `/config`. Ob er in deinen Home-Assistant-Backups
+> landet, hängt von deinen Backup-Einstellungen ab (Annahme – nicht pro Einrichtung geprüft). Wenn nach einem Aufräumen
+> alles funktioniert, kannst du die Kopie löschen, um Speicher zu sparen.
 
 **Datenbank-Kopie zurückspielen:** Home Assistant stoppen, die Datei aus
 `/config/ha_percyta_db_backups/` nach `/config/home-assistant_v2.db` kopieren, Home Assistant starten.
@@ -469,7 +516,12 @@ danebenliegen. Werte wie `api_key=…`, `token=…` oder `password=…` werden i
 - **Zugriffstokens widerrufen** – Button in der Tabelle *Access Tokens* und im Befund *Ungenutzter
   Zugriffstoken*. Der Token deiner eigenen, aktuellen Sitzung ist geschützt. Wird protokolliert.
 - **Automationen** – *Einschalten* direkt im Befund *Ausgeschaltete Automationen*; *Jetzt testen*
-  (führt die Aktionen ohne Bedingungen aus) und *Ausschalten* in den Automations-Befunden.
+  (führt die Aktionen ohne Bedingungen aus) und *Einschalten* / *Ausschalten* (je nach aktuellem Zustand) in den
+  Automations-Befunden. Seit 1.2.4
+  wartet *Jetzt testen* auf den Lauf (max. 30 s) und zeigt das Ergebnis unter der Kopfkarte: erfolgreich
+  (mit Dauer), fehlgeschlagen (mit Meldung und Schritt), übersprungen, läuft noch oder kein Lauf erkannt –
+  mit Link zur Ablaufverfolgung. Automationen ohne `id:` haben keine Ablaufverfolgung, dort lässt sich nur
+  „ausgelöst“ anzeigen.
 - **Abkürzungen in Befunden** – *Datenleichen* → löschen, *Verwaiste Entitäten* → aus der Registry
   entfernen, *Datenbank-Hotspot* → alten Verlauf löschen.
 
@@ -493,7 +545,7 @@ Siehe [CHANGELOG_de.md](CHANGELOG_de.md) (English: [CHANGELOG.md](CHANGELOG.md))
 
 Scans **lesen** ausschließlich – sie verändern nichts an deiner Installation. Verändert wird nur
 etwas über die Aktions-Buttons (Datenbank-Werkzeuge, verwaiste Entitäten, Tokens widerrufen,
-Automationen ein/aus), und nur, wenn du sie selbst startest (mit Bestätigung und, wo nötig, Sicherung). Gespeichert werden eigene Daten (Risiko-Overrides, Befund-Status und -Verlauf,
+Automationen ein/aus) und nur, wenn du sie selbst startest (mit Bestätigung und, wo nötig, Sicherung). Gespeichert werden eigene Daten (Risiko-Overrides, Befund-Status und -Verlauf,
 „Zuletzt behoben“, Vergleichsstand für „Neu seit letztem Scan“, Protokoll).
 Reports werden lokal im gewählten Ausgabeverzeichnis gespeichert.
 

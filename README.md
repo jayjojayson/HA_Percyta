@@ -4,11 +4,11 @@
 
 <h1 align="center">HA Percyta</h1>
 
-<p align="center">Home Assistant Permissions, Privacy &amp; Data Scanner</p>
+<p align="center">Home Assistant Permissions, Privacy &amp; Data Center</p>
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.3-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.4-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -102,13 +102,18 @@ system from one panel.
     really fixed, the finding leaves every status with the next scan and appears under *Recently resolved*.
   - **Affected objects** in the finding details: the **ID is clickable** – entities open their Home Assistant
     detail dialog (settings, history), devices and areas their HA page; a **copy button** copies the ID.
-    *Open in Home Assistant* and the ID links are real links – right-click or Ctrl/Cmd-click opens them in a
-    new tab (for entities: their history), so you can stay in HA Percyta.
+    *Open in Home Assistant* and the ID links are real links – Ctrl/Cmd-click opens them in a new tab. Since 1.2.4
+    a click or right-click on any target in Home Assistant opens a small **link menu**: open here (leaves the
+    panel), open in a new tab, copy, plus fitting extra targets (e.g. *Open entity* as a dialog, device list,
+    integration, trace, logbook).
   - **Recently resolved (last 30 days)** – every entry is **clickable** (new in 1.2.2): it shows what
     the problem was, the affected objects *as they were* incl. a **“Now”** column with their current
     state, the technical data and a **history timeline** (first observed → which objects were added or
     fixed over time → resolved), plus how long the finding existed. Open findings have the same
-    **History** tab.
+    **History** tab; since 1.2.4 the diagnosis ends with **Straight to the fix** (buttons to the trace, entity,
+    device, integration …), the *Recently resolved* list has pages of 10 and *Clear history*, and the History tab starts with *First observed* and *Last observed*. The *At a glance*
+    box of an open finding shows *Last observed*: for automation runs the last occurrence, otherwise the
+    last scan that still found it.
 
 - **🧽 Care center** – the maintenance view of your system: a **maintenance need** score (0 % = all fine)
   relative to the size of your installation with a *“Why?”* breakdown, one tile per topic (orphaned data,
@@ -251,6 +256,12 @@ Options can be changed at any time via **Configure** on the integration.
   - **Sortable tables:** click a column header to sort ascending/descending.
   - Buttons for *Rescan* and **Download as MD/HTML**, plus a button on the right of the
     header to show/hide the HA sidebar, are built in.
+  - **Fixed header & quick navigation** (new in 1.2.4): the header stays visible while scrolling; two icon
+    buttons next to the menu switch between *Overview* and *Care center*.
+  - **Scan progress** (new in 1.2.4): while a scan runs, a ring next to *Rescan* shows the current
+    step, the percentage and the approximate time left. The estimate uses how long each step took in
+    the previous scan (first scan after a restart: step x of y). A scan started elsewhere (automatic
+    scan, button entity) ends with *Show new results*.
   - **View is preserved:** when a scan runs in the background the panel only refreshes the
     data – open boxes, sorting and scroll position stay as they are. The last view (open boxes,
     sorting) is remembered in the browser and applies again when you leave the panel and come
@@ -258,8 +269,11 @@ Options can be changed at any time via **Configure** on the integration.
   - **Automatic scan on open:** opening the panel from the sidebar runs a fresh scan
     automatically; after that you can trigger one manually via *Rescan*.
 - **🧭 Reports:** the third box of the report (after *Storage & System* and *Inventory & Health*). The category tiles filter the list, the tabs
-  switch between *Open / Allowed / Snoozed / Hidden*. Tick findings (or *Select page*) and use the
-  buttons above the list for bulk actions. A click on a finding opens its detail view with
+  switch between *Open / Allowed / Snoozed / Hidden*. Tick findings (or *Select all*) and use the
+  bulk action buttons. **Search** (new in 1.2.4): the search field also searches
+  the affected objects and technical data of every finding – e.g. enter an entity ID to see every finding that
+  refers to it; a match inside the affected objects is shown in the row and highlighted in the detail view.
+  A click on a finding opens its detail view with
   *Esc* or the back button returning you to exactly the place you left (open boxes, scroll position).
   **Limits and assumptions:** references are checked for automations and scripts
   (entity IDs under `entity_id`, blueprint inputs, `device_id`, `area_id`, actions and common
@@ -396,6 +410,38 @@ The view is remembered. The preview keeps the
 previous table while loading, shows a hint when nothing is selected yet and takes over an ID you typed
 but did not confirm with Enter.
 
+#### 💾 How backups are managed
+
+There are two kinds of backup. They are handled differently:
+
+**1. Percyta database copy** (option *Copy the database file*, SQLite only)
+
+| | |
+|---|---|
+| **Where** | `/config/ha_percyta_db_backups/`, file name `home-assistant_v2_YYYYMMDD_HHMMSS.db` |
+| **Before copying** | The free space is checked (database size + 512 MB reserve). The copy is a consistent snapshot taken while Home Assistant keeps running and is verified with `PRAGMA quick_check`; only then it gets its final name. A copy that is interrupted leaves a `*.part` file – it is removed on the next run. |
+| **How many are kept** | **The last 2 copies.** Every new copy automatically deletes the older ones – only HA Percyta's own files in that folder, never anything else. |
+| **Deleted by age?** | **No.** A copy stays until a newer one pushes it out of the last 2 or you delete it yourself. |
+| **Space is short** | **“♻️ Replace the existing Percyta copy”** deletes the existing copies *before* the new one is made (only if the space is then sufficient). |
+| **Delete by hand** | Open **💾 Database backups** (care center tile *Last Percyta backup* → *Back up …*, or *Database → Edit database → Backups*). It lists every copy with date and size and a **Delete** button. Deleting the file yourself (Samba, File editor …) works as well. Deleting in the dialog is recorded in the **log** (*Backup deleted*). |
+| **Restore** | See *Restoring a database copy* below. |
+
+**2. Home Assistant backup** (option *Create a Home Assistant backup*)
+
+HA Percyta only **asks Home Assistant to create it**:
+- with **Supervisor** (HA OS / Supervised): a partial backup *Home Assistant* (configuration incl. database) named
+  `HA Percyta YYYY-MM-DD HH:MM`; with an **external database** (e.g. MariaDB) a full backup, because only that contains it;
+- without Supervisor (Core / Container): Home Assistant's own backup service (`backup.create_automatic`); the name
+  is then chosen by Home Assistant.
+
+**HA Percyta never deletes these backups.** They are managed in Home Assistant (*Settings → System → Backups*), including
+its own retention setting. We have not verified whether that retention also applies to backups created this way –
+please check your backup settings and delete old ones yourself if needed.
+
+> **Good to know:** the Percyta copy folder lies inside `/config`. Whether it ends up in your Home Assistant backups
+> depends on your backup settings (assumption – not checked per setup). Once everything works after a clean-up you can
+> delete the copy to save space.
+
 **Restoring a database copy:** stop Home Assistant, copy the file from
 `/config/ha_percyta_db_backups/` to `/config/home-assistant_v2.db`, start Home Assistant.
 With an external database (MariaDB/PostgreSQL) the file copy is not available – with Supervisor a
@@ -479,7 +525,11 @@ Values such as `api_key=…`, `token=…` or `password=…` are masked in the lo
 - **Revoke access tokens** – button in the *Access tokens* table and in the *Unused access token*
   finding. The token of your own current session is protected. Logged.
 - **Automations** – *Turn on* directly in the *Automations turned off* finding; *Test now* (runs the
-  actions, skipping conditions) and *Turn off* in the automation findings.
+  actions, skipping conditions) and *Turn on* / *Turn off* (follows the current state) in the automation
+  findings. Since 1.2.4 *Test now* waits for the run (max. 30 s) and shows the result below the header:
+  passed (with duration), failed (with the error message and step), skipped, still running or no run
+  detected – with a link to the trace. Automations without an `id:` have no trace, so only “triggered”
+  can be shown.
 - **Shortcuts in findings** – *Orphaned data* → delete, *Orphaned entities* → remove from the registry,
   *Database hotspot* → delete old history.
 

@@ -227,7 +227,7 @@ const FSTR = {
     st_open: "Offen", st_known: "Erlaubt", st_snoozed: "Zurückgestellt", st_hidden: "Ausgeblendet",
     st_open_t: "Wieder offen", st_known_t: "Als erlaubt markieren", st_snoozed_t: "Zurückstellen", st_hidden_t: "Ausblenden",
     snooze_for: "für {n} Tage", snooze_until: "bis {d}",
-    f_select_page: "Seite auswählen", f_clear_sel: "Auswahl leeren", f_selected: "{n} ausgewählt",
+    f_select_page: "Alles auswählen", f_clear_sel: "Auswahl leeren", f_selected: "{n} ausgewählt",
     f_reopen: "Wieder öffnen", f_th_sev: "Schwere", f_th_finding: "Befund", f_th_cat: "Kategorie",
     f_th_affected: "Betroffen", f_th_since: "Seit",
     f_empty_open: "Keine offenen Befunde – alles in Ordnung. 🎉", f_empty_other: "Hier ist nichts eingetragen.",
@@ -264,7 +264,7 @@ const FSTR = {
     st_open: "Open", st_known: "Allowed", st_snoozed: "Snoozed", st_hidden: "Hidden",
     st_open_t: "Reopen", st_known_t: "Mark as allowed", st_snoozed_t: "Snooze", st_hidden_t: "Hide",
     snooze_for: "for {n} days", snooze_until: "until {d}",
-    f_select_page: "Select page", f_clear_sel: "Clear selection", f_selected: "{n} selected",
+    f_select_page: "Select all", f_clear_sel: "Clear selection", f_selected: "{n} selected",
     f_reopen: "Reopen", f_th_sev: "Severity", f_th_finding: "Finding", f_th_cat: "Category",
     f_th_affected: "Affected", f_th_since: "Since",
     f_empty_open: "No open findings – all good. 🎉", f_empty_other: "Nothing here.",
@@ -1582,6 +1582,90 @@ const XSTR = {
 Object.assign(STR.de, XSTR.de);
 Object.assign(STR.en, XSTR.en);
 
+// ---------- v1.2.4: Zuletzt beobachtet, Automation testen, Scan-Fortschritt ----------
+const YSTR = {
+  de: {
+    fd_last: "Zuletzt beobachtet", fd_last_event: "letztes Auftreten", fd_last_scan: "beim letzten Scan",
+    fd_seen_first: "🔎 Erstmals beobachtet", fd_seen_last: "🕒 Zuletzt beobachtet",
+    au_testing: "⏳ Test läuft …", au_retest: "▶ Erneut testen",
+    au_test_t: "Löst die Automation ohne Bedingungen aus – die Aktionen laufen wirklich – und zeigt danach, ob der Lauf geklappt hat.",
+    at_wait_t: "Test läuft", at_wait: "Die Automation wurde ohne Bedingungen ausgelöst. HA Percyta wartet auf das Ergebnis des Laufs (max. 30 s) …",
+    at_ok_t: "Test erfolgreich", at_ok: "Die Automation lief ohne Fehler bis zum Ende durch{d}.",
+    at_ok_scan: "Der Befund wird neu geprüft – nach dem Scan verschwindet er, wenn der letzte Lauf fehlerfrei war.",
+    at_error_t: "Test fehlgeschlagen", at_error_step: "Abgebrochen bei Schritt {s}.",
+    at_trigger_t: "Auslösen fehlgeschlagen",
+    at_skipped_t: "Nicht ausgeführt", at_skipped: "Home Assistant hat den Lauf übersprungen ({x}) – die Automation lief vermutlich gerade schon (Modus „single“ oder max. Läufe erreicht).",
+    at_stopped_t: "Vorzeitig beendet", at_stopped: "Der Lauf endete ohne Fehler, aber vor dem Ende der Aktionen ({x}).",
+    at_running_t: "Läuft noch", at_running: "Nach {n} s noch nicht fertig – die Automation wartet vermutlich (Verzögerung, Warten auf Auslöser). Das Ergebnis steht in der Ablaufverfolgung.",
+    at_no_run_t: "Kein Lauf erkannt", at_no_run: "Innerhalb von {n} s ist kein neuer Lauf in der Ablaufverfolgung erschienen.",
+    at_off: "Die Automation ist ausgeschaltet – schalte sie ein und teste erneut.",
+    at_started_t: "Ausgelöst – Ergebnis nicht auswertbar", at_started: "Die Automation hat keine ID (YAML ohne „id:“), deshalb führt Home Assistant keine Ablaufverfolgung, die HA Percyta auswerten könnte.",
+    at_failed_t: "Test nicht möglich", e_invalid_entity: "Ungültige Entität.", at_open: "Ablauf öffnen", at_dur: " ({t})", at_at: "Getestet {t}",
+    sp_title: "Scan läuft", sp_left: "noch ca. {t}", sp_soon: "gleich fertig", sp_stepn: "Schritt {i} von {n}",
+    sp_done: "Scan fertig", sp_done_in: "in {t}", sp_failed: "Scan fehlgeschlagen", sp_new: "Neuen Stand anzeigen",
+    sp_tip: "Fortschritt des laufenden Scans. Die Restzeit schätzt HA Percyta aus der Dauer der Schritte beim letzten Scan.",
+    sp_first: "erster Scan – Dauer wird gemessen",
+    ss_integrations: "Integrationen", ss_addons: "Apps", ss_cards: "Custom Cards", ss_blueprints: "Blueprints",
+    ss_config: "Dashboards & Konfiguration", ss_users: "Benutzer & Tokens", ss_errors: "Protokoll", ss_system: "System & Speicher",
+    nav_home: "Übersicht", nav_care: "Pflege-Center",
+    lm_entity: "Entität öffnen", lm_stay: "Dialog – du bleibst im Panel", lm_leave: "hier öffnen – verlässt das Panel",
+    lm_newtab: "In neuem Tab öffnen", lm_copy: "Link kopieren", lm_copy_id: "Entitäts-ID kopieren",
+    lm_more: "Weitere Ziele", lm_logbook: "Logbuch", lm_int_devices: "Geräte dieser Integration", lm_int_entities: "Entitäten dieser Integration",
+    lm_devices_list: "Geräteliste dieser Integration", lm_entities_list: "Entitätenliste dieser Integration", lm_addon_logs: "Protokoll der App",
+    fd_solve: "👉 Direkt zur Lösung", fd_solve_all: "Alle {n} betroffenen Objekte ›",
+    f_select_page_t: "Alle Befunde auswählen, die gerade in der Liste stehen (passend zu Filtern und Suche).",
+    fr_note: "Behobene Befunde der letzten 30 Tage – ältere fallen automatisch weg.",
+    fr_clear_t: "Leert nur diese Liste in HA Percyta. Offene Befunde und Home Assistant bleiben unverändert.",
+    fq_ph: "In Befunden suchen – z. B. Entität, Automation, Gerät, Fehlermeldung …", fq_clear: "Suche leeren",
+    fq_info: "{n} von {m} Befunden passen", fq_none: "Kein Befund passt zur Suche.", fq_hit_items: "Treffer in betroffenen Objekten: {x}",
+    fq_hit_details: "Treffer in den technischen Daten",
+    au_on_t: "Automation einschalten – sie reagiert dann wieder auf ihre Auslöser.", au_off_t: "Automation ausschalten – sie reagiert dann nicht mehr auf ihre Auslöser.",
+    au_state_off: "⏸ Ausgeschaltet",
+    ss_database: "Datenbank", ss_backup: "Backups", ss_inventory: "Bestand & Zustand", ss_findings: "Befunde", ss_save: "Speichern",
+  },
+  en: {
+    fd_last: "Last observed", fd_last_event: "last occurrence", fd_last_scan: "in the last scan",
+    fd_seen_first: "🔎 First observed", fd_seen_last: "🕒 Last observed",
+    au_testing: "⏳ Testing …", au_retest: "▶ Test again",
+    au_test_t: "Triggers the automation without conditions – the actions really run – and then shows whether the run worked.",
+    at_wait_t: "Test running", at_wait: "The automation was triggered without conditions. HA Percyta is waiting for the result of the run (max. 30 s) …",
+    at_ok_t: "Test passed", at_ok: "The automation ran to the end without errors{d}.",
+    at_ok_scan: "The finding is checked again – after the scan it disappears if the last run had no error.",
+    at_error_t: "Test failed", at_error_step: "Stopped at step {s}.",
+    at_trigger_t: "Triggering failed",
+    at_skipped_t: "Not run", at_skipped: "Home Assistant skipped the run ({x}) – the automation was probably already running (mode “single” or max. runs reached).",
+    at_stopped_t: "Ended early", at_stopped: "The run ended without an error, but before the end of the actions ({x}).",
+    at_running_t: "Still running", at_running: "Not finished after {n} s – the automation is probably waiting (delay, wait for trigger). The result is in the trace.",
+    at_no_run_t: "No run detected", at_no_run: "No new run appeared in the trace within {n} s.",
+    at_off: "The automation is turned off – turn it on and test again.",
+    at_started_t: "Triggered – result not available", at_started: "The automation has no ID (YAML without “id:”), so Home Assistant keeps no trace HA Percyta could evaluate.",
+    at_failed_t: "Test not possible", e_invalid_entity: "Invalid entity.", at_open: "Open trace", at_dur: " ({t})", at_at: "Tested {t}",
+    sp_title: "Scan running", sp_left: "approx. {t} left", sp_soon: "almost done", sp_stepn: "Step {i} of {n}",
+    sp_done: "Scan finished", sp_done_in: "in {t}", sp_failed: "Scan failed", sp_new: "Show new results",
+    sp_tip: "Progress of the running scan. HA Percyta estimates the remaining time from how long each step took in the last scan.",
+    sp_first: "first scan – measuring duration",
+    ss_integrations: "Integrations", ss_addons: "Apps", ss_cards: "Custom cards", ss_blueprints: "Blueprints",
+    ss_config: "Dashboards & configuration", ss_users: "Users & tokens", ss_errors: "Log", ss_system: "System & storage",
+    nav_home: "Overview", nav_care: "Care center",
+    lm_entity: "Open entity", lm_stay: "dialog – you stay in the panel", lm_leave: "open here – leaves the panel",
+    lm_newtab: "Open in new tab", lm_copy: "Copy link", lm_copy_id: "Copy entity ID",
+    lm_more: "More targets", lm_logbook: "Logbook", lm_int_devices: "Devices of this integration", lm_int_entities: "Entities of this integration",
+    lm_devices_list: "Device list of this integration", lm_entities_list: "Entity list of this integration", lm_addon_logs: "App log",
+    fd_solve: "👉 Straight to the fix", fd_solve_all: "All {n} affected objects ›",
+    f_select_page_t: "Select every finding currently in the list (matching filters and search).",
+    fr_note: "Findings resolved in the last 30 days – older ones drop off automatically.",
+    fr_clear_t: "Clears only this list in HA Percyta. Open findings and Home Assistant stay unchanged.",
+    fq_ph: "Search findings – e.g. entity, automation, device, error message …", fq_clear: "Clear search",
+    fq_info: "{n} of {m} findings match", fq_none: "No finding matches the search.", fq_hit_items: "Match in affected objects: {x}",
+    fq_hit_details: "Match in the technical data",
+    au_on_t: "Turn the automation on – it reacts to its triggers again.", au_off_t: "Turn the automation off – it no longer reacts to its triggers.",
+    au_state_off: "⏸ Turned off",
+    ss_database: "Database", ss_backup: "Backups", ss_inventory: "Inventory & state", ss_findings: "Findings", ss_save: "Saving",
+  },
+};
+Object.assign(STR.de, YSTR.de);
+Object.assign(STR.en, YSTR.en);
+
 const XDOC = {
   de: {
     automation_invalid: {
@@ -1844,6 +1928,7 @@ class HaPercytaPanel extends HTMLElement {
       this._built = true;
       this._build();
     }
+    this._subscribeScan();
     this._maybeAutoScan();
   }
 
@@ -1884,6 +1969,7 @@ class HaPercytaPanel extends HTMLElement {
     window.addEventListener("resize", this._scrollHandler);
     this._keyHandler = this._keyHandler || ((e) => {
       if (e.key !== "Escape") return;
+      if (this._linkMenuEl) { this._closeLinkMenu(); return; }
       if (this._modal) { this._closeModal(); return; }
       if (!this._detailId && !this._resolvedKey && !this._page) return;
       const t = e.composedPath && e.composedPath()[0];
@@ -1899,6 +1985,7 @@ class HaPercytaPanel extends HTMLElement {
     this._visHandler = this._visHandler || (() => { if (document.hidden) this._hideSecrets(); });
     document.addEventListener("visibilitychange", this._visHandler);
     this._autoScanPending = true;
+    if (this._hass) this._subscribeScan();
     this._maybeAutoScan();
   }
 
@@ -1911,6 +1998,8 @@ class HaPercytaPanel extends HTMLElement {
     if (this._keyHandler) window.removeEventListener("keydown", this._keyHandler);
     if (this._popHandler) window.removeEventListener("popstate", this._popHandler);
     if (this._visHandler) document.removeEventListener("visibilitychange", this._visHandler);
+    this._unsubscribeScan();
+    this._closeLinkMenu();
     this._hideSecrets();
   }
 
@@ -2049,6 +2138,7 @@ class HaPercytaPanel extends HTMLElement {
       old = Date.now() - when.getTime() > 7 * 86400000;
     }
     const line = this._el("div", { class: "backup-line clickable" + (old ? " warn" : ""), text, attrs: { title: this._t("open_in_ha") } });
+    line.dataset.link = "/config/backup";
     line.addEventListener("click", () => this._navigate("/config/backup"));
     return line;
   }
@@ -2225,7 +2315,7 @@ class HaPercytaPanel extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = `
       [hidden] { display:none !important; } /* „hidden“ gilt immer – auch bei Buttons mit eigener display-Regel */
-      :host { display:block; height:100%; overflow:auto;
+      :host { display:block; height:100vh; height:100dvh; overflow:auto; overscroll-behavior:contain;
         /* Buttons etwas dunkler als die Primärfarbe (HA-Farbskala, Fallback: Primärfarbe) */
         --pc-btn:var(--ha-color-primary-40, var(--primary-color,#3f9dff));
         background:var(--primary-background-color); color:var(--primary-text-color);
@@ -2686,6 +2776,156 @@ class HaPercytaPanel extends HTMLElement {
       .pk-foot { display:flex; gap:8px; align-items:center; padding:6px 8px; border-top:1px solid var(--divider-color); flex-wrap:wrap; }
       .pk-foot .muted { margin-right:auto; }
       .fd-hero-acts { display:flex; flex-direction:column; gap:8px; flex:none; }
+      /* v1.2.4: Ergebnis „Jetzt testen“ */
+      .at-card { display:flex; align-items:center; gap:14px; padding:12px 16px; margin:0 0 16px; border-radius:12px;
+        border:1px solid var(--divider-color); background:var(--card-background-color); animation:atIn .25s ease; }
+      .at-ok { background:rgba(67,160,71,.12); border-color:rgba(67,160,71,.5); }
+      .at-error { background:rgba(219,68,55,.12); border-color:rgba(219,68,55,.55); }
+      .at-warn { background:rgba(255,166,0,.11); border-color:rgba(255,166,0,.5); }
+      .at-wait { background:rgba(63,157,255,.10); border-color:rgba(63,157,255,.4); }
+      .at-ico { flex:none; width:30px; font-size:22px; text-align:center; }
+      .at-wait .at-ico { width:22px; height:22px; margin:0 4px; box-sizing:border-box; border-radius:50%;
+        border:3px solid rgba(63,157,255,.25); border-top-color:var(--info-color,#3f9dff); animation:atSpin .8s linear infinite; }
+      .at-body { flex:1; min-width:0; }
+      .at-title { font-weight:600; font-size:14px; margin-bottom:2px; }
+      .at-line { font-size:13px; line-height:1.45; }
+      .at-err { font-family:var(--code-font-family, monospace); font-size:12.5px; line-height:1.4; margin:3px 0;
+        color:var(--error-color,#db4437); overflow-wrap:anywhere; }
+      .at-meta { font-size:11.5px; color:var(--secondary-text-color); margin-top:4px; }
+      .at-card .at-open { flex:none; text-decoration:none; color:inherit; }
+      @keyframes atIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+      @keyframes atSpin { to { transform:rotate(360deg); } }
+      @media (max-width:620px) { .at-card { flex-wrap:wrap; } }
+      /* v1.2.4: gleiche Spaltenaufteilung der Speicher-Tabellen */
+      .tbl-split table { table-layout:fixed; width:100%; }
+      .tbl-split th:nth-child(1), .tbl-split td:nth-child(1) { width:38%; overflow:hidden; text-overflow:ellipsis; }
+      .tbl-split th:nth-child(2), .tbl-split td:nth-child(2) { width:18%; }
+      .tbl-split th:nth-child(3), .tbl-split td:nth-child(3) { width:44%; }
+      /* v1.2.4: Link-Menü (hier öffnen / neuer Tab / kopieren) */
+      .link-menu { position:fixed; z-index:20000; min-width:230px; max-width:min(360px, calc(100vw - 16px)); padding:6px;
+        border-radius:12px; background:var(--card-background-color,#1c1c1c); color:var(--primary-text-color);
+        border:1px solid var(--divider-color); box-shadow:0 10px 32px rgba(0,0,0,.45); animation:lmIn .14s ease-out; }
+      .lm-head { font-size:11px; color:var(--secondary-text-color); padding:4px 8px 6px; border-bottom:1px solid var(--divider-color);
+        margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .lm-item { display:flex; align-items:center; gap:10px; width:100%; padding:7px 9px; border:none; border-radius:8px;
+        background:transparent; color:inherit; font:inherit; font-size:13.5px; text-align:left; cursor:pointer; }
+      .lm-item:hover, .lm-item:focus-visible { background:color-mix(in srgb, var(--pc-btn) 18%, transparent); outline:none; }
+      .lm-ico { width:20px; text-align:center; flex:none; }
+      .lm-txt { display:flex; flex-direction:column; min-width:0; }
+      .lm-s { font-size:11px; color:var(--secondary-text-color); }
+      .lm-row { display:flex; align-items:stretch; gap:2px; }
+      .lm-row .lm-item { flex:1; min-width:0; }
+      .lm-nt { flex:none; width:34px; border:none; border-radius:8px; background:transparent; color:var(--secondary-text-color);
+        cursor:pointer; font-size:15px; }
+      .lm-nt:hover, .lm-nt:focus-visible { background:color-mix(in srgb, var(--pc-btn) 18%, transparent); color:var(--primary-text-color); outline:none; }
+      .lm-sep { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--secondary-text-color); padding:8px 9px 3px; }
+      .lm-sep.lm-line { padding:0; margin:4px 0; border-top:1px solid var(--divider-color); }
+      .lm-l { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      @keyframes lmIn { from { opacity:0; transform:translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+      /* v1.2.4: Direkt zur Lösung (Ende der Diagnose) */
+      .fd-solve { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; padding:10px 12px; border-radius:10px;
+        background:color-mix(in srgb, var(--pc-btn) 9%, transparent); border:1px dashed color-mix(in srgb, var(--pc-btn) 45%, transparent); }
+      .fd-solve-h { font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--secondary-text-color); margin-right:4px; }
+      .fd-solve-btn { text-decoration:none; color:inherit; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .fd-solve-btn.first { background:var(--pc-btn); border-color:transparent; color:#fff; font-weight:600; }
+      .fd-solve-btn.first:hover { filter:brightness(1.1); }
+      /* v1.2.4: Schnell-Navigation in der Kopfzeile */
+      .nav-seg { display:inline-flex; border-radius:20px; background:rgba(255,255,255,.10); padding:2px; gap:2px; }
+      .toolbar .nav-seg .nav-btn { padding:5px 10px; border-radius:18px; background:transparent; line-height:0; }
+      .toolbar .nav-seg .nav-btn:hover { background:rgba(255,255,255,.22); }
+      .toolbar .nav-seg .nav-btn.active { background:rgba(255,255,255,.30); }
+      .nav-btn ha-icon { --mdc-icon-size:20px; width:20px; height:20px; display:inline-block; }
+      .f-resolved .log-bar { justify-content:space-between; margin:4px 0 6px; }
+      /* v1.2.4: Suche in Befunden */
+      .f-search { position:relative; flex:1 1 360px; max-width:620px; display:flex; align-items:center; }
+      .f-search-ico { position:absolute; left:11px; font-size:13px; opacity:.6; pointer-events:none; }
+      .f-search-in { width:100%; box-sizing:border-box; padding:8px 34px 8px 33px; border-radius:10px; font:inherit; font-size:13.5px;
+        border:1px solid var(--divider-color); background:var(--secondary-background-color,#2b2b2b); color:var(--primary-text-color);
+        transition:border-color .15s, box-shadow .15s; }
+      .f-search-in:focus { outline:none; border-color:var(--pc-btn); box-shadow:0 0 0 3px color-mix(in srgb, var(--pc-btn) 25%, transparent); }
+      .f-search-in::-webkit-search-cancel-button { display:none; }
+      .f-search-x { position:absolute; right:6px; width:24px; height:24px; border:none; border-radius:50%; cursor:pointer;
+        background:transparent; color:var(--secondary-text-color); font-size:17px; line-height:1; display:none; }
+      .f-search-x:hover { background:var(--divider-color); color:var(--primary-text-color); }
+      .f-search.has-q .f-search-x { display:block; }
+      .f-search.has-q .f-search-in { border-color:var(--pc-btn); }
+      .f-search-info { font-size:12.5px; }
+      .f-hit { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:10px; font-size:11.5px; cursor:pointer;
+        background:color-mix(in srgb, var(--pc-btn) 18%, transparent); border:1px solid color-mix(in srgb, var(--pc-btn) 45%, transparent);
+        overflow-wrap:anywhere; animation:atIn .2s ease; }
+      tr.q-hit > td { background:color-mix(in srgb, var(--pc-btn) 14%, transparent); }
+      tr.q-hit > td:first-child { box-shadow:inset 3px 0 0 var(--pc-btn); }
+      /* v1.2.4: Ein-/Ausschalten */
+      .vb-btn.au-toggle.au-on { border-color:rgba(67,160,71,.6); }
+      .vb-btn.busy { opacity:.7; cursor:progress; }
+      .vb-btn.flash-ok { animation:flashOk 1s ease; }
+      .vb-btn.flash-err { animation:flashErr 1s ease; }
+      @keyframes flashOk { 0% { box-shadow:0 0 0 0 rgba(67,160,71,.7); } 100% { box-shadow:0 0 0 12px rgba(67,160,71,0); } }
+      @keyframes flashErr { 0%, 100% { transform:none; } 25% { transform:translateX(-3px); } 75% { transform:translateX(3px); } }
+      /* v1.2.4: IDs immer in einer Zeile */
+      .id-cell { max-width:none; white-space:nowrap; }
+      .id-cell > .mono, .id-cell > .id-link { white-space:nowrap; word-break:normal; overflow-wrap:normal; }
+      /* v1.2.4: Animationen (nur beim ersten Aufbau einer Seite bzw. wenn sich Werte ändern) */
+      .anim-in { animation:fadeUp .34s cubic-bezier(.2,.8,.2,1) both; animation-delay:var(--d, 0ms); }
+      .anim-grow { animation:growX 1.6s cubic-bezier(.25,.8,.25,1) both; animation-delay:var(--d, 0ms); transform-origin:left center; }
+      .anim-bump { animation:bump 1.2s ease; }
+      .f-cat-n, .cc-n, .cc-ring-in b { display:inline-block; }
+      .job-pill.done .sp-pct, .job-pill.error .sp-pct { font-size:12px; }
+      @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+      @keyframes growX { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+      @keyframes bump { 0% { transform:scale(1); } 30% { transform:scale(1.18); color:var(--pc-btn); } 100% { transform:scale(1); } }
+      .job-pill { display:inline-flex; align-items:center; gap:7px; }
+      .job-pill .sp-ringw { width:22px; height:22px; }
+      .job-pill .sp-ring { -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+        mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); }
+      .job-pill .sp-pct { font-size:8px; }
+      .job-pill.running .sp-ringw::after { content:""; position:absolute; inset:-3px; border-radius:50%;
+        border:2px solid transparent; border-top-color:rgba(255,255,255,.55); animation:atSpin 1.1s linear infinite; }
+      @media (prefers-reduced-motion: reduce) {
+        .anim-in, .anim-grow, .anim-bump, .at-card, .scan-pill, .f-hit { animation:none !important; }
+      }
+      /* v1.2.4: Erstmals / Zuletzt beobachtet im Verlauf */
+      .fd-seen { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px; margin:2px 0 16px; }
+      .fd-seen-box { padding:10px 14px; border-radius:10px; background:var(--secondary-background-color,#2b2b2b);
+        border:1px solid var(--divider-color); border-left:4px solid var(--divider-color); }
+      .fd-seen-box:first-child { border-left-color:var(--pc-btn); }
+      .fd-seen-l { font-size:12px; color:var(--secondary-text-color); }
+      .fd-seen-v { font-size:15px; font-weight:600; margin:2px 0 1px; font-variant-numeric:tabular-nums; }
+      /* v1.2.4: Scan-Fortschritt in der Kopfzeile */
+      .scan-pill { display:flex; align-items:center; gap:9px; padding:3px 13px 3px 3px; border-radius:22px;
+        background:rgba(255,255,255,.12); font-size:12px; line-height:1.25; max-width:270px; animation:atIn .25s ease;
+        transition:background .25s; }
+      .scan-pill[hidden] { display:none; }
+      .sp-ringw { position:relative; flex:none; width:32px; height:32px; }
+      .sp-ring { position:absolute; inset:0; border-radius:50%;
+        background:conic-gradient(currentColor calc(var(--p, 0) * 1%), rgba(255,255,255,.18) 0);
+        -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+        mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); }
+      .scan-pill.running .sp-ringw::after { content:""; position:absolute; inset:-3px; border-radius:50%;
+        border:2px solid transparent; border-top-color:rgba(255,255,255,.55); animation:atSpin 1.1s linear infinite; }
+      .sp-pct { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+        font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; }
+      .sp-text { display:flex; flex-direction:column; min-width:0; }
+      .sp-l1 { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .sp-l2 { opacity:.82; white-space:nowrap; font-variant-numeric:tabular-nums; }
+      .scan-pill.done { background:rgba(67,160,71,.38); }
+      .scan-pill.done .sp-pct, .scan-pill.failed .sp-pct { font-size:14px; }
+      .scan-pill.failed { background:rgba(219,68,55,.42); }
+      .scan-pill.new { cursor:pointer; }
+      .scan-pill.new:hover { background:rgba(67,160,71,.55); }
+      .scan-pill.new .sp-l2 { text-decoration:underline; opacity:1; }
+      .toolbar #scan.scanning[disabled] { opacity:1; }
+      .toolbar #scan.scanning { background:linear-gradient(90deg, rgba(255,255,255,.30) 0 var(--sp, 0%), rgba(255,255,255,.10) var(--sp, 0%) 100%); }
+      @media (max-width:760px) { .sp-text { display:none; } .scan-pill { padding:3px; } }
+      @media (max-width:560px) {
+        .toolbar { gap:6px; padding:0 10px; }
+        .toolbar .title { font-size:17px; }
+        .toolbar .title .app-ver, .toolbar .meta, .toolbar #dl-html, .toolbar #dl-md { display:none; }
+        .toolbar .title { white-space:nowrap; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+        .toolbar button { white-space:nowrap; }
+        .toolbar .nav-seg .nav-btn { padding:5px 8px; }
+        .toolbar button { padding:7px 11px; }
+      }
       .vb-btn.warn-btn { border-color:rgba(255,166,0,.5); }
       .db-calm { font-size:12.5px; line-height:1.45; margin:-2px 0 10px; padding:7px 10px; border-radius:8px;
         background:rgba(63,157,255,.10); border:1px solid rgba(63,157,255,.28); }
@@ -2816,6 +3056,14 @@ class HaPercytaPanel extends HTMLElement {
       .f-help > summary { cursor:pointer; font-size:13px; color:var(--secondary-text-color); padding:4px 0; }
       .f-help > summary:hover { color:var(--primary-text-color); }
       .f-help .dlg-explain { margin:6px 0 0; }
+      /* v1.2.4: Infobox und Label-Box etwas eingerückt; Label-Box hervorgehoben (aktiv steuerbar) */
+      .f-body > .f-help { margin-left:8px; margin-right:8px; }
+      .f-body > .f-supp { margin-left:8px; }
+      .f-body > .f-help.f-labels { padding:4px 12px; border-radius:10px;
+        background:color-mix(in srgb, var(--pc-btn) 8%, transparent); border:1px solid color-mix(in srgb, var(--pc-btn) 40%, transparent);
+        border-left:4px solid var(--pc-btn); }
+      .f-body > .f-help.f-labels > summary { color:var(--primary-text-color); font-weight:600; font-size:13.5px; padding:6px 0; }
+      .f-body > .f-help.f-labels[open] > summary { margin-bottom:2px; }
       .pk-clear { border:1px solid var(--divider-color); background:transparent; color:var(--secondary-text-color); border-radius:999px; font-size:12px; padding:3px 10px; cursor:pointer; }
       .pk-clear:hover { color:var(--primary-text-color); background:rgba(127,127,127,.14); }
       .dlg-preview.loading .table-wrap { opacity:.45; transition:opacity .2s; }
@@ -2893,7 +3141,17 @@ class HaPercytaPanel extends HTMLElement {
       this._el("button", { text: "⤓ MD", attrs: { id: "dl-md", title: this._t("dl_md_title") } }),
       this._el("button", { text: "⤓ HTML", attrs: { id: "dl-html", title: this._t("dl_html_title") } }),
       this._el("button", { class: "job-pill", attrs: { id: "job-pill", hidden: "", title: this._t("jv_title") } }),
+      this._el("div", { class: "scan-pill", attrs: { id: "scan-pill", hidden: "" } }, [
+        this._el("div", { class: "sp-ringw" }, [this._el("div", { class: "sp-ring" }), this._el("span", { class: "sp-pct" })]),
+        this._el("div", { class: "sp-text" }, [this._el("span", { class: "sp-l1" }), this._el("span", { class: "sp-l2" })]),
+      ]),
       this._el("button", { text: this._t("rescan"), attrs: { id: "scan" } }),
+      this._el("div", { class: "nav-seg", attrs: { role: "group" } }, [
+        this._el("button", { class: "nav-btn", attrs: { id: "nav-home", type: "button", title: this._t("nav_home"), "aria-label": this._t("nav_home") } },
+          [this._el("ha-icon", { attrs: { icon: "mdi:view-dashboard-outline" } })]),
+        this._el("button", { class: "nav-btn", attrs: { id: "nav-care", type: "button", title: this._t("nav_care"), "aria-label": this._t("nav_care") } },
+          [this._el("ha-icon", { attrs: { icon: "mdi:broom" } })]),
+      ]),
       this._el("button", { class: "menu-btn", text: "☰", attrs: { id: "toggle-menu", title: this._t("sidebar_toggle"), "aria-label": this._t("sidebar_toggle") } }),
     ]);
     const content = this._el("div", { class: "content", attrs: { id: "content" } }, [
@@ -2904,6 +3162,34 @@ class HaPercytaPanel extends HTMLElement {
     this.shadowRoot.append(style, bar, content, toTop);
     this.shadowRoot.getElementById("scan").addEventListener("click", () => this._runScan());
     this.shadowRoot.getElementById("job-pill").addEventListener("click", () => this._jobDialog());
+    // Letzte Klickstelle (für die Position des Link-Menüs).
+    this.shadowRoot.addEventListener("click", (e) => {
+      this._lastClick = { x: e.clientX, y: e.clientY, el: e.target, t: performance.now() };
+    }, true);
+    // Rechtsklick auf ein Ziel in Home Assistant: dasselbe Menü (hier öffnen / neuer Tab / …).
+    // Shift + Rechtsklick zeigt weiterhin das Menü des Browsers.
+    this.shadowRoot.addEventListener("contextmenu", (e) => {
+      if (e.shiftKey) return;
+      const el = e.composedPath().find((n) => n && n.dataset && n.dataset.link);
+      if (!el) return;
+      const link = el.dataset.link;
+      if (!(link.startsWith("#entity:") || this._isInternalPath(link))) return;
+      e.preventDefault();
+      this._lastClick = { x: e.clientX, y: e.clientY, el, t: performance.now() };
+      this._linkMenu(link, el._lmCtx);
+    });
+    this.shadowRoot.getElementById("nav-home").addEventListener("click", () => this._navHome());
+    this.shadowRoot.getElementById("nav-care").addEventListener("click", () => this._navCare());
+    const scanPill = this.shadowRoot.getElementById("scan-pill");
+    const openNew = () => {
+      if (!this._scanNew) return;
+      this._scanNew = false;
+      this._scanDone = null;
+      this._renderScanPill();
+      this._loadReport(true);
+    };
+    scanPill.addEventListener("click", openNew);
+    scanPill.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNew(); } });
     this.shadowRoot.getElementById("dl-md").addEventListener("click", () => this._download("md"));
     this.shadowRoot.getElementById("dl-html").addEventListener("click", () => this._download("html"));
     this.shadowRoot.getElementById("toggle-menu").addEventListener("click", () => this._toggleHaMenu());
@@ -2951,7 +3237,14 @@ class HaPercytaPanel extends HTMLElement {
     return typeof path === "string" && /^\/(?![\/\\])[^\s]*$/.test(path);
   }
 
-  _navigate(path) {
+  // Ziele in Home Assistant: immer erst ein kleines Menü – hier öffnen (verlässt das Panel),
+  // im neuen Tab öffnen oder Link kopieren; bei einer Entität zusätzlich der Dialog im Panel.
+  _navigate(path, ctx) {
+    if (!this._isInternalPath(path)) return;
+    this._linkMenu(path, ctx);
+  }
+
+  _navigateNow(path) {
     if (!this._isInternalPath(path)) return;
     try {
       history.pushState(null, "", path);
@@ -2996,16 +3289,138 @@ class HaPercytaPanel extends HTMLElement {
     const attrs = href ? { href, rel: "noopener noreferrer" } : { type: "button" };
     if (target) attrs.title = target;
     const el = this._el(href ? "a" : "button", { class: cls, text: label, attrs });
+    el.dataset.link = String(link || "");
     el.addEventListener("click", (e) => {
       if (href && (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0)) return; // Browser übernimmt (neuer Tab)
       e.preventDefault();
       if (before) before();
-      this._openLink(link);
+      this._openLink(link, el._lmCtx);
     });
     return el;
   }
 
   // Detail-Dialog einer Entität in Home Assistant öffnen (Einstellungen, Verlauf …).
+  // Weitere sinnvolle Ziele zum Link (je nach Art): z. B. Integration → Geräte/Entitäten,
+  // Liste einer Integration mit nur einem Gerät/einer Entität → genau dieses öffnen.
+  _linkExtras(path, entity, ctx) {
+    const ex = [];
+    const lbl = (p) => this._linkLabel(p).replace(/\s*[↗›]$/, "");
+    let m;
+    if (entity) ex.push({ icon: "📖", label: this._t("lm_logbook"), path: "/logbook?entity_id=" + encodeURIComponent(entity) });
+    if ((m = /^\/config\/integrations\/integration\/([a-z0-9_]+)/.exec(path))) {
+      ex.push({ icon: "📟", label: this._t("lm_int_devices"), path: `/config/devices/dashboard?historyBack=1&domain=${m[1]}` });
+      ex.push({ icon: "🔢", label: this._t("lm_int_entities"), path: `/config/entities?historyBack=1&domain=${m[1]}` });
+    }
+    const ce = /[?&]config_entry=([^&]+)/.exec(path);
+    if (ce) {
+      const entry = decodeURIComponent(ce[1]);
+      if (path.startsWith("/config/entities")) ex.push({ icon: "📟", label: this._t("lm_devices_list"), path: `/config/devices/dashboard?historyBack=1&config_entry=${ce[1]}` });
+      else if (path.startsWith("/config/devices/dashboard")) ex.push({ icon: "🔢", label: this._t("lm_entities_list"), path: `/config/entities?historyBack=1&config_entry=${ce[1]}` });
+      if (ctx && ctx.domain) ex.push({ icon: "🧩", label: lbl("/config/integrations/integration/x"), path: `/config/integrations/integration/${ctx.domain}` });
+      // Genau ein Gerät / eine Entität → direkt öffnen (aus den Registern im Browser).
+      const devs = Object.values((this._hass && this._hass.devices) || {}).filter((dv) => (dv.config_entries || []).includes(entry));
+      if (devs.length === 1) {
+        const dv = devs[0];
+        ex.unshift({ icon: "📟", label: `${lbl("/config/devices/device/x")} · ${dv.name_by_user || dv.name || dv.id}`, path: "/config/devices/device/" + dv.id });
+      }
+      if (ctx && ctx.domain && ctx.entities === 1) {
+        const ents = Object.values((this._hass && this._hass.entities) || {}).filter((en) => en.platform === ctx.domain);
+        if (ents.length === 1) ex.unshift({ icon: "🔎", label: `${this._t("lm_entity")} · ${ents[0].entity_id}`, sub: this._t("lm_stay"), fn: () => this._moreInfo(ents[0].entity_id) });
+      }
+    }
+    if ((m = /^\/config\/(automation|script)\/edit\/([^?]+)$/.exec(path))) ex.push({ icon: "🧭", label: lbl(`/config/${m[1]}/trace/x`), path: `/config/${m[1]}/trace/${m[2]}` });
+    if ((m = /^\/config\/(automation|script)\/trace\/([^?]+)$/.exec(path))) ex.push({ icon: "✏️", label: lbl(`/config/${m[1]}/edit/x`), path: `/config/${m[1]}/edit/${m[2]}` });
+    if ((m = /^\/hassio\/addon\/([^/?]+)$/.exec(path))) ex.push({ icon: "📜", label: this._t("lm_addon_logs"), path: `/hassio/addon/${m[1]}/logs` });
+    return ex;
+  }
+
+  _linkMenu(link, ctx) {
+    this._closeLinkMenu();
+    let path = link;
+    let entity = null;
+    if (link.startsWith("#entity:")) {
+      entity = link.slice(8);
+      path = "/history?entity_id=" + encodeURIComponent(entity);
+    } else {
+      const m = /^\/history\?entity_id=([^&]+)$/.exec(link);
+      if (m) entity = decodeURIComponent(m[1]);
+    }
+    if (!this._isInternalPath(path)) return;
+    const abs = (() => { try { return new URL(path, window.location.origin).href; } catch (e) { return path; } })();
+    const items = [];
+    const extras = this._linkExtras(path, entity, ctx);
+    if (entity) items.push({ icon: "🔎", label: this._t("lm_entity"), sub: this._t("lm_stay"), fn: () => this._moreInfo(entity) });
+    extras.filter((x) => x.fn).forEach((x) => items.push(x));
+    const here = entity ? this._t("lk_history") : this._linkLabel(path).replace(/\s*[↗›]$/, "");
+    items.push({ icon: "↪", label: here, sub: this._t("lm_leave"), path, main: true });
+    items.push({ icon: "⧉", label: this._t("lm_newtab"), fn: () => window.open(abs, "_blank", "noopener") });
+    const navX = extras.filter((x) => x.path);
+    if (navX.length) items.push({ sep: this._t("lm_more") });
+    navX.forEach((x) => items.push(x));
+    items.push({ sep: "" });
+    items.push({ icon: "📋", label: this._t(entity ? "lm_copy_id" : "lm_copy"), fn: () => {
+      try { navigator.clipboard.writeText(entity || abs); } catch (e) {}
+    } });
+    const menu = this._el("div", { class: "link-menu", attrs: { role: "menu" } }, [
+      this._el("div", { class: "lm-head mono", text: entity || path, attrs: { title: abs } }),
+    ]);
+    const absOf = (p) => { try { return new URL(p, window.location.origin).href; } catch (e) { return p; } };
+    items.forEach((it) => {
+      if (it.sep != null) {
+        menu.appendChild(this._el("div", { class: "lm-sep" + (it.sep ? "" : " lm-line"), text: it.sep }));
+        return;
+      }
+      const b = this._el("button", { class: "lm-item", attrs: { type: "button", role: "menuitem", title: it.path ? it.path : "" } }, [
+        this._el("span", { class: "lm-ico", text: it.icon }),
+        this._el("span", { class: "lm-txt" }, [
+          this._el("span", { class: "lm-l", text: it.label }),
+          it.sub ? this._el("span", { class: "lm-s", text: it.sub }) : null,
+        ]),
+      ]);
+      const run = it.path ? () => this._navigateNow(it.path) : it.fn;
+      b.addEventListener("click", (e) => { e.stopPropagation(); this._closeLinkMenu(); run(); });
+      if (!it.path || it.main) { menu.appendChild(b); return; }
+      // Ziel in HA: rechts daneben „in neuem Tab“.
+      const nt = this._el("button", { class: "lm-nt", text: "⧉", attrs: { type: "button", role: "menuitem", title: this._t("lm_newtab"), "aria-label": this._t("lm_newtab") + ": " + it.label } });
+      nt.addEventListener("click", (e) => { e.stopPropagation(); this._closeLinkMenu(); window.open(absOf(it.path), "_blank", "noopener"); });
+      menu.appendChild(this._el("div", { class: "lm-row" }, [b, nt]));
+    });
+    menu.addEventListener("keydown", (e) => {
+      const btns = Array.from(menu.querySelectorAll(".lm-item, .lm-nt"));
+      const i = btns.indexOf(this.shadowRoot.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); this._closeLinkMenu(); }
+    });
+    this.shadowRoot.appendChild(menu);
+    // Position: an der Klickstelle bzw. unter dem auslösenden Element, im Fenster gehalten.
+    const c = this._lastClick && performance.now() - this._lastClick.t < 1500 ? this._lastClick : null;
+    let x = window.innerWidth / 2, y = window.innerHeight / 3;
+    if (c && (c.x || c.y)) { x = c.x; y = c.y + 6; }
+    else if (c && c.el && c.el.getBoundingClientRect) { const r = c.el.getBoundingClientRect(); x = r.left; y = r.bottom + 4; }
+    const w = menu.offsetWidth, h = menu.offsetHeight;
+    x = Math.max(8, Math.min(x, window.innerWidth - w - 8));
+    if (y + h > window.innerHeight - 8) y = Math.max(8, (c ? c.y - h - 6 : window.innerHeight - h - 8));
+    menu.style.left = x + "px";
+    menu.style.top = y + "px";
+    this._linkMenuEl = menu;
+    const first = menu.querySelector(".lm-item");
+    if (first) first.focus({ preventScroll: true });
+    this._lmOutside = (e) => { if (!e.composedPath().includes(menu)) this._closeLinkMenu(); };
+    this._lmScroll = () => this._closeLinkMenu();
+    setTimeout(() => {
+      window.addEventListener("pointerdown", this._lmOutside, true);
+      this.addEventListener("scroll", this._lmScroll, { passive: true });
+      window.addEventListener("resize", this._lmScroll);
+    }, 0);
+  }
+
+  _closeLinkMenu() {
+    if (this._linkMenuEl) { this._linkMenuEl.remove(); this._linkMenuEl = null; }
+    if (this._lmOutside) { window.removeEventListener("pointerdown", this._lmOutside, true); this._lmOutside = null; }
+    if (this._lmScroll) { this.removeEventListener("scroll", this._lmScroll); window.removeEventListener("resize", this._lmScroll); this._lmScroll = null; }
+  }
+
   _moreInfo(entityId) {
     this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
   }
@@ -3047,9 +3462,10 @@ class HaPercytaPanel extends HTMLElement {
     return this._el("span", { class: "id-cell" }, [idEl, this._copyBtn(ref)]);
   }
 
-  _linkNum(n, path) {
-    const el = this._el("span", { class: "link-num", text: String(n), attrs: { title: this._t("open_in_ha") } });
-    el.addEventListener("click", () => this._navigate(path));
+  _linkNum(n, path, ctx) {
+    const el = this._el("span", { class: "link-num", text: String(n), attrs: { title: this._t("open_in_ha"), "data-link": path } });
+    el._lmCtx = ctx;
+    el.addEventListener("click", () => this._navigate(path, ctx));
     return el;
   }
 
@@ -3189,12 +3605,153 @@ class HaPercytaPanel extends HTMLElement {
   async _runScan() {
     const btn = this.shadowRoot.getElementById("scan");
     if (btn) { btn.setAttribute("disabled", ""); btn.textContent = this._t("scanning"); }
+    this._scanOwn = true;
     try {
-      await this._hass.callService("ha_percyta", "scan");
-    } catch (e) {}
-    // Kam der Scan-Wunsch kurz nach einem anderen Scan, startet HA ihn etwas später → abwarten.
-    if (!(await this._loadReport(true))) await this._refreshSoon();
-    if (btn) { btn.removeAttribute("disabled"); btn.textContent = this._t("rescan"); }
+      try {
+        await this._hass.callService("ha_percyta", "scan");
+      } catch (e) {}
+      // Kam der Scan-Wunsch kurz nach einem anderen Scan, startet HA ihn etwas später → abwarten.
+      if (!(await this._loadReport(true))) await this._refreshSoon();
+    } finally {
+      this._scanOwn = false;
+      if (btn) { btn.removeAttribute("disabled"); btn.textContent = this._t("rescan"); }
+    }
+  }
+
+  // ---------- Scan-Fortschritt (Kopfzeile) ----------
+  // Home Assistant meldet jeden Scan-Schritt über ein Abo; Prozent und Restzeit rechnet das Panel
+  // aus der Dauer der Schritte beim letzten Scan hoch (Schätzung).
+  async _subscribeScan() {
+    if (this._scanUnsub || this._scanSubBusy || !this._hass || !this._hass.connection || !this.isConnected) return;
+    this._scanSubBusy = true;
+    try {
+      this._scanUnsub = await this._hass.connection.subscribeMessage(
+        (m) => this._onScanStatus(m), { type: "ha_percyta/scan_subscribe" });
+      if (!this.isConnected) this._unsubscribeScan();
+    } catch (e) {
+      this._scanUnsub = null; // z. B. HA noch nicht neu gestartet (alter Code ohne Abo)
+    } finally {
+      this._scanSubBusy = false;
+    }
+  }
+
+  _unsubscribeScan() {
+    const unsub = this._scanUnsub;
+    this._scanUnsub = null;
+    if (unsub) { try { Promise.resolve(unsub()).catch(() => {}); } catch (e) {} }
+    clearInterval(this._scanTimer);
+    this._scanTimer = null;
+  }
+
+  _onScanStatus(st) {
+    if (!st || typeof st !== "object") return;
+    const prev = this._scanSt;
+    if (st.running) {
+      if (!prev || !prev.running || (st.elapsed || 0) < (prev.elapsed || 0) - 0.5) {
+        // Neuer Scan
+        this._scanPctMax = 0;
+        this._scanGenStart = this._data && this._data.generated_at;
+        this._scanDone = null;
+        this._scanNew = false;
+        clearTimeout(this._scanDoneTimer);
+      }
+      this._scanSt = Object.assign({}, st, { recv: performance.now() });
+      if (!this._scanTimer) this._scanTimer = setInterval(() => this._renderScanPill(), 250);
+      this._renderScanPill();
+      return;
+    }
+    clearInterval(this._scanTimer);
+    this._scanTimer = null;
+    this._scanSt = null;
+    // Nur das Ende eines Scans zeigen, den das Panel auch laufen gesehen hat.
+    if (prev && prev.running && st.finished) {
+      this._scanDone = { ok: st.ok !== false, duration: st.duration };
+      clearTimeout(this._scanDoneTimer);
+      this._scanDoneTimer = setTimeout(() => {
+        const loaded = this._data && this._data.generated_at !== this._scanGenStart;
+        // Eigener Scan oder Aktualisierung lädt den Stand selbst; sonst Hinweis „Neuen Stand anzeigen“.
+        this._scanNew = !!(this._scanDone && this._scanDone.ok && !loaded && !this._scanOwn && !this._refreshRun);
+        if (!this._scanNew) this._scanDone = null;
+        this._renderScanPill();
+        if (this._scanNew) this._scanDoneTimer = setTimeout(() => { this._scanNew = false; this._scanDone = null; this._renderScanPill(); }, 300000);
+      }, 4000);
+    }
+    this._renderScanPill();
+  }
+
+  _scanProgress(st) {
+    const dt = (performance.now() - st.recv) / 1000;
+    const exp = (st.steps || []).map((s) => Math.max(0.05, Number(s[1]) || 0));
+    if (!exp.length) return { pct: 1, remaining: null };
+    const total = exp.reduce((a, b) => a + b, 0);
+    const i = Math.max(0, Math.min(st.index || 0, exp.length - 1));
+    const before = exp.slice(0, i).reduce((a, b) => a + b, 0);
+    const cur = exp[i];
+    const inStep = (st.step_elapsed || 0) + dt;
+    const frac = Math.min(inStep / cur, 0.95);
+    let pct = ((before + frac * cur) / total) * 100;
+    pct = Math.max(this._scanPctMax || 0, Math.min(99, Math.max(1, pct)));
+    this._scanPctMax = pct;
+    const remaining = Math.max(0, cur - inStep) + exp.slice(i + 1).reduce((a, b) => a + b, 0);
+    return { pct, remaining };
+  }
+
+  _fmtShortDur(sec) {
+    sec = Math.max(0, Number(sec) || 0);
+    if (sec > 20) sec = Math.round(sec / (sec > 60 ? 10 : 5)) * (sec > 60 ? 10 : 5);
+    else sec = Math.round(sec);
+    if (sec < 60) return `${sec} s`;
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return s ? `${m} min ${s} s` : `${m} min`;
+  }
+
+  _renderScanPill() {
+    const root = this.shadowRoot;
+    const pill = root && root.getElementById("scan-pill");
+    if (!pill) return;
+    const btn = root.getElementById("scan");
+    const ring = pill.querySelector(".sp-ring"), pctEl = pill.querySelector(".sp-pct");
+    const l1 = pill.querySelector(".sp-l1"), l2 = pill.querySelector(".sp-l2");
+    const st = this._scanSt;
+    pill.removeAttribute("role");
+    pill.removeAttribute("tabindex");
+    if (st && st.running) {
+      const p = this._scanProgress(st);
+      const pct = Math.floor(p.pct);
+      pill.className = "scan-pill running";
+      pill.hidden = false;
+      ring.style.setProperty("--p", p.pct.toFixed(1));
+      pctEl.textContent = String(pct);
+      l1.textContent = this._t("ss_" + st.step);
+      const n = (st.steps || []).length;
+      let eta;
+      if (!st.measured) eta = this._ti("sp_stepn", { i: (st.index || 0) + 1, n });
+      else if (p.remaining == null || p.remaining < 3) eta = this._t("sp_soon");
+      else eta = this._ti("sp_left", { t: this._fmtShortDur(p.remaining) });
+      l2.textContent = `${pct} % · ${eta}`;
+      pill.title = `${this._t("sp_title")} · ${this._ti("sp_stepn", { i: (st.index || 0) + 1, n })}` +
+        (st.measured ? "" : ` · ${this._t("sp_first")}`) + `\n${this._t("sp_tip")}`;
+      if (btn) { btn.classList.add("scanning"); btn.style.setProperty("--sp", p.pct.toFixed(1) + "%"); }
+      return;
+    }
+    if (btn) { btn.classList.remove("scanning"); btn.style.removeProperty("--sp"); }
+    const done = this._scanDone;
+    if (!done) { pill.hidden = true; pill.className = "scan-pill"; return; }
+    pill.hidden = false;
+    ring.style.setProperty("--p", "100");
+    pctEl.textContent = done.ok ? "✓" : "!";
+    l1.textContent = this._t(done.ok ? "sp_done" : "sp_failed");
+    if (this._scanNew) {
+      pill.className = "scan-pill done new";
+      pill.setAttribute("role", "button");
+      pill.setAttribute("tabindex", "0");
+      l2.textContent = this._t("sp_new");
+      pill.title = this._t("sp_new");
+    } else {
+      pill.className = "scan-pill " + (done.ok ? "done" : "failed");
+      l2.textContent = done.duration != null ? this._ti("sp_done_in", { t: this._fmtShortDur(done.duration) }) : "";
+      pill.title = "";
+    }
   }
 
   // ---------- Ansicht-Modus ----------
@@ -3408,6 +3965,153 @@ class HaPercytaPanel extends HTMLElement {
   }
 
   _render() {
+    this._renderView();
+    this._updateNav();
+    this._afterRender();
+  }
+
+  // ---------- Animationen ----------
+  // Beim ersten Aufbau einer Seite: Kacheln blenden gestaffelt ein, Balken wachsen, Zahlen zählen hoch.
+  // Danach (z. B. nach einem Scan) zählen nur Zahlen, die sich geändert haben, vom alten zum neuen Wert.
+  // Schnell-Navigation in der Kopfzeile: Übersicht / Pflege-Center.
+  _navHome() {
+    if (!this._page && !this._detailId && !this._resolvedKey) { this._scrollToTop(); return; }
+    this._unwindNav();
+    this._returnPage = null;
+    this._page = null;
+    this._detailId = null;
+    this._resolvedKey = null;
+    this._render();
+    this.scrollTop = 0;
+  }
+
+  _navCare() {
+    if (this._page === "care") { this._scrollToTop(); return; }
+    if (this._detailId || this._resolvedKey) {
+      // Aus einer Detailseite: Verlaufseintrag behalten (Zurück führt dann zur Übersicht).
+      this._returnPage = null;
+      this._detailId = null;
+      this._resolvedKey = null;
+      this._page = "care";
+      this._render();
+      this.scrollTop = 0;
+      return;
+    }
+    this._openCarePage();
+  }
+
+  _updateNav() {
+    const root = this.shadowRoot;
+    if (!root) return;
+    const home = root.getElementById("nav-home"), care = root.getElementById("nav-care");
+    if (home) home.classList.toggle("active", !this._page && !this._detailId && !this._resolvedKey);
+    if (care) care.classList.toggle("active", this._page === "care");
+  }
+
+  _reducedMotion() {
+    try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+  }
+
+  _afterRender() {
+    const content = this.shadowRoot && this.shadowRoot.getElementById("content");
+    if (!content || !this._data || this._error) return;
+    const view = this._page ? "page:" + this._page : this._resolvedKey ? "res:" + this._resolvedKey : this._detailId ? "det:" + this._detailId : "report";
+    let intro = view !== this._lastView;
+    if (view === "report") { intro = !this._reportIntro; this._reportIntro = true; }
+    this._lastView = view;
+    const now = performance.now();
+    if (intro) {
+      this._introT0 = now;
+      this._introView = view;
+    } else if (this._introView === view && now - (this._introT0 || 0) < 3000) {
+      // Kurz nach dem ersten Aufbau neu gezeichnet (z. B. Sicherungen nachgeladen) → Animation fortsetzen.
+      intro = true;
+    }
+    this._animate(content, intro, intro ? now - this._introT0 : 0);
+    // Aus der Befund-Suche geöffnet: passende betroffene Objekte hervorheben.
+    const dq = this._detailQ;
+    if (dq && this._detailId === dq.id) {
+      const words = String(dq.q || "").toLowerCase().split(/\s+/).filter(Boolean);
+      content.querySelectorAll('.fd-panel[data-key="items"] tbody tr').forEach((tr) => {
+        const txt = tr.textContent.toLowerCase();
+        tr.classList.toggle("q-hit", words.length > 0 && words.some((w) => txt.includes(w)));
+      });
+    }
+  }
+
+  // elapsed: ms seit Beginn der Einstiegs-Animation (beim Neuzeichnen geht sie nahtlos weiter).
+  _animate(root, intro, elapsed) {
+    elapsed = elapsed || 0;
+    if (!root) return;
+    const reduced = this._reducedMotion();
+    if (intro && !reduced) {
+      // Große Hauptboxen zuerst und dicht gestaffelt (alle nach ca. 0,5 s da), kleine Kacheln gleich danach.
+      const fade = (sel, step, cap, base) => {
+        let i = 0;
+        root.querySelectorAll(sel).forEach((el) => {
+          el.classList.add("anim-in");
+          el.style.setProperty("--d", base + Math.min(i++ * step, cap) - elapsed + "ms");
+          el.addEventListener("animationend", () => el.classList.remove("anim-in"), { once: true });
+        });
+      };
+      fade(".hero-grid > *, .fd-hero, .fd-card, .sections > details.section", 35, 210, 0);
+      fade(".stat-grid .stat, .f-cat, .cc-tile", 25, 250, 0);
+      let j = 0;
+      root.querySelectorAll(".meter > span, .fd-conf-bar > span, .riskbar").forEach((el) => {
+        el.classList.add("anim-grow");
+        el.style.setProperty("--d", Math.min(150 + j++ * 40, 900) - elapsed + "ms");
+        el.addEventListener("animationend", () => el.classList.remove("anim-grow"), { once: true });
+      });
+    }
+    const mem = (this._countMem = this._countMem || {});
+    const scope = (el) => (el.closest(".care-page") ? "c:" : el.closest(".cc-preview") ? "p:" : el.closest(".fd-wrap, .fd-grid") ? "d:" : "o:");
+    const label = (el, sel) => { const n = el && el.querySelector(sel); return n ? n.textContent : ""; };
+    const targets = [];
+    root.querySelectorAll(".stat-value").forEach((el) => targets.push([el, "kpi:" + scope(el) + label(el.closest(".stat"), ".stat-label")]));
+    root.querySelectorAll(".f-cat-n").forEach((el) => targets.push([el, "fcat:" + scope(el) + label(el.closest(".f-cat"), ".f-cat-label")]));
+    root.querySelectorAll(".cc-tile .cc-n").forEach((el) => { const tl = el.closest(".cc-tile"); targets.push([el, "cc:" + scope(el) + ((tl && tl.dataset.key) || label(tl, ".cc-title"))]); });
+    root.querySelectorAll(".cc-ring-in b").forEach((el) => targets.push([el, "ring:" + scope(el)]));
+    targets.forEach(([el, key]) => {
+      const m = /^(\d{1,3}(?:[.,\u202f\u00a0]\d{3})+|\d+)(\s?%)?$/.exec((el.textContent || "").trim());
+      if (!m) { delete mem[key]; return; }
+      const sepM = /[.,\u202f\u00a0]/.exec(m[1]);
+      const val = parseInt(m[1].replace(/[.,\u202f\u00a0]/g, ""), 10);
+      const fmt = (n) => (sepM ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, sepM[0]) : String(n)) + (m[2] || "");
+      const prev = mem[key];
+      mem[key] = val;
+      if (reduced) return;
+      const ring = el.closest(".cc-ring");
+      const onStep = ring ? (v) => ring.style.setProperty("--p", v.toFixed(1)) : null;
+      if (intro) {
+        if (val > 0 && elapsed < 2000) this._countUp(el, 0, val, fmt, onStep, performance.now() - elapsed);
+      } else if (prev !== undefined && prev !== val) {
+        this._countUp(el, prev, val, fmt, onStep);
+        el.classList.remove("anim-bump");
+        void el.offsetWidth;
+        el.classList.add("anim-bump");
+        setTimeout(() => el.classList.remove("anim-bump"), 1300);
+      }
+    });
+  }
+
+  _countUp(el, from, to, fmt, onStep, start) {
+    const id = (el._cuId = (el._cuId || 0) + 1);
+    const t0 = start || performance.now();
+    const dur = Math.min(2000, 1100 + Math.abs(to - from) * 20);
+    const step = (now) => {
+      if (!el.isConnected || el._cuId !== id) return;
+      const k = Math.min(1, (now - t0) / dur);
+      const v = from + (to - from) * (1 - Math.pow(1 - k, 3));
+      el.textContent = fmt(Math.round(v));
+      if (onStep) onStep(v);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    el.textContent = fmt(from);
+    if (onStep) onStep(from);
+    requestAnimationFrame(step);
+  }
+
+  _renderView() {
     const content = this.shadowRoot.getElementById("content");
     const meta = this.shadowRoot.getElementById("meta");
     // Bei einer Aktualisierung (z. B. Scan im Hintergrund) bleibt die Ansicht erhalten.
@@ -3823,7 +4527,7 @@ class HaPercytaPanel extends HTMLElement {
       sub ? this._el("div", { class: "sub", text: sub }) : null,
       percent != null ? this._meter(percent) : null,
     ]);
-    if (path) card.addEventListener("click", () => this._navigate(path));
+    if (path) { card.dataset.link = path; card.addEventListener("click", () => this._navigate(path)); }
     return card;
   }
 
@@ -3866,7 +4570,9 @@ class HaPercytaPanel extends HTMLElement {
         { node: this._el("div", { class: "bar-cell" }, [this._meter(this._sharePct(cat.used, maxUsed), "ok")]), sort: cat.used || 0 },
       ]);
       parts.push(this._el("div", { class: "sub-head", text: this._t("sub_categories") }));
-      parts.push(this._table([this._t("th_category"), this._t("th_used"), this._t("th_share")], rows, { sortIdx: 1, sortDir: "desc" }));
+      const tb = this._table([this._t("th_category"), this._t("th_used"), this._t("th_share")], rows, { sortIdx: 1, sortDir: "desc" });
+      tb.classList.add("tbl-split");
+      parts.push(tb);
     }
 
     const breakdown = storage.breakdown || [];
@@ -3878,7 +4584,9 @@ class HaPercytaPanel extends HTMLElement {
         { node: this._el("div", { class: "bar-cell" }, [this._meter(this._sharePct(it.bytes, maxRef), "ok")]), sort: it.bytes || 0 },
       ]);
       parts.push(this._el("div", { class: "sub-head", text: this._t("sub_consumers") }));
-      parts.push(this._table([this._t("th_area"), this._t("th_size"), this._t("th_share")], rows, { sortIdx: 1, sortDir: "desc" }));
+      const tb = this._table([this._t("th_area"), this._t("th_size"), this._t("th_share")], rows, { sortIdx: 1, sortDir: "desc" });
+      tb.classList.add("tbl-split");
+      parts.push(tb);
     }
 
     const custom = storage.custom_integrations || [];
@@ -4021,6 +4729,7 @@ class HaPercytaPanel extends HTMLElement {
       const maxS = states.reduce((m, x) => Math.max(m, x.rows || 0), 0) || 1;
       const rows = states.map((x) => {
         const link = this._el("span", { class: "mono link-num", text: x.entity_id, attrs: { title: this._t("open_history") } });
+        link.dataset.link = "#entity:" + x.entity_id;
         link.addEventListener("click", () => this._navigate("/history?entity_id=" + encodeURIComponent(x.entity_id)));
         return [
           { node: link, sort: x.entity_id },
@@ -4043,6 +4752,7 @@ class HaPercytaPanel extends HTMLElement {
         // Externe Statistiken (z. B. "energy:…") haben keine Entität und damit keinen Verlauf.
         if (!isEntity(id)) return this._el("span", { class: "mono", text: id });
         const link = this._el("span", { class: "mono link-num", text: id, attrs: { title: this._t("open_history") } });
+        link.dataset.link = "#entity:" + id;
         link.addEventListener("click", () => this._navigate("/history?entity_id=" + encodeURIComponent(id)));
         return { node: link, sort: id };
       };
@@ -4113,10 +4823,10 @@ class HaPercytaPanel extends HTMLElement {
         i.source,
         chips,
         i.entity_count && i.entry_id
-          ? { node: this._linkNum(i.entity_count, `/config/entities?historyBack=1&config_entry=${i.entry_id}`), sort: i.entity_count }
+          ? { node: this._linkNum(i.entity_count, `/config/entities?historyBack=1&config_entry=${i.entry_id}`, { domain: i.domain, entry: i.entry_id, entities: i.entity_count, devices: i.device_count }), sort: i.entity_count }
           : { text: String(i.entity_count || 0), sort: i.entity_count || 0 },
         i.device_count && i.entry_id
-          ? { node: this._linkNum(i.device_count, `/config/devices/dashboard?historyBack=1&config_entry=${i.entry_id}`), sort: i.device_count }
+          ? { node: this._linkNum(i.device_count, `/config/devices/dashboard?historyBack=1&config_entry=${i.entry_id}`, { domain: i.domain, entry: i.entry_id, entities: i.entity_count, devices: i.device_count }), sort: i.device_count }
           : { text: String(i.device_count || 0), sort: i.device_count || 0 },
         { node: this._overrideSelect(i), nosrch: true },
       ];
@@ -4426,9 +5136,9 @@ class HaPercytaPanel extends HTMLElement {
   }
 
   // Links aus Befunden: interne Sprünge (#finding:…, #percyta:…), HA-Pfade oder http(s).
-  _openLink(link) {
+  _openLink(link, ctx) {
     if (!link || typeof link !== "string") return;
-    if (link.startsWith("#entity:")) { this._moreInfo(link.slice(8)); return; }
+    if (link.startsWith("#entity:")) { this._linkMenu(link, ctx); return; }
     if (link.startsWith("#finding:")) {
       const id = link.slice(9);
       const exists = this._data && this._data.data && (this._data.data.findings || []).some((f) => f.id === id);
@@ -4465,7 +5175,7 @@ class HaPercytaPanel extends HTMLElement {
       if (url.protocol === "https:" || url.protocol === "http:") window.open(url.href, "_blank", "noopener,noreferrer");
       return;
     }
-    this._navigate(link);
+    this._navigate(link, ctx);
   }
 
   _fStatusText(f) {
@@ -4500,7 +5210,31 @@ class HaPercytaPanel extends HTMLElement {
     await this._loadReport();
   }
 
-  _findingRow(f, fs, onSel) {
+  // Suche in einem Befund: sichtbare Texte, betroffene Objekte (Name/ID/Fundstelle) und technische Daten.
+  // Mehrere Wörter müssen alle vorkommen. Liefert, wo der Treffer liegt (für den Hinweis in der Zeile).
+  _findingMatch(f, q) {
+    const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return { where: "visible" };
+    const doc = this._fdoc(f);
+    const kind = (f.params || {}).kind;
+    const topicKey = f.category === "automations" && (kind === "automation" || kind === "script") && !/^unused_/.test(f.type) ? "tp_" + kind : "tp_" + f.type;
+    const flat = (v) => (v == null ? "" : typeof v === "object" ? Object.values(v).map(flat).join(" ") : String(v));
+    const visible = [doc.title, f.subject, f.subject_ref, f.note, this._t(topicKey), this._t("cat_" + f.category), (f.areas || []).join(" ")]
+      .map(flat).join(" ").toLowerCase();
+    const itemTexts = (f.items || []).map((i) => flat([i.name, i.ref, i.paths, i.area, i.issue && this._t("iss_" + i.issue)]).toLowerCase());
+    const extra = flat([f.details, f.params, doc.what]).toLowerCase();
+    const all = [visible, itemTexts.join(" "), extra].join(" ");
+    if (!words.every((w) => all.includes(w))) return null;
+    if (words.every((w) => visible.includes(w))) return { where: "visible" };
+    const hits = (f.items || []).filter((i, k) => words.some((w) => itemTexts[k].includes(w)));
+    if (hits.length) {
+      const h = hits[0];
+      return { where: "items", text: String(h.ref || h.name || ""), more: hits.length - 1 };
+    }
+    return { where: "details" };
+  }
+
+  _findingRow(f, fs, onSel, match) {
     const doc = this._fdoc(f);
     const cb = this._el("input", { class: "f-cb", attrs: { type: "checkbox", "data-fid": f.id } });
     cb.checked = fs.sel.has(f.id);
@@ -4511,7 +5245,14 @@ class HaPercytaPanel extends HTMLElement {
     });
 
     const title = this._el("span", { class: "f-title", text: doc.title, attrs: { "data-fid": f.id, title: this._t("f_open") } });
-    title.addEventListener("click", () => this._openDetail(f.id));
+    // Treffer in betroffenen Objekten → Detail gleich auf diesem Reiter öffnen.
+    const open = () => {
+      this._detailQ = match && match.where === "items" ? { id: f.id, q: fs.q } : null;
+      if (match && match.where === "items") this._detailTab = "items";
+      else if (match && match.where === "details") this._detailTab = "tech";
+      this._openDetail(f.id);
+    };
+    title.addEventListener("click", open);
     // Thema auf einen Blick (Dashboard, Blueprints, Automation …) – farbig nach Kategorie.
     const kind = (f.params || {}).kind;
     const topicKey = f.category === "automations" && (kind === "automation" || kind === "script") && !/^unused_/.test(f.type) ? "tp_" + kind : "tp_" + f.type;
@@ -4523,9 +5264,17 @@ class HaPercytaPanel extends HTMLElement {
     const sub = this._el("div", { class: "f-sub" }, this._fSubject(f));
     if (f.status !== "open") sub.appendChild(this._chip(this._fStatusText(f), f.status === "hidden" ? "" : "info"));
     if (f.note) sub.appendChild(this._el("span", { class: "muted f-note", text: "— " + f.note }));
+    if (match && match.where !== "visible") {
+      const txt = match.where === "items"
+        ? this._ti("fq_hit_items", { x: match.text }) + (match.more > 0 ? ` +${match.more}` : "")
+        : this._t("fq_hit_details");
+      const hit = this._el("span", { class: "f-hit", text: "🔎 " + txt, attrs: { title: this._t("f_open") } });
+      hit.addEventListener("click", open);
+      sub.appendChild(hit);
+    }
 
     const go = this._el("span", { class: "f-go-btn", text: "›", attrs: { title: this._t("f_open") } });
-    go.addEventListener("click", () => this._openDetail(f.id));
+    go.addEventListener("click", open);
     const since = Date.parse(f.first_seen) || 0;
     return [
       { node: cb, nosrch: true, sort: 0 },
@@ -4556,7 +5305,10 @@ class HaPercytaPanel extends HTMLElement {
     Array.from(fs.sel).forEach((i) => { if (!ids.has(i)) fs.sel.delete(i); });
     const body = this._el("div", { class: "f-body" });
 
+    let built = false;
     const build = () => {
+      if (built) requestAnimationFrame(() => this._animate(body, false));
+      built = true;
       body.replaceChildren();
       all = d.findings.filter(inScope);
       const byStatus = { open: 0, known: 0, snoozed: 0, hidden: 0 };
@@ -4616,7 +5368,7 @@ class HaPercytaPanel extends HTMLElement {
       const labelSel = scopeSel(fs.label, "f_label_all", labelNames, (v) => { fs.label = v; }, "labels");
 
       const selInfo = this._el("span", { class: "f-sel-info muted" });
-      const btnPage = this._el("button", { class: "vb-btn", text: this._t("f_select_page") });
+      const btnPage = this._el("button", { class: "vb-btn", text: this._t("f_select_page"), attrs: { title: this._t("f_select_page_t") } });
       const btnClear = this._el("button", { class: "vb-btn", text: this._t("f_clear_sel") });
       const actions = this._el("div", { class: "f-actions" });
       const act = (label, status, extra) => {
@@ -4633,9 +5385,15 @@ class HaPercytaPanel extends HTMLElement {
       } else {
         actions.append(act(this._t("f_reopen"), "open"));
       }
+      // Suche in den Befunden (auch in betroffenen Objekten und technischen Daten).
+      const qInput = this._el("input", { class: "f-search-in", attrs: { type: "search", placeholder: this._t("fq_ph"), "aria-label": this._t("fq_ph"), value: fs.q || "" } });
+      const qClear = this._el("button", { class: "f-search-x", text: "×", attrs: { type: "button", title: this._t("fq_clear"), "aria-label": this._t("fq_clear") } });
+      const qInfo = this._el("span", { class: "f-search-info muted" });
+      const qBox = this._el("div", { class: "f-search" + (fs.q ? " has-q" : "") }, [this._el("span", { class: "f-search-ico", text: "🔎" }), qInput, qClear]);
       const tools = this._el("div", { class: "f-tools" }, [
         this._el("div", { class: "f-row" }, [tabs, sevSel, areaSel, labelSel]),
-        this._el("div", { class: "f-row" }, [btnPage, btnClear, selInfo, actions]),
+        this._el("div", { class: "f-row" }, [qBox, qInfo, actions]),
+        this._el("div", { class: "f-row" }, [btnPage, btnClear, selInfo]),
       ]);
       body.appendChild(tools);
 
@@ -4661,18 +5419,29 @@ class HaPercytaPanel extends HTMLElement {
       if (suppParts.length) body.appendChild(this._el("div", { class: "hint-line f-supp", text: this._ti("f_supp", { parts: suppParts.join(" · ") }) }));
 
       // Liste
-      const rowsData = tabList.filter((f) => (fs.cat === "all" || f.category === fs.cat) && (fs.sev === "all" || f.severity === fs.sev));
       const listWrap = this._el("div", { class: "f-list" });
       const updateSel = () => {
         selInfo.textContent = fs.sel.size ? this._ti("f_selected", { n: fs.sel.size }) : "";
         actions.querySelectorAll("button, select").forEach((el) => { el.disabled = !fs.sel.size; });
         btnClear.disabled = !fs.sel.size;
       };
-      if (!rowsData.length) {
-        const msg = !tabList.length ? (fs.tab === "open" ? "f_empty_open" : "f_empty_other") : "f_empty_filter";
-        listWrap.appendChild(this._el("div", { class: "empty", text: this._t(msg) }));
-      } else {
-        const rows = rowsData.map((f) => this._findingRow(f, fs, updateSel));
+      const renderList = () => {
+        listWrap.replaceChildren();
+        const base = tabList.filter((f) => (fs.cat === "all" || f.category === fs.cat) && (fs.sev === "all" || f.severity === fs.sev));
+        const matches = new Map();
+        const rowsData = fs.q ? base.filter((f) => {
+          const m = this._findingMatch(f, fs.q);
+          if (m) matches.set(f.id, m);
+          return !!m;
+        }) : base;
+        qBox.classList.toggle("has-q", !!fs.q);
+        qInfo.textContent = fs.q ? this._ti("fq_info", { n: rowsData.length, m: base.length }) : "";
+        if (!rowsData.length) {
+          const msg = fs.q && base.length ? "fq_none" : !tabList.length ? (fs.tab === "open" ? "f_empty_open" : "f_empty_other") : "f_empty_filter";
+          listWrap.appendChild(this._el("div", { class: "empty", text: this._t(msg) }));
+          return;
+        }
+        const rows = rowsData.map((f) => this._findingRow(f, fs, updateSel, matches.get(f.id)));
         listWrap.appendChild(
           this._table(
             ["", this._t("f_th_sev"), this._t("f_th_finding"), this._t("f_th_cat"), this._t("f_th_affected"), this._t("f_th_since"), ""],
@@ -4683,7 +5452,15 @@ class HaPercytaPanel extends HTMLElement {
             }
           )
         );
-      }
+      };
+      let qTimer = null;
+      qInput.addEventListener("input", () => {
+        clearTimeout(qTimer);
+        qTimer = setTimeout(() => { fs.q = qInput.value.trim(); renderList(); updateSel(); }, 160);
+      });
+      qInput.addEventListener("keydown", (e) => { if (e.key === "Escape" && qInput.value) { e.stopPropagation(); qInput.value = ""; fs.q = ""; renderList(); updateSel(); } });
+      qClear.addEventListener("click", () => { qInput.value = ""; fs.q = ""; renderList(); updateSel(); qInput.focus(); });
+      renderList();
       body.appendChild(listWrap);
       btnPage.addEventListener("click", () => {
         listWrap.querySelectorAll("tbody tr:not([hidden]) input.f-cb").forEach((cb) => { cb.checked = true; fs.sel.add(cb.dataset.fid); });
@@ -4699,7 +5476,10 @@ class HaPercytaPanel extends HTMLElement {
       // Zuletzt behoben
       const res = d.findings_resolved || [];
       if (res.length) {
-        const list = this._el("div", { class: "f-resolved" }, res.map((r) => {
+        const RES_PAGE = 10;
+        const resPages = Math.max(1, Math.ceil(res.length / RES_PAGE));
+        fs.resPage = Math.min(Math.max(0, fs.resPage || 0), resPages - 1);
+        const mkRow = (r) => {
           const doc = (FDOC[this._lang()] || FDOC.en)[r.type];
           const label = doc ? doc.title : r.type;
           const subj = r.subject ? String(r.subject) : String(r.id || "").split(":").slice(1).join(":");
@@ -4715,9 +5495,39 @@ class HaPercytaPanel extends HTMLElement {
           row.addEventListener("click", open);
           row.addEventListener("keydown", (e) => { if (e.key === "Enter") open(); });
           return row;
-        }));
+        };
+        const list = this._el("div", { class: "f-resolved" });
+        const holder = this._el("div", {});
+        const renderRes = () => {
+          holder.replaceChildren(...res.slice(fs.resPage * RES_PAGE, fs.resPage * RES_PAGE + RES_PAGE).map(mkRow));
+          if (resPages > 1) {
+            const prev = this._el("button", { class: "vb-btn small", text: this._t("log_prev"), attrs: { type: "button" } });
+            const next = this._el("button", { class: "vb-btn small", text: this._t("log_next"), attrs: { type: "button" } });
+            prev.disabled = fs.resPage <= 0;
+            next.disabled = fs.resPage >= resPages - 1;
+            prev.addEventListener("click", () => { fs.resPage -= 1; renderRes(); });
+            next.addEventListener("click", () => { fs.resPage += 1; renderRes(); });
+            holder.appendChild(this._el("div", { class: "log-pager" }, [
+              prev, this._el("span", { class: "muted small", text: this._ti("log_page", { p: fs.resPage + 1, n: resPages, t: res.length }) }), next,
+            ]));
+          }
+        };
+        // Verlauf leeren (nur Percytas Liste „Zuletzt behoben“; offene Befunde bleiben).
+        const clearRes = this._el("button", { class: "vb-btn small", text: this._t("log_clear"), attrs: { type: "button", title: this._t("fr_clear_t") } });
+        let armed = false;
+        clearRes.addEventListener("click", async () => {
+          if (!armed) { armed = true; clearRes.textContent = this._t("log_clear_sure"); clearRes.classList.add("danger-btn"); return; }
+          clearRes.disabled = true;
+          const r = await this._ws({ type: "ha_percyta/resolved_clear" });
+          if (r && !r.error) { fs.resPage = 0; await this._loadReport(); }
+          else { clearRes.disabled = false; clearRes.textContent = this._errText(r); }
+        });
+        list.append(this._el("div", { class: "log-bar" }, [this._el("span", { class: "muted small", text: this._t("fr_note") }), clearRes]), holder);
+        renderRes();
         const det = this._section(this._t("f_resolved"), res.length, list, fs.resolvedOpen);
         det.classList.add("f-resolved-box");
+        const cnt = det.querySelector(".sec-count");
+        if (cnt) cnt.classList.add("lvl-ok");
         det.addEventListener("toggle", () => { fs.resolvedOpen = det.open; });
         body.appendChild(det);
       }
@@ -4946,6 +5756,7 @@ class HaPercytaPanel extends HTMLElement {
       this._chip(CAT_ICON[f.category] + " " + this._t("cat_" + f.category)),
     ]);
     if (f.status !== "open") badges.appendChild(this._chip(this._fStatusText(f), "info"));
+    if ((f.params || {}).kind === "automation" && this._autoIsOff(f.subject_ref)) badges.appendChild(this._chip(this._t("au_state_off"), "warn au-off-chip"));
     const heroMain = this._el("div", { class: "fd-hero-main" }, [
       badges,
       this._el("h2", { class: "fd-title", text: doc.title }),
@@ -4959,6 +5770,10 @@ class HaPercytaPanel extends HTMLElement {
     const heroActs = this._heroActions(f);
     if (heroActs.length) hero.appendChild(this._el("div", { class: "fd-hero-acts" }, heroActs));
     wrap.appendChild(hero);
+    // Ergebnis von „Jetzt testen“ (bleibt beim Neuzeichnen erhalten).
+    if (f.subject_ref && (f.params || {}).kind === "automation") {
+      wrap.appendChild(this._el("div", { class: "at-slot", attrs: { "data-ref": f.subject_ref } }, [this._testResultCard(f.subject_ref)]));
+    }
 
     // Reiter: Diagnose / Betroffene Objekte / Technische Daten
     const step = (cls, icon, label, content) =>
@@ -4989,7 +5804,7 @@ class HaPercytaPanel extends HTMLElement {
     }
     const steps = this._el("ul", { class: "fd-steps" }, [
       step("", "🔎", this._t("fd_found"), this._el("div", {}, [this._el("p", { text: doc.what }), intent, why])),
-      step("fix", "🛠️", this._t("fd_fix"), fixList),
+      step("fix", "🛠️", this._t("fd_fix"), this._el("div", {}, [fixList, this._solutionBar(f, () => show("items"))])),
     ]);
     const panels = [["diag", this._t("fd_tab_diag"), steps]];
     if ((f.items || []).length) panels.push(["items", `${this._t("fd_tab_items")} ${f.items_total}`, this._itemsPanel(f)]);
@@ -5018,10 +5833,11 @@ class HaPercytaPanel extends HTMLElement {
       this._el("div", { class: "fd-conf-bar" }, [this._el("span", { style: `width:${conf}%` })]),
       this._el("span", { text: conf + " %" }),
     ]);
-    const first = f.first_seen ? new Date(f.first_seen) : null;
+    // Zuletzt beobachtet: letztes Auftreten (Läufe mit Zeitstempel) oder der letzte Scan, in dem es noch so war.
+    const last = this._lastSeen(f);
     const sinceNode = this._el("div", {}, [
-      this._el("div", { text: first ? this._fmtDateTime(f.first_seen) : "—" }),
-      first ? this._el("div", { class: "muted small", text: this._ago(first) }) : null,
+      this._el("div", { text: last ? this._fmtDateTime(last.at) : "—" }),
+      last ? this._el("div", { class: "muted small", text: `${this._ago(new Date(last.at))} · ${this._t(last.event ? "fd_last_event" : "fd_last_scan")}` }) : null,
     ]);
     const statusNode = this._el("div", {}, [
       this._el("span", { text: this._fStatusText(f) }),
@@ -5032,7 +5848,7 @@ class HaPercytaPanel extends HTMLElement {
       row(this._t("fd_sev"), this._sevBadge(f.severity)),
       row(this._t("fd_conf"), confNode),
       row(this._t("fd_cat"), this._el("span", { text: CAT_ICON[f.category] + " " + this._t("cat_" + f.category) })),
-      row(this._t("fd_since"), sinceNode),
+      row(this._t("fd_last"), sinceNode),
       f.items_total ? row(this._t("fd_affected"), this._el("span", { text: String(f.items_total) })) : null,
       row(this._t("fd_status"), statusNode),
     ]);
@@ -5062,6 +5878,42 @@ class HaPercytaPanel extends HTMLElement {
     return wrap;
   }
 
+  // „Direkt zur Lösung“ am Ende der Diagnose: die passenden Ziele in Home Assistant (Ablaufverfolgung,
+  // Entität, Gerät, Integration …) aus dem Befund und seinen betroffenen Objekten – doppelte zusammengefasst.
+  _solutionBar(f, gotoItems) {
+    const seen = new Set();
+    const out = [];
+    const add = (link, sub) => {
+      if (!link || seen.has(link)) return;
+      seen.add(link);
+      out.push({ link, sub });
+    };
+    add(f.link, null);
+    (f.items || []).forEach((it) => {
+      let link = it.link;
+      const isEnt = it.kind === "entity" && /^[a-z0-9_]+\.[a-z0-9_]+$/.test(String(it.ref || "")) && it.issue !== "missing";
+      // Allgemeine Entitätenliste → lieber direkt die Entität öffnen.
+      if (isEnt && (!link || /^\/config\/entities\/?$/.test(link))) link = "#entity:" + it.ref;
+      add(link, it.name || it.ref);
+    });
+    if (!out.length) return null;
+    const MAX = 4;
+    const multi = out.length > 1;
+    const btns = out.slice(0, MAX).map((o, i) => {
+      const base = this._linkLabel(o.link);
+      const arrow = base.slice(-2);
+      const label = multi && o.sub ? `${base.slice(0, -2)} · ${o.sub}${arrow}` : base;
+      return this._linkBtn(label, o.link, "vb-btn fd-solve-btn" + (i === 0 ? " first" : ""));
+    });
+    const total = (f.items_total || (f.items || []).length);
+    if (out.length > MAX || total > MAX) {
+      const all = this._el("button", { class: "vb-btn fd-solve-btn", text: this._ti("fd_solve_all", { n: total }), attrs: { type: "button" } });
+      all.addEventListener("click", () => gotoItems && gotoItems());
+      btns.push(all);
+    }
+    return this._el("div", { class: "fd-solve" }, [this._el("span", { class: "fd-solve-h", text: this._t("fd_solve") }), ...btns]);
+  }
+
   // Zusätzliche Aktionen in der Kopfkarte eines Befunds (steuern statt nur anzeigen).
   _heroActions(f) {
     const p = f.params || {};
@@ -5073,10 +5925,16 @@ class HaPercytaPanel extends HTMLElement {
     };
     const ref = f.subject_ref;
     if (p.kind === "automation" && ref && ["automation_errors", "automation_skipped", "automation_refs"].includes(f.type)) {
-      btn(this._t("au_trigger"), (b) => this._automationAction(b, "trigger", ref, { skip_condition: true }));
-      btn(this._t("au_turn_off"), (b) => this._automationAction(b, "turn_off", ref));
+      btn(this._t(this._testResults && this._testResults[ref] && !this._testResults[ref].pending ? "au_retest" : "au_trigger"),
+        (b) => this._testAutomation(b, ref));
+      acts[acts.length - 1].title = this._t("au_test_t");
+      if (this._testResults && this._testResults[ref] && this._testResults[ref].pending) {
+        acts[acts.length - 1].disabled = true;
+        acts[acts.length - 1].textContent = this._t("au_testing");
+      }
+      acts.push(this._autoToggleBtn(ref));
     }
-    if (f.type === "unused_automation" && ref) btn(this._t("au_turn_off"), (b) => this._automationAction(b, "turn_off", ref));
+    if (f.type === "unused_automation" && ref) acts.push(this._autoToggleBtn(ref));
     if (f.type === "stale_token" && p.token_id) {
       btn(this._t("tk_revoke"), () => this._revokeDialog({ id: p.token_id, user: p.user, client_name: f.subject }), "warn-btn");
     }
@@ -5112,6 +5970,30 @@ class HaPercytaPanel extends HTMLElement {
   }
 
   // ---------- Verlauf eines Befunds ----------
+  // Zeitpunkt, zu dem der Befund zuletzt beobachtet wurde: bei Läufen das letzte Auftreten,
+  // sonst der letzte Scan (der Befund steht ja im aktuellen Ergebnis).
+  _lastSeen(f) {
+    const times = (f.items || []).filter((i) => i.kind === "run").map((i) => Date.parse(i.when)).filter((x) => x > 0);
+    if (times.length) return { at: new Date(Math.max(...times)).toISOString(), event: true };
+    const gen = this._data && this._data.generated_at;
+    return gen ? { at: gen, event: false } : null;
+  }
+
+  _seenStrip(f, resolved) {
+    const first = Date.parse(f.first_seen) || 0;
+    const last = resolved ? null : this._lastSeen(f);
+    if (!first && !last) return null;
+    const box = (label, iso, sub) => this._el("div", { class: "fd-seen-box" }, [
+      this._el("div", { class: "fd-seen-l", text: label }),
+      this._el("div", { class: "fd-seen-v", text: this._fmtDateTime(iso) }),
+      this._el("div", { class: "muted small", text: sub }),
+    ]);
+    const parts = [];
+    if (first) parts.push(box(this._t("fd_seen_first"), f.first_seen, this._ago(new Date(first))));
+    if (last) parts.push(box(this._t("fd_seen_last"), last.at, `${this._ago(new Date(last.at))} · ${this._t(last.event ? "fd_last_event" : "fd_last_scan")}`));
+    return this._el("div", { class: "fd-seen" }, parts);
+  }
+
   _historyPanel(f, resolved) {
     const events = [];
     if (f.first_seen) events.push({ at: f.first_seen, icon: "🔎", title: this._t("fd_hist_first"), lines: [] });
@@ -5133,7 +6015,7 @@ class HaPercytaPanel extends HTMLElement {
           ...e.lines.map((l) => this._el("p", { text: l })),
         ]),
       ])));
-    const wrap = this._el("div", {}, [list]);
+    const wrap = this._el("div", {}, [this._seenStrip(f, resolved), list]);
     if (!(f.history || []).length) wrap.appendChild(this._el("div", { class: "hint-line", text: this._t("fd_hist_none") }));
     return wrap;
   }
@@ -6371,6 +7253,110 @@ class HaPercytaPanel extends HTMLElement {
   }
 
   // Automation ein-/ausschalten bzw. testweise auslösen (offizielle HA-Dienste).
+  // „Jetzt testen“: auslösen (ohne Bedingungen) und das Ergebnis des Laufs anzeigen.
+  async _testAutomation(btn, entityId) {
+    this._testResults = this._testResults || {};
+    if (this._testResults[entityId] && this._testResults[entityId].pending) return;
+    btn.disabled = true;
+    btn.textContent = this._t("au_testing");
+    this._testResults[entityId] = { pending: true, at: Date.now() };
+    this._showTestResult(entityId);
+    let res = await this._ws({ type: "ha_percyta/automation_test", entity_id: entityId });
+    if (!res) res = { error: "action_failed" };
+    this._testResults[entityId] = { res, at: Date.now() };
+    // Der Button kann durch ein Neuzeichnen ersetzt worden sein → den aktuellen suchen.
+    this.shadowRoot.querySelectorAll(".fd-hero-acts .vb-btn").forEach((b) => {
+      if (b.textContent === this._t("au_testing")) { b.disabled = false; b.textContent = this._t("au_retest"); }
+    });
+    btn.disabled = false;
+    btn.textContent = this._t("au_retest");
+    this._showTestResult(entityId);
+    if (res.outcome === "ok") this._refreshSoon(true); // Befund neu prüfen
+  }
+
+  _showTestResult(entityId) {
+    this.shadowRoot.querySelectorAll(".at-slot").forEach((slot) => {
+      if (slot.dataset.ref === entityId) slot.replaceChildren(this._testResultCard(entityId) || "");
+    });
+  }
+
+  _testResultCard(entityId) {
+    const entry = this._testResults && this._testResults[entityId];
+    if (!entry || Date.now() - entry.at > 30 * 60000) return null;
+    const card = (kind, icon, title, lines, link) => {
+      const body = this._el("div", { class: "at-body" }, [
+        this._el("div", { class: "at-title", text: title }),
+        ...lines.filter(Boolean).map((l) => this._el("div", { class: l.cls || "at-line", text: l.text || l })),
+      ]);
+      const kids = [this._el("div", { class: "at-ico", text: icon }), body];
+      if (link) kids.push(this._linkBtn(this._t("at_open") + " ↗", link, "vb-btn at-open"));
+      return this._el("div", { class: "at-card at-" + kind, attrs: { role: "status", "aria-live": "polite" } }, kids);
+    };
+    if (entry.pending) return card("wait", "", this._t("at_wait_t"), [this._t("at_wait")]);
+    const r = entry.res || {};
+    const when = { cls: "at-meta", text: this._ti("at_at", { t: new Date(entry.at).toLocaleTimeString() }) };
+    if (r.error && !r.outcome) return card("error", "⚠️", this._t("at_failed_t"), [this._errText(r), when]);
+    const n = r.waited || 30;
+    const dur = r.duration != null ? this._ti("at_dur", { t: r.duration < 60 ? `${String(r.duration).replace(".", this._lang() === "de" ? "," : ".")} s` : this._fmtDur(r.duration) }) : "";
+    switch (r.outcome) {
+      case "ok":
+        return card("ok", "✅", this._t("at_ok_t"), [this._ti("at_ok", { d: dur }), this._t("at_ok_scan"), when], r.link);
+      case "error":
+        return card("error", "❌", this._t(r.stage === "trigger" ? "at_trigger_t" : "at_error_t"), [
+          { cls: "at-err", text: r.error || r.execution || "error" },
+          r.last_step ? this._ti("at_error_step", { s: r.last_step }) : null, when], r.link);
+      case "skipped":
+        return card("warn", "⏭️", this._t("at_skipped_t"), [this._ti("at_skipped", { x: r.execution }), when], r.link);
+      case "stopped":
+        return card("warn", "⏹️", this._t("at_stopped_t"), [this._ti("at_stopped", { x: r.execution }), when], r.link);
+      case "running":
+        return card("warn", "⏳", this._t("at_running_t"), [this._ti("at_running", { n }), when], r.link);
+      case "no_run":
+        return card("muted", "❔", this._t("at_no_run_t"), [this._ti("at_no_run", { n }), r.state === "off" ? this._t("at_off") : null, when], r.link);
+      default:
+        return card("muted", "▶", this._t("at_started_t"), [this._t("at_started"), when], r.link);
+    }
+  }
+
+  _autoIsOff(ref) {
+    const s = ref && this._hass && this._hass.states && this._hass.states[ref];
+    return !!s && s.state === "off";
+  }
+
+  // Ein-/Ausschalten je nach aktuellem Zustand der Automation (live aus Home Assistant).
+  _autoToggleBtn(ref) {
+    const b = this._el("button", { class: "vb-btn au-toggle", attrs: { type: "button" } });
+    const paint = () => {
+      const off = this._autoIsOff(ref);
+      b.textContent = this._t(off ? "au_turn_on" : "au_turn_off");
+      b.title = this._t(off ? "au_on_t" : "au_off_t");
+      b.classList.toggle("au-on", off);
+    };
+    paint();
+    b.addEventListener("click", async () => {
+      const off = this._autoIsOff(ref);
+      b.disabled = true;
+      b.classList.add("busy");
+      let ok = true;
+      try {
+        await this._hass.callService("automation", off ? "turn_on" : "turn_off", { entity_id: ref });
+        // Warten, bis Home Assistant den neuen Zustand meldet (max. 3 s).
+        for (let i = 0; i < 15 && this._autoIsOff(ref) === off; i++) await new Promise((r) => setTimeout(r, 200));
+      } catch (e) {
+        ok = false;
+      }
+      b.disabled = false;
+      b.classList.remove("busy");
+      paint();
+      b.classList.add(ok ? "flash-ok" : "flash-err");
+      setTimeout(() => b.classList.remove("flash-ok", "flash-err"), 1100);
+      const chip = this.shadowRoot.querySelector(".fd-badges .au-off-chip");
+      if (chip) chip.hidden = !this._autoIsOff(ref);
+      if (ok) this._refreshSoon(true); // Befunde (z. B. „Ausgeschaltete Automationen“) neu prüfen
+    });
+    return b;
+  }
+
   async _automationAction(btn, service, entityId, data) {
     btn.disabled = true;
     try {
@@ -6995,8 +7981,17 @@ class HaPercytaPanel extends HTMLElement {
     if (!j || this._jobPillHidden === j.id) { pill.hidden = true; return; }
     pill.hidden = false;
     pill.className = "job-pill " + j.status;
-    const p = j.progress != null && j.status === "running" ? ` ${Math.floor(j.progress)} %` : "";
-    pill.textContent = (j.status === "running" ? "⏳ " : j.status === "done" ? "✅ " : "❌ ") + this._t("ja_" + j.action) + p;
+    const run = j.status === "running";
+    const hasP = j.progress != null && run;
+    const pct = hasP ? Math.floor(j.progress) : run ? 0 : 100;
+    let ring = pill.querySelector(".sp-ringw");
+    if (!ring) {
+      ring = this._el("span", { class: "sp-ringw" }, [this._el("span", { class: "sp-ring" }), this._el("span", { class: "sp-pct" })]);
+      pill.replaceChildren(ring, this._el("span", { class: "jp-text" }));
+    }
+    ring.querySelector(".sp-ring").style.setProperty("--p", String(pct));
+    ring.querySelector(".sp-pct").textContent = run ? (hasP ? String(pct) : "") : j.status === "done" ? "✓" : "!";
+    pill.querySelector(".jp-text").textContent = this._t("ja_" + j.action) + (hasP ? ` · ${pct} %` : "");
   }
 
   _jobDialog() {

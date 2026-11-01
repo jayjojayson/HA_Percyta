@@ -3,6 +3,67 @@
 All notable changes to **HA Percyta**. German version: [CHANGELOG_de.md](CHANGELOG_de.md).
 Older versions: see the [GitHub releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.4
+
+Follow-up to 1.2.3 with wishes from daily use: clearer timing on finding pages, a real result for *Test now*, a visible scan progress, a search in the findings and a livelier panel.
+
+### 🕒 Last observed
+- The *At a glance* box of a finding now shows **“Last observed”** instead of “First observed”: for automation runs (e.g. *Error while running*) the time of the last failed run, otherwise the last scan that still found it.
+- The **History** tab starts with two boxes **“First observed”** (highlighted) and **“Last observed”**. The findings list keeps the *Since* column.
+
+### ▶ Test now with a result
+- *Test now* used to only trigger the automation and then showed a greyed-out “✔” – whether the run worked was not visible. Now HA Percyta waits for the new run (max. 30 s, recognised by its context, so other runs at the same time do not count) and shows a result card below the header: **passed** (with duration), **failed** (error message and step), **skipped** (already running), **ended early**, **still running** or **no run detected** (with a hint if the automation is turned off) – plus *Open trace*.
+- After a passed test the finding is checked again by a new scan.
+- The button shows *⏳ Testing …* while waiting and *▶ Test again* afterwards.
+
+### 📊 Scan progress in the header
+- While a scan runs, a pill next to *Rescan* shows a **progress ring with percentage**, the **current step** (e.g. *Database*) and the **approximate time left**; the *Rescan* button fills up as well.
+- The estimate uses the duration of each step in the previous scan; for the first scan after a restart the pill shows *step x of y*. The percentage never goes backwards; a slow step shows *almost done* instead of a wrong time.
+- At the end it shows *Scan finished in …*. A scan started elsewhere (automatic scan, button entity) ends with **“Show new results”** – one click loads the new results.
+- Small screens: the header hides the timestamp, version and downloads so *Rescan* stays visible.
+
+### 🔎 Search in the findings
+- New search field in the **Reports** box, next to the bulk actions (*Select all* / *Clear selection* now sit below it; *Select page* is called **Select all** – it selects every finding currently in the list). It searches the finding title, the affected object (name and ID), the **affected objects** of every finding (entity IDs, names, location in the configuration) and the technical data. Several words must all match.
+- Example: search for an entity ID and see every automation, script, dashboard or integration finding that refers to it.
+- If the match is only in the affected objects, the row shows **“🔎 Match in affected objects: …”**; a click opens the finding directly on the *Affected objects* tab with the matching rows highlighted.
+- Shows *x of y findings match*; *×* or *Esc* clears the search. Works together with the category, status, severity, area and label filters.
+
+### 👉 Straight to the fix
+- The diagnosis of every finding now ends with **“Straight to the fix”**: buttons to the matching place in Home Assistant – e.g. *Open trace* for automation errors, *Open entity* / *Open device* / *Open integration* for the affected objects, *Edit automation*. Duplicate targets are merged; with more than four there is *All n affected objects ›*.
+
+### 🔗 Link menu – stay in the panel or leave
+- Every click on a target in Home Assistant (buttons, IDs, entity/device counts, tiles, backup line) opens a small menu first: **open here** (leaves the panel), **open in new tab**, copy link. For entities additionally **Open entity** (dialog, you stay in the panel), history and logbook.
+- The menu offers **more targets** that fit the click, each with its own *new tab* button: e.g. entity count of an integration → device list, the integration itself and – if the integration has only one device or entity – exactly that one; automation → trace and vice versa; app → app log.
+- **Right-click** on such a target opens the same menu (Shift + right-click shows the browser menu).
+
+### 🧭 Header & navigation
+- The **header stays visible** while scrolling (the panel is now its own scroll area), so scan and database progress are always in view.
+- Two new icon buttons next to the menu switch quickly between **Overview** and **Care center**; the current page is highlighted.
+
+### ✔ Recently resolved
+- The count is shown in **green**, the list is split into **pages of 10** and can be cleared with **“Clear history”** (only HA Percyta's list; open findings stay unchanged).
+
+### ✨ A livelier panel
+- On opening, the key figures, the overview boxes and the care center tiles fade in one after the other, the bars (risk distribution, storage, certainty) grow and the numbers count up; the maintenance ring fills up.
+- After a scan, numbers that **changed** count from the old to the new value and pulse briefly – you see at a glance what changed. The same applies to the category tiles when you switch between *Open / Allowed / …*.
+- Database jobs in the header now show the same progress ring as the scan.
+- Pages and boxes fade in quickly: the large main boxes come first, closely staggered and are all there after about 0.5 s; the small tiles follow right behind. Bars and counting run calmly (1–2 s) so the effect is visible.
+- Animations only run when a page is opened or a value changes, not on every refresh. With *reduce motion* enabled in the operating system they are switched off.
+
+### 📖 Documentation
+- New README section **“How backups are managed”**: where Percyta database copies are stored, that only the last 2 are kept (older ones are removed automatically, never by age), how to replace or delete copies by hand and that Home Assistant backups created via HA Percyta are never deleted by HA Percyta.
+- The subtitle is now **“Permissions, Privacy & Data Center”** (was *… Data Scanner*): HA Percyta no longer only scans, it also lets you edit and clean up. The device model shown in Home Assistant changes accordingly.
+
+### 🐞 Fixes
+- **Storage tables aligned:** *System storage by category* and *Largest storage consumers* now use the same column split, so *Used* and *Size* sit exactly below each other.
+- **Reports:** the info box *What do Open, Allowed …* and the box *Intended exceptions with labels* are indented a bit (the triangles stand out); the label box is highlighted because you control it actively.
+- **IDs in one line:** long entity IDs in *Affected objects* were broken into single characters in narrow tables; they now stay on one line (the table scrolls sideways if needed).
+- **Turn on / turn off follows the state:** for a turned-off automation the finding page showed *Turn off*. The button now follows the current state from Home Assistant (*▶ Turn on* / *⏸ Turn off*), switches after a click and the header shows a *⏸ Turned off* chip.
+
+### ⚠️ Notes
+- **Restart Home Assistant after updating** – progress display, test and *Clear history* need the new code. With the old code still running, the panel simply shows no progress.
+- The time left is an estimate by HA Percyta, not a value from Home Assistant.
+
 ## v1.2.3
 
 Follow-up to 1.2.2, mostly from community feedback: intended states via Home Assistant labels, a new
@@ -45,7 +106,7 @@ care center.
   removed in HA Percyta** (single or with their device; earlier removals are taken from the log). You choose the
   entities and the data types; **long-term statistics are unticked by default**. The server refuses any other ID.
   Then the file is shrunk; nothing is deleted by age. After deleting data, the job window offers **“🧹 Clean up &
-  shrink now …”**, and the *Why?* hint opens this mode.
+  shrink now …”** and the *Why?* hint opens this mode.
 - **Shrinking shows its status:** file size and unused space before, every chosen entity with its rows, then every
   30 s the elapsed time and the step (copy / transfer via WAL) – no invented percentage – and at the end the size
   before/after and the space freed.
@@ -77,14 +138,14 @@ care center.
 - **Panel could vanish from the sidebar after saving options:** saving reloaded the integration, which removed the
   panel first. Now changing only the labels just starts a new scan (no reload). A reload for other options keeps the
   panel; it is only removed when the integration is disabled or deleted. The panel is set up first, every step is
-  protected, and an error is written to the Home Assistant log (*“HA Percyta: Panel konnte nicht eingerichtet
+  protected and an error is written to the Home Assistant log (*“HA Percyta: Panel konnte nicht eingerichtet
   werden”*).
 
 ### ⚠️ Notes
 - **Restart Home Assistant after updating.** Otherwise the browser already uses the new panel while HA still runs
   the old code (e.g. error *not a valid option*).
-- *Clean up leftovers* only offers entities removed with HA Percyta. Removals from 1.2.2 are taken from *Recent
-  actions* – entries you cleared there can no longer be offered.
+- *Clean up leftovers* only offers entities removed with HA Percyta. Entities removed with 1.2.2 are taken over once
+  from *Recent actions* (last 100 entries); entities removed together with a device in 1.2.2 are not included.
 - Long-term statistics are unticked by default. Data that has been deleted can only be restored from a backup.
 
 ## v1.2.2
@@ -140,7 +201,7 @@ you start yourself, with an explanation, a preview, confirmation and (where it m
 - Preview shows rows and the **time range per data type**, unit, current state and warnings.
 - **Preview fixed**: no more flickering/empty preview – the previous table stays visible while loading, the window
   stays anchored at the top, a hint is shown when nothing is selected, a typed but not confirmed ID is taken over,
-  outdated answers are ignored, and after a job the preview is reloaded (confirmation is reset).
+  outdated answers are ignored and after a job the preview is reloaded (confirmation is reset).
 - The **“Load preview” button was removed** – the preview loads automatically when the selection changes, so the
   button only closed the selection list and confused. New column **Space (approx.)** when deleting data, plus the
   total and a note that the file only shrinks after a repack.
@@ -201,7 +262,7 @@ you start yourself, with an explanation, a preview, confirmation and (where it m
   network) are no longer counted as integrations or as “not running” – they were never set up. Disabled entries were
   already excluded. In the reload window, the name and **Open ↗** lead straight to the integration in Home Assistant.
 - **Automations with problems:** tile and maintenance need now count the same thing – each automation/script once,
-  only open findings with severity high/medium, and **turned-off automations don't count** (an old error of a
+  only open findings with severity high/medium and **turned-off automations don't count** (an old error of a
   turned-off automation is now only a low-severity note). Before, the score also counted low-severity findings and
   turned-off automations, so allowing or switching off did not lower it. Note: one automation can have several
   findings (e.g. *errors while running* and *problematic references*) – it only stops counting once all of them are

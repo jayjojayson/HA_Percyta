@@ -10,6 +10,7 @@ import voluptuous as vol
 
 from homeassistant.components import frontend, panel_custom, websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     APP_NAME,
@@ -25,6 +26,7 @@ from .const import (
     PANEL_URL_PATH,
     REVEAL_RATE_LIMIT,
     REVEAL_RATE_WINDOW,
+    SIGNAL_SCAN_PROGRESS,
     VERSION,
     WS_TYPE_DB_BACKUP,
     WS_TYPE_DB_BACKUP_DELETE,
@@ -49,7 +51,11 @@ from .const import (
     WS_TYPE_SET_IGNORE_LABELS,
     WS_TYPE_CONFIG_DELETE,
     WS_TYPE_PENDING_CLEANUP,
+    WS_TYPE_SCAN_SUBSCRIBE,
+    WS_TYPE_AUTOMATION_TEST,
+    WS_TYPE_RESOLVED_CLEAR,
 )
+from .automation_test import async_test_automation
 from .coordinator import HAPercytaCoordinator
 from .db_tools import DbToolError, DbTools
 from .report import generate_report
@@ -478,6 +484,48 @@ def _register_ws(hass: HomeAssistant) -> None:
     @websocket_api.async_response
     async def ws_pending_cleanup(hass, connection, msg):
         await _run(connection, msg, lambda t, u: t.async_pending_info())
+
+    @websocket_api.websocket_command({vol.Required("type"): WS_TYPE_SCAN_SUBSCRIBE})
+    @websocket_api.require_admin
+    @callback
+    def ws_scan_subscribe(hass, connection, msg):
+        """Scan-Fortschritt abonnieren: erst der aktuelle Stand, dann jede Änderung."""
+
+        @callback
+        def forward(status):
+            connection.send_message(websocket_api.event_message(msg["id"], status))
+
+        connection.subscriptions[msg["id"]] = async_dispatcher_connect(hass, SIGNAL_SCAN_PROGRESS, forward)
+        connection.send_result(msg["id"])
+        coordinator = _get_coordinator(hass)
+        forward(coordinator.scan_status() if coordinator else {"running": False})
+
+    @websocket_api.websocket_command(
+        {vol.Required("type"): WS_TYPE_AUTOMATION_TEST, vol.Required("entity_id"): vol.All(str, vol.Length(min=12, max=255))}
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_automation_test(hass, connection, msg):
+        try:
+            result = await async_test_automation(hass, msg["entity_id"], getattr(connection.user, "id", None))
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.exception("HA Percyta: Automation-Test fehlgeschlagen")
+            result = {"error": "action_failed", "message": str(err)}
+        connection.send_result(msg["id"], result)
+
+    @websocket_api.websocket_command({vol.Required("type"): WS_TYPE_RESOLVED_CLEAR})
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_resolved_clear(hass, connection, msg):
+        """Liste „Zuletzt behoben“ leeren (offene Befunde bleiben unverändert)."""
+        coordinator = _get_coordinator(hass)
+        if coordinator is None:
+            connection.send_error(msg["id"], "not_ready", "HA Percyta ist nicht eingerichtet.")
+            return
+        connection.send_result(msg["id"], await coordinator.async_clear_resolved())
+
+    for handler in (ws_scan_subscribe, ws_automation_test, ws_resolved_clear):
+        websocket_api.async_register_command(hass, handler)
 
     for handler in (ws_entity_disable, ws_entry_reload, ws_device_remove, ws_config_delete, ws_pending_cleanup):
         websocket_api.async_register_command(hass, handler)

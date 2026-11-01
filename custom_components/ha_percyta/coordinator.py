@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -45,6 +47,8 @@ from .const import (
     OVERRIDES_STORAGE_VERSION,
     RESOLVED_KEEP_DAYS,
     RISK_LEVELS,
+    SCAN_STEPS,
+    SIGNAL_SCAN_PROGRESS,
     SNAPSHOT_ITEM_KEYS,
     SNAPSHOT_ITEMS,
     SNOOZE_MAX_DAYS,
@@ -87,6 +91,11 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.finding_states: dict[str, dict[str, Any]] = {}
         self.resolved_findings: list[dict[str, Any]] = []
+
+        # Scan-Fortschritt fürs Panel: laufender Scan und Dauer je Schritt des letzten Scans.
+        self._scan_run: dict[str, Any] | None = None
+        self._scan_timings: dict[str, float] = {}
+        self._scan_last: dict[str, Any] | None = None
 
         auto_enabled = options.get(CONF_SCAN_AUTO_ENABLED, DEFAULT_SCAN_AUTO_ENABLED)
         interval = options.get(CONF_SCAN_AUTO_INTERVAL, DEFAULT_SCAN_AUTO_INTERVAL)
@@ -473,6 +482,16 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         counts["findings_by_category"] = by_cat
         return changed
 
+    async def async_clear_resolved(self) -> dict:
+        """Leert die Liste „Zuletzt behoben“ (nur Percytas eigene Liste)."""
+        removed = len(self.resolved_findings)
+        self.resolved_findings = []
+        await self._save_finding_states()
+        if self.data:
+            self.data["findings_resolved"] = []
+            self.async_set_updated_data(self.data)
+        return {"success": True, "removed": removed}
+
     async def async_set_finding_state(
         self,
         ids: list[str],
@@ -519,7 +538,81 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.async_set_updated_data(data)
         return {"success": True, "updated": updated, "status": status}
 
+    # ------------------------------------------------------------------ #
+    # Scan-Fortschritt
+    # ------------------------------------------------------------------ #
+    @callback
+    def _scan_begin(self) -> None:
+        now = time.monotonic()
+        self._scan_run = {"t0": now, "step": None, "step_t": now, "done": {}}
+        self._publish_scan()
+
+    @callback
+    def _scan_step(self, key: str) -> None:
+        run = self._scan_run
+        if run is None:
+            return
+        now = time.monotonic()
+        if run["step"]:
+            run["done"][run["step"]] = now - run["step_t"]
+        run["step"] = key
+        run["step_t"] = now
+        self._publish_scan()
+
+    @callback
+    def _scan_end(self, ok: bool) -> None:
+        run = self._scan_run
+        if run is None:
+            return
+        now = time.monotonic()
+        if run["step"]:
+            run["done"][run["step"]] = now - run["step_t"]
+        self._scan_run = None
+        if ok:
+            # Gemessene Dauer je Schritt → Schätzung für den nächsten Scan.
+            self._scan_timings = {k: round(v, 3) for k, v in run["done"].items()}
+        self._scan_last = {"running": False, "finished": True, "ok": ok,
+                           "duration": round(now - run["t0"], 1)}
+        self._publish_scan()
+
+    def scan_status(self) -> dict[str, Any]:
+        """Stand des laufenden Scans (oder Ergebnis des letzten) für das Panel."""
+        run = self._scan_run
+        if run is None:
+            return dict(self._scan_last or {"running": False})
+        now = time.monotonic()
+        measured = bool(self._scan_timings)
+        steps = [
+            [key, round(max(0.05, self._scan_timings.get(key, default)) if measured else default, 3)]
+            for key, default in SCAN_STEPS
+        ]
+        keys = [s[0] for s in steps]
+        step = run["step"] or keys[0]
+        return {
+            "running": True,
+            "elapsed": round(now - run["t0"], 2),
+            "step": step,
+            "index": keys.index(step) if step in keys else 0,
+            "step_elapsed": round(now - run["step_t"], 2),
+            "steps": steps,
+            "measured": measured,
+        }
+
+    @callback
+    def _publish_scan(self) -> None:
+        async_dispatcher_send(self.hass, SIGNAL_SCAN_PROGRESS, self.scan_status())
+
     async def _async_update_data(self) -> dict[str, Any]:
+        self._scan_begin()
+        ok = False
+        try:
+            data = await self._async_scan()
+            ok = True
+            return data
+        finally:
+            self._scan_end(ok)
+
+    async def _async_scan(self) -> dict[str, Any]:
         options = self.entry.options
         scanner = HAPercytaScanner(
             self.hass,
@@ -535,12 +628,14 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ),
             overrides=self.overrides,
             ignore_labels=options.get(CONF_IGNORE_LABELS) or [],
+            progress=self._scan_step,
         )
 
         try:
             data = await scanner.scan_all()
         except Exception as err:  # noqa: BLE001
             raise UpdateFailed(f"Scan fehlgeschlagen: {err}") from err
+        self._scan_step("save")
 
         # Auto-Scan-Infos für die Anzeige (Letzter/Nächster Scan) mitgeben.
         data["auto_enabled"] = options.get(
