@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.4-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.5-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -61,7 +61,8 @@ system from one panel.
   grouped by common cause (e.g. an integration that is not running instead of dozens of
   single unavailable entities) and sorted by severity. Covered:
   - **Security & privacy** – unused long-lived tokens, integrations rated high risk, apps with
-    far-reaching rights, stored credentials (notice), backup missing/outdated.
+    far-reaching rights, backup missing/outdated. Stored credentials of integrations are **not** a finding (since
+    1.2.5) – integrations need them; you can still review them in the *API keys, tokens & secrets* box of the overview.
   - **🤖 Automations & scripts** (new in 1.2.2) – answers *“which automations don't run, and why?”*:
     - **Invalid configuration** – Home Assistant rejected it on load (incl. the exact error message,
       e.g. a missing blueprint or a misspelled trigger); it is “unavailable” and never runs.
@@ -77,7 +78,8 @@ system from one panel.
       of the automation's triggers has – that branch can never run.
     - **Turned off** – automations that are switched off and therefore never run.
     - **Not triggered for 90+ days** – now with the reason from the traces when the trigger fired but
-      the conditions blocked it.
+      the conditions blocked it. If the traces show failed runs within that time, the automation was triggered –
+      then only *Errors while running* is shown.
   - **Broken references** – automations/scripts that point to entities which do not exist
     (with the exact location in the configuration), integrations that are not running.
   - **Unused & orphaned** – unavailable entities per integration, orphaned entities (still
@@ -277,8 +279,10 @@ Options can be changed at any time via **Configure** on the integration.
   *Esc* or the back button returning you to exactly the place you left (open boxes, scroll position).
   **Limits and assumptions:** references are checked for automations and scripts
   (entity IDs under `entity_id`, blueprint inputs, `device_id`, `area_id`, actions and common
-  template functions) – not for scenes or dashboards. Run errors and skipped runs come from the
-  traces Home Assistant keeps per automation/script (by default the last 5 runs).
+  template functions) – not for scenes. Parts switched off with `enabled: false` are not checked, and placeholders such as
+  `this.entity_id` (e.g. from the auto-entities card) do not count as entities. Run errors and skipped runs come from the
+  traces Home Assistant keeps per automation/script (by default the last 5 runs). Failed runs from before a change stay
+  stored until new runs replace them – if the automation was changed since, the finding is only *low* until the next run.
   Thresholds: 90 days without trigger, token never used (14 days grace), backup older than 7 days,
   storage ≥ 85 %, a database entity with ≥ 10 % of all state rows (min. 50,000). Findings are only
   shown when their data source could be read in the scan; the reference check is skipped while Home
@@ -510,7 +514,8 @@ Values such as `api_key=…`, `token=…` or `password=…` are masked in the lo
 
 ### More actions (v1.2.2)
 
-- **Unavailable entities: disable or remove** – *Disable* is reversible (Settings › Entities). *Remove from Home
+- **Unavailable entities: disable or remove** – the window opens with the list of unavailable entities already shown
+  (entities with an excluded label or whose finding is *Allowed*, *Snoozed* or *Hidden* are left out). *Disable* is reversible (Settings › Entities). *Remove from Home
   Assistant* deletes the entity from the entity registry, exactly like **“Delete”** in the entity settings of Home
   Assistant, so it also disappears from its device; optionally its history and statistics are deleted too, and an HA
   backup is pre-selected (the registry is part of it). If the integration still provides the entity, it comes back

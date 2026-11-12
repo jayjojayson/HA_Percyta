@@ -3,6 +3,26 @@
 Alle wichtigen Änderungen an **HA Percyta**. English version: [CHANGELOG.md](CHANGELOG.md).
 Ältere Versionen: siehe [GitHub-Releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.5
+
+Korrekturen aus euren Rückmeldungen (GitHub-Issues #3 und #4, Community-Forum): weniger falsche und widersprüchliche Befunde.
+
+### 🐞 Fehlerbehebungen
+- **Pflege-Center beachtet Labels überall:** Das Fenster hinter der Kachel *Nicht verfügbare Entitäten* (*Prüfen …*) listete bisher alle nicht verfügbaren Entitäten – auch die mit einem ausgenommenen Label (z. B. ein Drucker, der sich selbst ausschaltet). Jetzt stehen dort dieselben Entitäten, die die Kachel zählt; Entitäten mit ausgenommenem Label oder deren Befund auf *Erlaubt*, *Zurückgestellt* oder *Ausgeblendet* steht, bleiben draußen (eine Zeile nennt die Anzahl). Aus einem Befund vorgewählte Entitäten sind immer dabei. (#3)
+- **`this.entity_id` in Dashboards wird nicht mehr gemeldet:** Platzhalter wie `this.entity_id` (genutzt von der Karte auto-entities) wurden als fehlende Entität gemeldet. Platzhalter (`this.…`, `trigger.…`, `repeat.…` …) werden jetzt in Dashboards und Automationen übersprungen. (#4)
+- **`enabled: false` wird beachtet:** Auslöser, Bedingungen und Aktionen, die mit `enabled: false` abgeschaltet sind, werden nicht mehr auf Verweise geprüft (fehlende Entitäten, Geräte, Bereiche, Aktionen, Trigger-IDs) und zählen auch nicht mehr für die Schutz-Erkennung.
+- **Keine widersprüchlichen Automations-Befunde mehr:** Eine Automation konnte gleichzeitig *Fehler beim Ausführen* und *Seit über 90 Tagen nicht ausgelöst* zeigen – z. B. wenn der Fehler auftritt, bevor Home Assistant *zuletzt ausgelöst* setzt (in `variables` oder einem Template). Zeigen die Traces fehlerhafte Läufe innerhalb der 90 Tage, entfällt *nicht ausgelöst*.
+- **Alte Fehler nach einer Änderung:** Home Assistant behält die letzten Läufe (Traces), bis neue sie ersetzen. Wurde die Automation seit dem fehlerhaften Lauf geändert (z. B. ein Teil mit `enabled: false` abgeschaltet), ist *Fehler beim Ausführen* jetzt nur noch **niedrig** und sagt das auch – ob der Fehler weg ist, zeigt der nächste Lauf.
+- **Nicht verfügbare Entitäten sofort sichtbar:** Das Fenster *Nicht verfügbare Entitäten* (Pflege-Center-Kachel und Übersichtsbox) öffnet jetzt direkt mit der Liste – man muss nicht erst ins Suchfeld klicken. Vorausgewählt ist nichts; du hakst an, was deaktiviert oder entfernt werden soll.
+
+### 🔐 Secrets sind kein Befund mehr
+- Der Befund *Gespeicherte Zugangsdaten* (Hinweis) ist entfallen. Integrationen brauchen ihre Zugangsdaten und Home Assistant speichert sie selbst in seiner Konfiguration – zu beheben gibt es da nichts, dutzende Einträge haben nur gestört. Die Box **API-Keys, Tokens & Secrets** der Übersicht zeigt weiterhin, welche Integrationen welche Felder speichern.
+- Nach dem Update verschwindet der alte Befund still; er taucht nicht unter *Zuletzt behoben* auf.
+
+### ⚠️ Hinweise
+- **Nach dem Update Home Assistant neu starten** und das Browser-Fenster neu laden.
+- Die Erkennung von Änderungen vergleicht die beim Lauf gespeicherte Konfiguration mit der aktuellen. Bei Automationen aus Blueprints wird eine Änderung am Blueprint selbst nicht erkannt.
+
 ## v1.2.4
 
 Folgeversion zu 1.2.3 mit Wünschen aus dem Alltag: klarere Zeitangaben auf der Befundseite, ein echtes Ergebnis für *Jetzt testen*, ein sichtbarer Scan-Fortschritt, eine Suche in den Befunden und ein lebendigeres Panel.

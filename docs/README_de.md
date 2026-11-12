@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.4-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.5-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -61,7 +61,9 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
   Befunde mit gemeinsamer Ursache werden zusammengefasst (z. B. eine nicht laufende Integration statt
   dutzender einzelner nicht verfügbarer Entitäten) und nach Schwere sortiert. Abgedeckt:
   - **Sicherheit & Datenschutz** – ungenutzte Langzeit-Tokens, Integrationen mit hohem Risiko, Apps
-    mit weitreichenden Rechten, gespeicherte Zugangsdaten (Hinweis), Backup fehlt/veraltet.
+    mit weitreichenden Rechten, Backup fehlt/veraltet. Gespeicherte Zugangsdaten von Integrationen sind **kein** Befund
+    (seit 1.2.5) – Integrationen brauchen sie; einsehen kannst du sie weiter in der Box *API-Keys, Tokens & Secrets* der
+    Übersicht.
   - **🤖 Automationen & Skripte** (neu in 1.2.2) – beantwortet *„Welche Automationen laufen nicht – und warum?“*:
     - **Konfiguration ungültig** – Home Assistant hat sie beim Laden abgelehnt (inkl. genauer
       Fehlermeldung, z. B. fehlendes Blueprint oder falsch geschriebener Auslöser); sie ist „nicht
@@ -79,7 +81,8 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
       einer ID, die kein Auslöser der Automation hat – dieser Zweig läuft nie.
     - **Ausgeschaltet** – Automationen, die aus sind und deshalb nie laufen.
     - **Seit über 90 Tagen nicht ausgelöst** – jetzt mit dem Grund aus den Traces, wenn der Auslöser
-      zwar feuerte, die Bedingungen ihn aber blockiert haben.
+      zwar feuerte, die Bedingungen ihn aber blockiert haben. Zeigen die Traces in dieser Zeit fehlerhafte Läufe, wurde
+      die Automation ausgelöst – dann steht nur *Fehler beim Ausführen* da.
   - **Defekte Verweise** – Automationen/Skripte, die auf nicht existierende Entitäten zeigen
     (mit genauer Fundstelle in der Konfiguration), Integrationen, die nicht laufen.
   - **Ungenutzt & verwaist** – nicht verfügbare Entitäten je Integration, verwaiste Entitäten
@@ -258,8 +261,11 @@ Die Optionen lassen sich jederzeit über **Konfigurieren** an der Integration ä
   an der du warst (offene Boxen, Scroll-Position).
   **Grenzen und Annahmen:** Verweise werden für Automationen und Skripte geprüft
   (Entity-IDs unter `entity_id`, Blueprint-Eingaben, `device_id`, `area_id`, Aktionen und gängige
-  Template-Funktionen) – nicht für Szenen oder Dashboards. Fehler und übersprungene Läufe stammen aus
-  den Ablaufverfolgungen, die Home Assistant je Automation/Skript vorhält (standardmäßig die letzten 5 Läufe).
+  Template-Funktionen) – nicht für Szenen. Teile, die mit `enabled: false` abgeschaltet sind, werden nicht geprüft und
+  Platzhalter wie `this.entity_id` (z. B. aus der Karte auto-entities) zählen nicht als Entität. Fehler und übersprungene
+  Läufe stammen aus den Ablaufverfolgungen, die Home Assistant je Automation/Skript vorhält (standardmäßig die letzten
+  5 Läufe). Fehlerhafte Läufe von vor einer Änderung bleiben gespeichert, bis neue Läufe sie ersetzen – wurde die
+  Automation seitdem geändert, ist der Befund bis zum nächsten Lauf nur *niedrig*.
   Schwellen: 90 Tage ohne Auslösung, Token nie genutzt (14 Tage Schonfrist), Backup älter als 7 Tage,
   Speicher ≥ 85 %, eine Datenbank-Entität mit ≥ 10 % aller Zustandszeilen (mind. 50.000). Befunde
   erscheinen nur, wenn ihre Datenquelle im Scan lesbar war; die Verweis-Prüfung entfällt, solange
@@ -410,7 +416,7 @@ Es gibt zwei Arten von Sicherung. Sie werden unterschiedlich behandelt:
 | **Wie viele bleiben** | **Die letzten 2 Kopien.** Jede neue Kopie löscht automatisch die älteren – nur eigene Dateien von HA Percyta in diesem Ordner, nie etwas anderes. |
 | **Löschen nach Alter?** | **Nein.** Eine Kopie bleibt, bis eine neuere sie aus den letzten 2 verdrängt oder du sie selbst löschst. |
 | **Speicher knapp** | **„♻️ Vorhandene Percyta-Kopie ersetzen“** löscht die vorhandenen Kopien *vor* der neuen (nur, wenn der Platz danach reicht). |
-| **Von Hand löschen** | **💾 Sicherungen der Datenbank** öffnen (Pflege-Center-Kachel *Letzte Percyta-Sicherung* → *Sichern …*, oder *Datenbank → Datenbank bearbeiten → Sicherungen*). Das Fenster listet jede Kopie mit Datum und Größe und einem **Löschen**-Button. Die Datei selbst zu löschen (Samba, File Editor …) geht auch. Löschen im Fenster steht im **Protokoll** (*Sicherung gelöscht*). |
+| **Von Hand löschen** | **💾 Sicherungen der Datenbank** öffnen (Pflege-Center-Kachel *Letzte Percyta-Sicherung* → *Sichern …* oder *Datenbank → Datenbank bearbeiten → Sicherungen*). Das Fenster listet jede Kopie mit Datum und Größe und einem **Löschen**-Button. Die Datei selbst zu löschen (Samba, File Editor …) geht auch. Löschen im Fenster steht im **Protokoll** (*Sicherung gelöscht*). |
 | **Zurückspielen** | Siehe *Datenbank-Kopie zurückspielen* weiter unten. |
 
 **2. Home-Assistant-Backup** (Option *Home-Assistant-Backup erstellen*)
@@ -500,7 +506,9 @@ danebenliegen. Werte wie `api_key=…`, `token=…` oder `password=…` werden i
 
 ### Weitere Aktionen (v1.2.2)
 
-- **Nicht verfügbare Entitäten deaktivieren oder entfernen** – *Deaktivieren* ist umkehrbar (Einstellungen ›
+- **Nicht verfügbare Entitäten deaktivieren oder entfernen** – das Fenster öffnet direkt mit der Liste der nicht
+  verfügbaren Entitäten (ohne Entitäten mit ausgenommenem Label oder deren Befund auf *Erlaubt*, *Zurückgestellt* oder
+  *Ausgeblendet* steht). *Deaktivieren* ist umkehrbar (Einstellungen ›
   Entitäten). *Aus Home Assistant entfernen* löscht die Entität aus der Entitäten-Registry, genau wie **„Löschen“** in
   den Entitäts-Einstellungen von Home Assistant – sie verschwindet damit auch unter ihrem Gerät; optional werden
   Verlauf und Statistik mit gelöscht, als Sicherung ist ein HA-Backup vorausgewählt (die Registry steckt darin). Stellt

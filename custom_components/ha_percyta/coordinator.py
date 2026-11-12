@@ -46,14 +46,15 @@ from .const import (
     OVERRIDES_STORAGE_KEY,
     OVERRIDES_STORAGE_VERSION,
     RESOLVED_KEEP_DAYS,
+    RETIRED_FINDING_TYPES,
     RISK_LEVELS,
     SCAN_STEPS,
     SIGNAL_SCAN_PROGRESS,
     SNAPSHOT_ITEM_KEYS,
     SNAPSHOT_ITEMS,
-    SNOOZE_MAX_DAYS,
     SNAPSHOT_STORAGE_KEY,
     SNAPSHOT_STORAGE_VERSION,
+    SNOOZE_MAX_DAYS,
 )
 from .report import generate_report
 from .scanner import HAPercytaScanner
@@ -426,6 +427,14 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             finding["note"] = state.get("note")
             finding["first_seen"] = state.get("first_seen") or now_iso
             finding["history"] = list(state.get("history") or [])
+
+        # Abgeschaffte Befund-Arten still entfernen (nicht als „behoben“ melden).
+        for fid in [f for f in self.finding_states if f.split(":", 1)[0] in RETIRED_FINDING_TYPES]:
+            self.finding_states.pop(fid, None)
+            changed = True
+        before = len(self.resolved_findings)
+        self.resolved_findings = [r for r in self.resolved_findings if r.get("type") not in RETIRED_FINDING_TYPES]
+        changed = changed or len(self.resolved_findings) != before
 
         if track:
             evaluated = set(data.get("findings_evaluated") or [])

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ha_percyta"
-VERSION = "1.2.4"
+VERSION = "1.2.5"
 
 # Konfigurations-/Options-Keys
 CONF_OUTPUT_DIR = "output_dir"
@@ -288,3 +288,6 @@ DATAFLOW_TAGS = {
     "owntracks": {"local", "gps"},
     "nominatim": {"external", "gps"},
 }
+
+# Befund-Arten, die es nicht mehr gibt: gespeicherte Zustände werden still entfernt.
+RETIRED_FINDING_TYPES = frozenset({"secrets_stored"})

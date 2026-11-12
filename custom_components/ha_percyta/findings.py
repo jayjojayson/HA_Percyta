@@ -15,6 +15,7 @@ Alles hier ist lesend; es wird nichts in Home Assistant verändert.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from collections.abc import Mapping
@@ -81,7 +82,6 @@ TYPE_SOURCES = {
     "stale_token": "tokens",
     "high_risk_integration": "integrations",
     "privileged_app": "addons",
-    "secrets_stored": "integrations",
     "backup_old": "backup",
     "backup_missing": "backup",
     "disk_high": "disk",
@@ -312,6 +312,22 @@ def _split_ids(value: Any) -> list[str]:
     return []
 
 
+# Platzhalter aus Templates bzw. Karten wie auto-entities ("this.entity_id") – keine echten Entitäten.
+_PLACEHOLDER_DOMAINS = {"this", "trigger", "repeat", "wait", "context", "config", "states", "user", "hass", "variables"}
+
+
+def _is_placeholder(eid: str) -> bool:
+    return eid.split(".", 1)[0] in _PLACEHOLDER_DOMAINS
+
+
+def _disabled(node: Mapping[str, Any]) -> bool:
+    """True für Trigger, Bedingungen und Aktionen mit ``enabled: false`` (laufen nie)."""
+    value = node.get("enabled", True)
+    if value is False:
+        return True
+    return isinstance(value, str) and value.strip().lower() in ("false", "off", "no", "0")
+
+
 def _collect_refs(
     node: Any, path: str, out: list[tuple[str, str]], known_domains: set[str],
     loose: bool = False,
@@ -323,11 +339,13 @@ def _collect_refs(
     bekannten Domain aussieht.
     """
     if isinstance(node, Mapping):
+        if not loose and _disabled(node):
+            return  # deaktivierter Teil (enabled: false) → wird nie ausgeführt
         for key, value in node.items():
             sub = f"{path}/{key}" if path else str(key)
             if key == "entity_id":
                 for eid in _split_ids(value):
-                    if ENTITY_RE.match(eid):
+                    if ENTITY_RE.match(eid) and not _is_placeholder(eid):
                         out.append((eid, sub))
             else:
                 _collect_refs(
@@ -642,7 +660,7 @@ def _collect_traces(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]] | No
             traces = list(runs.values())
         except Exception:  # noqa: BLE001
             continue
-        shorts: list[dict[str, Any]] = []
+        pairs: list[tuple[dict[str, Any], Any]] = []
         for trace in traces:
             try:
                 short = trace.as_short_dict()
@@ -652,10 +670,35 @@ def _collect_traces(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]] | No
                 continue
             if short.get("state") not in (None, "stopped"):
                 continue  # läuft gerade noch
-            shorts.append(dict(short))
-        shorts.sort(key=lambda t: str((t.get("timestamp") or {}).get("start") or ""), reverse=True)
-        out[str(key)] = shorts
+            pairs.append((dict(short), trace))
+        pairs.sort(key=lambda p: str((p[0].get("timestamp") or {}).get("start") or ""), reverse=True)
+        if pairs:
+            # Konfiguration, mit der der neueste Lauf lief – um Änderungen danach zu erkennen.
+            sig = _config_sig(_trace_config(pairs[0][1]))
+            if sig:
+                pairs[0][0]["_cfg_sig"] = sig
+        out[str(key)] = [short for short, _ in pairs]
     return out
+
+
+def _trace_config(trace: Any) -> Any:
+    """Konfiguration, mit der ein Lauf gestartet wurde (laufende Sitzung oder aus .storage geladen)."""
+    config = getattr(trace, "_config", None)
+    if isinstance(config, Mapping):
+        return config
+    raw = getattr(trace, "_dict", None)  # aus .storage wiederhergestellter Trace
+    if isinstance(raw, Mapping) and isinstance(raw.get("config"), Mapping):
+        return raw["config"]
+    return None
+
+
+def _config_sig(config: Any) -> str | None:
+    if not isinstance(config, Mapping):
+        return None
+    try:
+        return json.dumps(config, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return None
 
 
 def _trace_time(short: Mapping[str, Any]) -> str | None:
@@ -671,6 +714,8 @@ def _collect_extra_refs(
 ) -> None:
     """Sammelt Geräte, Bereiche, Aktionen und Entitäten in Templates."""
     if isinstance(node, Mapping):
+        if not in_data and not path.startswith("use_blueprint") and _disabled(node):
+            return  # deaktivierter Teil (enabled: false) → wird nie ausgeführt
         for key, value in node.items():
             skey = str(key)
             sub = f"{path}/{skey}" if path else skey
@@ -771,6 +816,8 @@ def _trigger_ids(config: Mapping[str, Any]) -> set[str] | None:
 def _trigger_id_conditions(node: Any, path: str, out: list[tuple[str, str]]) -> None:
     """Bedingungen „Trigger-ID“ (condition: trigger) mit ihren IDs und Pfaden."""
     if isinstance(node, Mapping):
+        if _disabled(node):
+            return
         if node.get("condition") == "trigger" and "id" in node:
             raw = node.get("id")
             values = raw if isinstance(raw, (list, tuple)) else [raw]
@@ -867,17 +914,23 @@ def _automation_findings(
                 ]
                 # Ausgeschaltet → läuft ohnehin nicht mehr; der alte Fehler ist nur noch Hinweis.
                 switched_off = kind == "automation" and state is not None and state.state == "off"
+                # Seit dem fehlerhaften Lauf geändert (z. B. Teil mit enabled: false abgeschaltet)?
+                # Ob der Fehler weg ist, zeigt erst der nächste Lauf → bis dahin nur „niedrig“.
+                old_sig, new_sig = last.get("_cfg_sig"), _config_sig(config)
+                changed = bool(old_sig and new_sig and old_sig != new_sig)
                 result["traces"].append(
                     _finding(
                         f"automation_errors:{entity_id}", "automation_errors", "automations",
-                        "low" if switched_off else ("high" if all_failed else "medium"), 95, name, kind,
+                        "low" if switched_off or changed else ("high" if all_failed else "medium"), 95, name, kind,
                         subject_ref=entity_id,
                         params={"kind": kind, "errors": len(errors), "runs": len(runs),
-                                "error": str(last.get("error") or "")[:300], "active": not switched_off},
+                                "error": str(last.get("error") or "")[:300], "active": not switched_off,
+                                "changed": changed},
                         items=items, link=trace_link,
                         details={"entity_id": entity_id, "last_error": str(last.get("error") or "")[:600],
                                  "last_step": last.get("last_step"), "last_run": _trace_time(last),
-                                 "runs_stored": len(runs), "runs_failed": len(errors)},
+                                 "runs_stored": len(runs), "runs_failed": len(errors),
+                                 "changed_since_error": changed},
                     )
                 )
             skipped = [r for r in runs if r.get("script_execution") in SKIPPED_EXECUTIONS]
@@ -1011,9 +1064,17 @@ def _automation_findings(
 
 def _enrich_unused(findings: list[dict[str, Any]], traces: dict[str, list[dict[str, Any]]] | None,
                    hass: HomeAssistant) -> None:
-    """Ergänzt 'lange nicht ausgelöst' um blockierende Bedingungen aus den Traces."""
+    """Ergänzt 'lange nicht ausgelöst' um blockierende Bedingungen aus den Traces.
+
+    Zeigen die Traces fehlerhafte Läufe innerhalb der Frist, wurde die Automation
+    ausgelöst – der Fehler kam nur, bevor Home Assistant „zuletzt ausgelöst“
+    setzt (z. B. in variables). Dann entfällt „lange nicht ausgelöst“; der
+    Befund „Fehler beim Ausführen“ erklärt das eigentliche Problem.
+    """
     if not traces:
         return
+    limit = datetime.now(timezone.utc) - timedelta(days=UNUSED_AFTER_DAYS)
+    drop: list[dict[str, Any]] = []
     by_entity = {}
     for kind, entity in _config_objects(hass):
         key = _object_key(kind, entity)
@@ -1023,11 +1084,21 @@ def _enrich_unused(findings: list[dict[str, Any]], traces: dict[str, list[dict[s
         if finding["type"] not in ("unused_automation", "unused_script"):
             continue
         runs = traces.get(by_entity.get(finding["subject_ref"] or "", ""), [])
+        recent_errors = [
+            r for r in runs
+            if (r.get("error") or r.get("script_execution") in ERROR_EXECUTIONS)
+            and (_as_dt(_trace_time(r)) or limit) > limit
+        ]
+        if recent_errors:
+            drop.append(finding)
+            continue
         blocked = [r for r in runs if r.get("script_execution") == "failed_conditions"]
         if blocked:
             finding["params"]["cond_blocked"] = len(blocked)
             finding["details"]["blocked_by_conditions"] = len(blocked)
             finding["details"]["last_blocked"] = _trace_time(blocked[0])
+    for finding in drop:
+        findings.remove(finding)
 
 
 # ---------------------------------------------------------------------- #
@@ -1066,7 +1137,9 @@ def _token_findings(data: dict[str, Any], now: datetime) -> list[dict[str, Any]]
 
 def _integration_findings(data: dict[str, Any]) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
-    secret_items: list[dict[str, Any]] = []
+    # Gespeicherte Secrets sind kein Befund mehr (seit 1.2.5): Integrationen brauchen ihre Zugangsdaten,
+    # Home Assistant speichert sie selbst in .storage. Einsehbar bleiben sie in der Box
+    # „API-Keys, Tokens & Secrets“ der Übersicht.
     for integ in data.get("integrations", []) or []:
         ana = integ.get("analysis") or {}
         domain = integ.get("domain") or ""
@@ -1096,24 +1169,6 @@ def _integration_findings(data: dict[str, Any]) -> list[dict[str, Any]]:
                     },
                 )
             )
-        secrets = ana.get("secrets") or []
-        if secrets:
-            secret_items.append(
-                {"name": title, "ref": integ.get("entry_id"), "kind": "integration",
-                 "count": len(secrets), "link": link}
-            )
-    if secret_items:
-        secret_items.sort(key=lambda i: i["name"].lower())
-        total = sum(i["count"] for i in secret_items)
-        findings.append(
-            _finding(
-                "secrets_stored", "secrets_stored", "security", "info", 40,
-                "secrets", "system",
-                params={"count": total, "integrations": len(secret_items)},
-                items=secret_items,
-                details={"values": total, "integrations": len(secret_items)},
-            )
-        )
     return findings
 
 
@@ -1333,12 +1388,12 @@ def collect_dashboard_refs(config: Mapping[str, Any]) -> list[dict[str, str]]:
             for key, value in node.items():
                 if key in _DASH_ENTITY_KEYS:
                     for eid in _split_ids(value):
-                        if ENTITY_RE.match(eid):
+                        if ENTITY_RE.match(eid) and not _is_placeholder(eid):
                             add("entity", eid, where)
                 elif key == "entities" and isinstance(value, (list, tuple)):
                     for item in value:
                         if isinstance(item, str):
-                            if ENTITY_RE.match(item.strip()):
+                            if ENTITY_RE.match(item.strip()) and not _is_placeholder(item.strip()):
                                 add("entity", item.strip(), where)
                         else:
                             walk(item, view, card, depth + 1)
@@ -1637,7 +1692,20 @@ def _apply_meta(ctx: _Ctx, findings: list[dict[str, Any]]) -> dict[str, Any]:
         "label_names": {lab: ctx.label_name(lab) for lab in sorted(label_ids | ctx.ignore | all_labels)},
         "ignore_labels": sorted(ctx.ignore),
         "suppressed": dict(ctx.suppressed),
+        # Nicht verfügbare Entitäten, die wegen eines Labels nicht bewertet werden (für das Pflege-Center).
+        "hidden_unavailable": _hidden_unavailable(ctx),
     }
+
+
+def _hidden_unavailable(ctx: _Ctx) -> list[str]:
+    out = []
+    for eid in sorted(e for e in ctx.hidden if not e.startswith("device:")):
+        st = ctx.hass.states.get(eid)
+        if st is not None and st.state == "unavailable":
+            out.append(eid)
+        if len(out) >= 5000:
+            break
+    return out
 
 
 def build_findings(

@@ -3,6 +3,26 @@
 All notable changes to **HA Percyta**. German version: [CHANGELOG_de.md](CHANGELOG_de.md).
 Older versions: see the [GitHub releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.5
+
+Fixes from user feedback (GitHub issues #3 and #4, community forum): fewer false and contradictory findings.
+
+### 🐞 Fixes
+- **Care center respects labels everywhere:** the window behind the tile *Unavailable entities* (*Review …*) used to list every unavailable entity – also those with an excluded label (e.g. a printer that switches itself off). It now lists the same entities the tile counts; entities with an excluded label or whose finding is *Allowed*, *Snoozed* or *Hidden* are left out (a line shows how many). Entities pre-selected from a finding are always included. (#3)
+- **`this.entity_id` in dashboards is no longer reported:** placeholders such as `this.entity_id` (used by the auto-entities card) were reported as missing entities. Placeholders (`this.…`, `trigger.…`, `repeat.…` …) are now skipped in dashboards and automations. (#4)
+- **`enabled: false` is respected:** triggers, conditions and actions switched off with `enabled: false` are no longer checked for references (missing entities, devices, areas, actions, trigger IDs) and no longer count for the safety check.
+- **No more contradictory automation findings:** an automation could show *Error while running* and *Not triggered for 90+ days* at the same time – e.g. when the error happens before Home Assistant sets *last triggered* (in `variables` or a template). If the traces show failed runs within the 90 days, *Not triggered* is no longer shown.
+- **Old errors after a change:** Home Assistant keeps the last runs (traces) until new runs replace them. If the automation was changed since the failed run (e.g. a part switched off with `enabled: false`), *Error while running* is now only **low** and says so – the next run shows whether the error is gone.
+- **Unavailable entities shown right away:** the window *Unavailable entities* (care center tile and overview box) now opens with the list already visible – no need to click into the search field first. Nothing is pre-selected; you tick what you want to disable or remove.
+
+### 🔐 Secrets are no longer a finding
+- The finding *Stored credentials* (notice) has been removed. Integrations need their credentials and Home Assistant stores them itself in its configuration – there is nothing to fix, so dozens of entries only caused noise. The **API keys, tokens & secrets** box of the overview still shows which integrations store which fields.
+- After the update the old finding disappears silently; it does not show up under *Recently resolved*.
+
+### ⚠️ Notes
+- **Restart Home Assistant after updating** and reload the browser window.
+- The change detection compares the configuration stored with the run with the current one. For automations from blueprints, a change in the blueprint itself is not detected.
+
 ## v1.2.4
 
 Follow-up to 1.2.3 with wishes from daily use: clearer timing on finding pages, a real result for *Test now*, a visible scan progress, a search in the findings and a livelier panel.

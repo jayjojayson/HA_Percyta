@@ -204,7 +204,7 @@ const CAT_ICON = { security: "🛡️", automations: "🤖", integrity: "🔗", 
 const TYPE_ICON = {
   broken_reference: "🔗", integration_not_loaded: "🔌", unavailable_entities: "📡", orphaned_entities: "👻",
   unused_automation: "💤", unused_script: "💤", stale_token: "🗝️", high_risk_integration: "⚠️",
-  privileged_app: "🧩", secrets_stored: "🔐", backup_old: "💾", backup_missing: "💾",
+  privileged_app: "🧩", backup_old: "💾", backup_missing: "💾",
   disk_high: "🖴", db_hotspot: "🗄️", updates_available: "⬆️",
   dashboard_refs: "🖼️", dashboard_resources: "📦", energy_refs: "⚡", area_sensor_refs: "🌡️",
   empty_areas: "🏠", empty_floors: "🏢", unused_labels: "🏷️", unused_blueprints: "📘",
@@ -400,17 +400,6 @@ const FDOC = {
         "Gehören die Rechte zum Zweck der App, markiere den Befund als „Erlaubt“.",
       ],
     },
-    secrets_stored: {
-      title: "Gespeicherte Zugangsdaten",
-      what: "In {integrations} Integration(en) wurden {count} gespeicherte Zugangsdaten (Passwörter, Tokens, API-Keys) gefunden.",
-      cause: "Integrationen speichern ihre Zugangsdaten bei der Einrichtung in der Konfiguration von Home Assistant – das ist normal.",
-      impact: "Ein Hinweis, kein Fehler: Die Werte liegen unverschlüsselt in der Konfiguration und damit auch in Backups. Wer Zugriff darauf hat, kann sie lesen.",
-      steps: [
-        "Gib Backups und den Konfigurationsordner nur an vertrauenswürdige Stellen weiter.",
-        "Verschlüssele Backups, wenn möglich.",
-        "Im Bereich „API-Keys, Tokens & Secrets“ siehst du, welche Felder betroffen sind.",
-      ],
-    },
     backup_old: {
       title: "Backup ist veraltet",
       what: "Das letzte Backup ist {days} Tage alt.",
@@ -566,17 +555,6 @@ const FDOC = {
         "Check whether the app comes from a trusted source and is up to date.",
         "Stop and uninstall apps you no longer need.",
         "If the rights belong to the purpose of the app, mark the finding as “Allowed”.",
-      ],
-    },
-    secrets_stored: {
-      title: "Stored credentials",
-      what: "{count} stored credential(s) (passwords, tokens, API keys) were found in {integrations} integration(s).",
-      cause: "Integrations store their credentials in the Home Assistant configuration during setup – this is normal.",
-      impact: "A notice, not an error: the values sit unencrypted in the configuration and therefore also in backups. Anyone with access to them can read them.",
-      steps: [
-        "Only hand out backups and the configuration folder to trusted places.",
-        "Encrypt backups if possible.",
-        "The “API keys, tokens & secrets” section shows which fields are affected.",
       ],
     },
     backup_old: {
@@ -879,7 +857,7 @@ const XSTR = {
     ed_w1: "Die Entität verschwindet aus Dashboards, Auswahllisten und dem Verlauf; es wird nichts mehr aufgezeichnet.",
     ed_w2: "Sie wird NICHT gelöscht – der bisherige Verlauf bleibt erhalten.",
     ed_w3: "Rückgängig jederzeit: Einstellungen › Entitäten › Filter „Deaktiviert“ › Entität öffnen › „Aktiviert“ einschalten.",
-    ed_pick: "Nicht verfügbare Entitäten auswählen", ed_confirm: "Ausgewählte Entitäten deaktivieren.", ed_run: "⏸ Deaktivieren",
+    ed_pick: "Nicht verfügbare Entitäten auswählen", ed_hidden1: "1 weitere nicht verfügbare Entität steht nicht in der Liste: Sie trägt ein ausgenommenes Label oder ihr Befund ist auf Erlaubt, Zurückgestellt oder Ausgeblendet gesetzt.", ed_hidden: "{n} weitere nicht verfügbare Entitäten stehen nicht in der Liste: Sie tragen ein ausgenommenes Label oder ihr Befund ist auf Erlaubt, Zurückgestellt oder Ausgeblendet gesetzt.", ed_confirm: "Ausgewählte Entitäten deaktivieren.", ed_run: "⏸ Deaktivieren",
     dv_title: "📵 Verwaiste Geräte entfernen", dv_what: "Was passiert beim Entfernen?",
     dv_w1: "Die Geräte werden aus der Geräte-Registry gelöscht – samt ihrer Entitäten.",
     dv_w2: "Nur Geräte, deren Integration es nicht mehr gibt, können entfernt werden; alles andere ist gesperrt.",
@@ -961,7 +939,6 @@ const XSTR = {
     tp_stale_token: "Token",
     tp_high_risk_integration: "Integration",
     tp_privileged_app: "App",
-    tp_secrets_stored: "Secrets",
     tp_backup_old: "Backup",
     tp_backup_missing: "Backup",
     tp_disk_high: "Speicher",
@@ -1348,7 +1325,7 @@ const XSTR = {
     ed_w1: "The entity disappears from dashboards, pickers and history; nothing is recorded any more.",
     ed_w2: "It is NOT deleted – the existing history is kept.",
     ed_w3: "Undo at any time: Settings › Entities › filter “Disabled” › open the entity › switch on “Enabled”.",
-    ed_pick: "Select unavailable entities", ed_confirm: "Disable the selected entities.", ed_run: "⏸ Disable",
+    ed_pick: "Select unavailable entities", ed_hidden1: "1 more unavailable entity is not listed: it carries an excluded label or its finding is set to Allowed, Snoozed or Hidden.", ed_hidden: "{n} more unavailable entities are not listed: they carry an excluded label or their finding is set to Allowed, Snoozed or Hidden.", ed_confirm: "Disable the selected entities.", ed_run: "⏸ Disable",
     dv_title: "📵 Remove orphaned devices", dv_what: "What happens when removing?",
     dv_w1: "The devices are deleted from the device registry – together with their entities.",
     dv_w2: "Only devices whose integration no longer exists can be removed; everything else is blocked.",
@@ -1429,7 +1406,6 @@ const XSTR = {
     tp_stale_token: "Token",
     tp_high_risk_integration: "Integration",
     tp_privileged_app: "App",
-    tp_secrets_stored: "Secrets",
     tp_backup_old: "Backup",
     tp_backup_missing: "Backup",
     tp_disk_high: "Storage",
@@ -1682,6 +1658,7 @@ const XDOC = {
     automation_errors: {
       title: "Fehler beim Ausführen",
       what: "{Obj} „{subject}“ ist beim letzten Lauf mit einem Fehler abgebrochen ({errors} von {runs} gespeicherten Läufen fehlerhaft). Letzte Meldung: {error}",
+      changed: "Seit diesem Lauf wurde sie geändert (z. B. ein Teil mit enabled: false abgeschaltet). Ob der Fehler weg ist, zeigt erst der nächste Lauf – bis dahin ist der Befund nur „niedrig“. Home Assistant behält die alten Läufe, bis neue sie ersetzen.",
       cause: "Eine Aktion ist fehlgeschlagen – z. B. war ein Gerät nicht erreichbar, eine Entität fehlt, eine Aktion bekam einen ungültigen Wert oder ein Template wirft einen Fehler.",
       impact: "Alle Schritte nach dem fehlerhaften werden nicht mehr ausgeführt (außer bei continue_on_error).",
       steps: [
@@ -1752,6 +1729,7 @@ const XDOC = {
     automation_errors: {
       title: "Error while running",
       what: "{Obj} “{subject}” stopped with an error on its last run ({errors} of {runs} stored runs failed). Last message: {error}",
+      changed: "It has been changed since that run (e.g. a part switched off with enabled: false). Only the next run shows whether the error is gone – until then the finding is only “low”. Home Assistant keeps the old runs until new ones replace them.",
       cause: "An action failed – e.g. a device was unreachable, an entity is missing, an action got an invalid value or a template raises an error.",
       impact: "All steps after the failing one are not executed (unless continue_on_error is set).",
       steps: [
@@ -5120,6 +5098,7 @@ class HaPercytaPanel extends HTMLElement {
     const fill = (s) => String(s || "").replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
     let what = p.never && doc.what_never ? doc.what_never : doc.what;
     if (p.cond_blocked && doc.blocked) what = what + " " + doc.blocked;
+    if (p.changed && doc.changed) what = what + " " + doc.changed;
     return { title: fill(doc.title), what: fill(what), cause: fill(doc.cause), impact: fill(doc.impact), steps: (doc.steps || []).map(fill) };
   }
 
@@ -6809,14 +6788,16 @@ class HaPercytaPanel extends HTMLElement {
         } else if (first && !items.some((x) => x.id === v)) {
           input.value = first.id; panel.hidden = true; emit();
         } else { panel.hidden = true; emit(); }
-      } else if (e.key === "Escape" && !panel.hidden) {
+      } else if (e.key === "Escape" && !panel.hidden && !opts.pinned) {
         e.stopPropagation();
         panel.hidden = true;
       }
     });
-    caret.addEventListener("click", (e) => { e.preventDefault(); if (panel.hidden) { input.focus(); open(); } else panel.hidden = true; });
-    input.addEventListener("blur", () => setTimeout(() => { if (!root.contains(this.shadowRoot.activeElement)) panel.hidden = true; }, 150));
+    caret.addEventListener("click", (e) => { e.preventDefault(); if (panel.hidden) { input.focus(); open(); } else if (!opts.pinned) panel.hidden = true; });
+    input.addEventListener("blur", () => setTimeout(() => { if (!opts.pinned && !root.contains(this.shadowRoot.activeElement)) panel.hidden = true; }, 150));
     renderChips();
+    // pinned: Liste sofort sichtbar und bleibt offen (z. B. „Nicht verfügbare Entitäten“).
+    if (opts.pinned) { root.classList.add("pinned"); open(); }
     return {
       node: root,
       values: () => (multi ? Array.from(selected) : [input.value.trim()].filter(Boolean)),
@@ -8038,8 +8019,18 @@ class HaPercytaPanel extends HTMLElement {
   // Nicht verfügbare Entitäten: deaktivieren (umkehrbar) oder – wie „Löschen“ in HA – entfernen.
   async _disableDialog(preset, mode) {
     const states = (this._hass && this._hass.states) || {};
-    const items = Object.keys(states)
-      .filter((k) => states[k].state === "unavailable" && !/^(automation|script)\./.test(k))
+    const live = Object.keys(states).filter((k) => states[k].state === "unavailable" && !/^(automation|script)\./.test(k));
+    // Wie die Kachel: Entitäten mit einem ausgenommenen Label und Befunde „Nicht verfügbar“, die als
+    // Erlaubt/Bekannt markiert sind, bleiben draußen (aus einem Befund vorgewählte Entitäten immer drin).
+    const dd = (this._data && this._data.data) || {};
+    const fl = Array.isArray(dd.findings) ? dd.findings : [];
+    const hiddenSet = new Set(((dd.findings_meta || {}).hidden_unavailable) || []);
+    const closed = new Set(fl.filter((f) => f.type === "unavailable_entities" && f.status !== "open").map((f) => f.subject_ref));
+    const ents = (this._hass && this._hass.entities) || {};
+    const keep = new Set((preset || []).filter(Boolean));
+    const ids = live.filter((k) => keep.has(k) || (!hiddenSet.has(k) && !closed.has((ents[k] && ents[k].platform) || k.split(".")[0])));
+    const hiddenN = live.length - ids.length;
+    const items = ids
       .map((k) => ({ id: k, name: (states[k].attributes || {}).friendly_name, exists: true, restored: !!(states[k].attributes || {}).restored, note: this._t("iss_unavailable") }))
       .sort((a, b) => a.id.localeCompare(b.id));
     const name = "ed-mode-" + Math.random().toString(36).slice(2);
@@ -8052,7 +8043,7 @@ class HaPercytaPanel extends HTMLElement {
     const rRemove = radio("remove", this._t("ed_mode_remove"), this._t("ed_mode_remove_h"));
     const explainDisable = this._explain(this._t("ed_what"), [this._t("ed_w1"), this._t("ed_w2"), this._t("ed_w3")]);
     const explainRemove = this._explain(this._t("rm_what"), [this._t("rm_w1"), this._t("rm_w2"), this._t("rm_w3")]);
-    const pk = this._picker({ multi: true, items, preset: preset || [], placeholder: this._t("pk_search") });
+    const pk = this._picker({ multi: true, items, preset: preset || [], placeholder: this._t("pk_search"), pinned: true });
     const purgeData = this._check(this._t("dlg_reg_purge"), false);
     const backupSlot = this._el("div", {});
     const nsSlot = this._el("div", {});
@@ -8078,6 +8069,7 @@ class HaPercytaPanel extends HTMLElement {
       explainDisable, explainRemove,
       this._el("div", { class: "dlg-sub", text: this._t("ed_mode") }), rDisable.node, rRemove.node,
       this._el("div", { class: "dlg-field" }, [this._el("span", { text: this._t("ed_pick") }), pk.node]),
+      hiddenN > 0 ? this._el("p", { class: "dlg-check-h", text: this._ti(hiddenN === 1 ? "ed_hidden1" : "ed_hidden", { n: hiddenN }) }) : null,
       removeOpts, confirm.node, status,
     ]);
     const cancel = this._el("button", { class: "vb-btn", text: this._t("dlg_cancel") });

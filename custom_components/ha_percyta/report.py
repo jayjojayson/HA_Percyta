@@ -230,7 +230,6 @@ FINDING_TYPE_LABELS = {
     "stale_token": "Ungenutzter Token",
     "high_risk_integration": "Integration mit hohem Risiko",
     "privileged_app": "App mit weitreichenden Rechten",
-    "secrets_stored": "Gespeicherte Secrets",
     "backup_old": "Backup zu alt",
     "backup_missing": "Kein Backup",
     "disk_high": "Speicher fast voll",
