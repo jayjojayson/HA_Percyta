@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.5-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.6-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -107,7 +107,8 @@ system from one panel.
     *Open in Home Assistant* and the ID links are real links – Ctrl/Cmd-click opens them in a new tab. Since 1.2.4
     a click or right-click on any target in Home Assistant opens a small **link menu**: open here (leaves the
     panel), open in a new tab, copy, plus fitting extra targets (e.g. *Open entity* as a dialog, device list,
-    integration, trace, logbook).
+    integration, trace, logbook). Since 1.2.6 a right-click on a row in **Installed integrations** or **Apps** opens
+    the same menu for that integration or app (open, new tab, copy link, devices/entities or the app log).
   - **Recently resolved (last 30 days)** – every entry is **clickable** (new in 1.2.2): it shows what
     the problem was, the affected objects *as they were* incl. a **“Now”** column with their current
     state, the technical data and a **history timeline** (first observed → which objects were added or
@@ -484,6 +485,9 @@ weight (100 points in total):
 | Stale tokens | 5 | 25 % of all tokens |
 | Open repairs | 5 | 10 |
 | Errors in the log | 5 | 20 |
+
+Entities with an excluded label (and findings set to *Allowed*, *Snoozed* or *Hidden*) do not count for *Unavailable*
+and *Orphaned entities* – neither in the score nor in the care center tiles.
 | Pending updates | 5 | 10 |
 
 The weighting is a rule of thumb from HA Percyta, not an official Home Assistant value.
@@ -511,6 +515,12 @@ rules: *dependency*, *login (401/403)*, *reachability (timeout/connection)*, *en
 **possible cause** and concrete **steps** plus buttons: *Open integration*, *Reload integration*, *Open
 logs* and *Copy message*. The diagnosis is an automatic assessment of the error text and can be wrong.
 Values such as `api_key=…`, `token=…` or `password=…` are masked in the log texts.
+
+**Acknowledge errors (v1.2.6):** like findings, errors can be acknowledged – with **✓** in the row, in the detail
+window or with *Acknowledge all*. An acknowledged error is hidden and no longer counts (care center tile, care score,
+report) **until it occurs again**: as soon as Home Assistant logs it again (new time or higher count), it is open again.
+*Show acknowledged* lists them, **↺** reopens one. HA Percyta only keeps its own list – the Home Assistant log itself is
+not changed. Acknowledgements of errors that are no longer in the log (e.g. after a restart) are forgotten after 30 days.
 
 ### More actions (v1.2.2)
 

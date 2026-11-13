@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "ha_percyta"
-VERSION = "1.2.5"
+VERSION = "1.2.6"
 
 # Konfigurations-/Options-Keys
 CONF_OUTPUT_DIR = "output_dir"
@@ -82,6 +82,9 @@ WS_TYPE_JOB_STATUS = "ha_percyta/job_status"
 WS_TYPE_SCAN_SUBSCRIBE = "ha_percyta/scan_subscribe"
 WS_TYPE_AUTOMATION_TEST = "ha_percyta/automation_test"
 WS_TYPE_RESOLVED_CLEAR = "ha_percyta/resolved_clear"
+WS_TYPE_LOG_ACK = "ha_percyta/log_ack"
+# Quittierte Log-Fehler, die nicht mehr im System-Log stehen, nach dieser Zeit vergessen.
+LOG_ACK_KEEP_DAYS = 30
 
 # Scan-Fortschritt: Schritte in der Reihenfolge des Scans und Startwerte (Sekunden),
 # solange noch kein Scan gemessen wurde. Die Werte sind grobe Annahmen.

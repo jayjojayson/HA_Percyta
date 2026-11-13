@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange.svg" alt="HACS"></a>
-  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.5-blue.svg" alt="Version"></a>
+  <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/badge/version-1.2.6-blue.svg" alt="Version"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml"><img src="https://github.com/jayjojayson/HA_Percyta/actions/workflows/validate.yml/badge.svg" alt="Validate"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/releases"><img src="https://img.shields.io/github/downloads/jayjojayson/HA_Percyta/total.svg" alt="Downloads"></a>
   <a href="https://github.com/jayjojayson/HA_Percyta/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jayjojayson/HA_Percyta.svg" alt="License"></a>
@@ -112,7 +112,9 @@ komplette Home-Assistant-System in einem Panel zu sichten, aufzuräumen und zu p
     **Kopier-Button** kopiert die ID. *In Home Assistant öffnen* und die ID-Links sind echte Links – Strg/Cmd-Klick
     öffnet sie in einem neuen Tab. Seit 1.2.4 öffnet ein Klick oder Rechtsklick auf ein Ziel in Home Assistant ein
     kleines **Link-Menü**: hier öffnen (verlässt das Panel), in neuem Tab öffnen, kopieren und passende weitere Ziele
-    (z. B. *Entität öffnen* als Dialog, Geräteliste, Integration, Ablaufverfolgung, Logbuch).
+    (z. B. *Entität öffnen* als Dialog, Geräteliste, Integration, Ablaufverfolgung, Logbuch). Seit 1.2.6 öffnet ein
+    Rechtsklick auf eine Zeile unter **Installierte Integrationen** oder **Apps** dasselbe Menü für diese Integration
+    bzw. App (öffnen, neuer Tab, Link kopieren, Geräte/Entitäten bzw. Protokoll der App).
   - **Zuletzt behoben (letzte 30 Tage)** – jeder Eintrag ist **anklickbar** (neu in 1.2.2): Er zeigt,
     was das Problem war, die betroffenen Objekte *wie sie damals waren* inkl. Spalte **„Jetzt“** mit dem
     aktuellen Zustand, die technischen Daten und einen **Verlauf** (erstmals beobachtet → welche Objekte
@@ -474,6 +476,9 @@ Höchstgewicht (zusammen 100 Punkte):
 | Veraltete Tokens | 5 | 25 % aller Tokens |
 | Offene Reparaturen | 5 | 10 |
 | Fehler im Log | 5 | 20 |
+
+Entitäten mit ausgenommenem Label (und Befunde auf *Erlaubt*, *Zurückgestellt* oder *Ausgeblendet*) zählen bei
+*Nicht verfügbar* und *Verwaiste Entitäten* nicht mit – weder im Pflegebedarf noch in den Kacheln des Pflege-Centers.
 | Ausstehende Updates | 5 | 10 |
 
 Die Gewichtung ist eine Faustregel von HA Percyta, kein offizieller Home-Assistant-Wert.
@@ -504,7 +509,12 @@ konkrete **Schritte** sowie Buttons: *Integration öffnen*, *Integration neu lad
 und *Meldung kopieren*. Die Diagnose ist eine automatische Einschätzung des Fehlertexts und kann
 danebenliegen. Werte wie `api_key=…`, `token=…` oder `password=…` werden in den Log-Texten unkenntlich gemacht.
 
-### Weitere Aktionen (v1.2.2)
+**Fehler quittieren (v1.2.6):** Wie Befunde lassen sich Fehler quittieren – mit **✓** in der Zeile, im Detail-Fenster
+oder mit *Alle quittieren*. Ein quittierter Fehler wird ausgeblendet und zählt nicht mehr mit (Pflege-Center-Kachel,
+Pflegebedarf, Report), **bis er erneut auftritt**: Sobald Home Assistant ihn wieder protokolliert (neue Zeit oder höhere
+Anzahl), ist er wieder offen. *Quittierte anzeigen* listet sie auf, **↺** öffnet einen wieder. HA Percyta führt dafür
+nur eine eigene Liste – das Log von Home Assistant selbst bleibt unverändert. Quittungen zu Fehlern, die nicht mehr im
+Log stehen (z. B. nach einem Neustart), werden nach 30 Tagen vergessen.
 
 - **Nicht verfügbare Entitäten deaktivieren oder entfernen** – das Fenster öffnet direkt mit der Liste der nicht
   verfügbaren Entitäten (ohne Entitäten mit ausgenommenem Label oder deren Befund auf *Erlaubt*, *Zurückgestellt* oder

@@ -1692,7 +1692,7 @@ def _apply_meta(ctx: _Ctx, findings: list[dict[str, Any]]) -> dict[str, Any]:
         "label_names": {lab: ctx.label_name(lab) for lab in sorted(label_ids | ctx.ignore | all_labels)},
         "ignore_labels": sorted(ctx.ignore),
         "suppressed": dict(ctx.suppressed),
-        # Nicht verfügbare Entitäten, die wegen eines Labels nicht bewertet werden (für das Pflege-Center).
+        # Nicht verfügbare und verwaiste Entitäten, die wegen eines Labels nicht bewertet werden (für das Pflege-Center).
         "hidden_unavailable": _hidden_unavailable(ctx),
     }
 
@@ -1701,7 +1701,7 @@ def _hidden_unavailable(ctx: _Ctx) -> list[str]:
     out = []
     for eid in sorted(e for e in ctx.hidden if not e.startswith("device:")):
         st = ctx.hass.states.get(eid)
-        if st is not None and st.state == "unavailable":
+        if st is not None and (st.state == "unavailable" or st.attributes.get("restored")):
             out.append(eid)
         if len(out) >= 5000:
             break

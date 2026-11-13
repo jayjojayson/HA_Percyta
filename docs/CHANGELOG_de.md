@@ -3,6 +3,20 @@
 Alle wichtigen Änderungen an **HA Percyta**. English version: [CHANGELOG.md](CHANGELOG.md).
 Ältere Versionen: siehe [GitHub-Releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.6
+
+### ✨ Neu
+- **Log-Fehler quittieren wie Befunde:** Fehler unter **❗ Wichtige Fehler** lassen sich jetzt quittieren – mit **✓** in der Zeile, im Detail-Fenster oder mit *Alle quittieren*. Ein quittierter Fehler wird ausgeblendet und zählt nicht mehr mit (Pflege-Center-Kachel, Pflegebedarf, Report), **bis er erneut auftritt**: Sobald Home Assistant ihn wieder protokolliert, ist er wieder offen. *Quittierte anzeigen* listet sie auf, **↺** öffnet einen wieder. Nur Percytas eigene Liste – das Log von Home Assistant bleibt unverändert. (Idee aus dem Community-Forum – danke!)
+- **Frei werdender Speicher auf einen Blick:** In den Fenstern, die Daten löschen (*Daten aus der Datenbank löschen*, *Verwaiste Entitäten entfernen* mit Daten, *Aufräumen*), steht der geschätzte frei werdende Platz in der Zusammenfassung unter der Liste jetzt **grün**.
+- **Rechtsklick-Menü für Integrationen und Apps:** In der Übersicht öffnet ein Rechtsklick auf eine Zeile unter **Installierte Integrationen** oder **Apps** das kleine Link-Menü – Integration bzw. App öffnen, in neuem Tab öffnen oder Link kopieren, dazu ihre Geräte und Entitäten bzw. das Protokoll der App (wie bei den anderen Link-Zielen im Panel). Umschalt + Rechtsklick zeigt weiterhin das Menü des Browsers.
+
+### 🐞 Fehlerbehebungen
+- **Pflege-Center: Auch verwaiste Entitäten beachten Labels:** In v1.2.5 war nur das Fenster *Nicht verfügbare Entitäten* korrigiert – die Kachel *Verwaiste Entitäten* hat weiterhin alle verwaisten Entitäten gezählt und vorausgewählt, auch die mit ausgenommenem Label (z. B. Mediaplayer oder Entitäten eines Geräts, die es nur gibt, während es läuft). Kachel, Fenster und Pflegebedarf lassen jetzt Entitäten mit ausgenommenem Label (an Entität, Gerät oder Bereich) weg und ebenso Integrationen, deren Befund *Verwaiste Entitäten* auf *Erlaubt*, *Zurückgestellt* oder *Ausgeblendet* steht. Der Befund *Verwaiste Entitäten* in den Reports hat Labels schon beachtet.
+
+### ⚠️ Hinweise
+- **Nach dem Update Home Assistant neu starten** und das Browser-Fenster neu laden.
+- Das Werkzeug *Verwaiste Entitäten entfernen* in den Datenbank-Werkzeugen bietet bei der Suche weiterhin alle verwaisten Entitäten an – es ist für gezieltes Aufräumen gedacht; nur die Vorauswahl aus dem Pflege-Center beachtet eure Labels.
+
 ## v1.2.5
 
 Korrekturen aus euren Rückmeldungen (GitHub-Issues #3 und #4, Community-Forum): weniger falsche und widersprüchliche Befunde.

@@ -1060,6 +1060,11 @@ const XSTR = {
     er_kind: "Einordnung", dg_dep_k: "📦 Abhängigkeit", dg_auth_k: "🔐 Anmeldung", dg_net_k: "📡 Erreichbarkeit", dg_tmpl_k: "🧩 Template",
     dg_entity_k: "🏷️ Entität", dg_code_k: "🐞 Programmfehler", dg_setup_k: "⚙️ Einrichtung", dg_fetch_k: "🔄 Datenabruf", dg_custom_k: "🧩 Eigene Integration", dg_generic_k: "❔ Unklar",
     er_title: "❗ Fehler im Detail", er_click: "Für Details, mögliche Ursache und Lösungsvorschläge auf einen Fehler klicken.",
+    er_ack: "✓ Quittieren", er_ack_t: "Fehler quittieren – er wird ausgeblendet, bis er erneut auftritt", er_unack: "↺ Wieder öffnen",
+    er_unack_t: "Quittung aufheben – der Fehler wird wieder gezählt", er_ack_all: "✓ Alle quittieren ({n})", er_ack_all_sure: "Wirklich alle quittieren?",
+    er_show_acked: "Quittierte anzeigen ({n})", er_hide_acked: "Quittierte ausblenden",
+    er_ack_note: "Quittierte Fehler erscheinen wieder, sobald sie erneut auftreten.",
+    er_all_acked: "✓ Alle Fehler sind quittiert. Tritt einer erneut auf, erscheint er wieder.",
     er_msg: "Meldung", er_src: "Quelle", er_logger: "Logger", er_count: "Anzahl", er_last: "Zuletzt", er_first: "Zuerst", er_int: "Betroffene Integration",
     er_trace: "Technische Details (Traceback)", er_cause: "🔎 Mögliche Ursache", er_steps: "🛠️ Das kannst du tun",
     er_open_int: "Integration öffnen ↗", er_reload: "🔄 Integration neu laden", er_logs: "Protokolle öffnen ↗", er_copy: "📋 Meldung kopieren", er_copied: "✔ Kopiert",
@@ -1527,6 +1532,11 @@ const XSTR = {
     er_kind: "Category", dg_dep_k: "📦 Dependency", dg_auth_k: "🔐 Login", dg_net_k: "📡 Reachability", dg_tmpl_k: "🧩 Template",
     dg_entity_k: "🏷️ Entity", dg_code_k: "🐞 Code error", dg_setup_k: "⚙️ Setup", dg_fetch_k: "🔄 Data fetch", dg_custom_k: "🧩 Custom integration", dg_generic_k: "❔ Unclear",
     er_title: "❗ Error details", er_click: "Click an error for details, possible cause and suggested fixes.",
+    er_ack: "✓ Acknowledge", er_ack_t: "Acknowledge the error – it is hidden until it occurs again", er_unack: "↺ Reopen",
+    er_unack_t: "Remove the acknowledgement – the error counts again", er_ack_all: "✓ Acknowledge all ({n})", er_ack_all_sure: "Really acknowledge all?",
+    er_show_acked: "Show acknowledged ({n})", er_hide_acked: "Hide acknowledged",
+    er_ack_note: "Acknowledged errors show up again as soon as they occur again.",
+    er_all_acked: "✓ All errors are acknowledged. If one occurs again, it shows up again.",
     er_msg: "Message", er_src: "Source", er_logger: "Logger", er_count: "Count", er_last: "Last", er_first: "First", er_int: "Affected integration",
     er_trace: "Technical details (traceback)", er_cause: "🔎 Possible cause", er_steps: "🛠️ What you can do",
     er_open_int: "Open integration ↗", er_reload: "🔄 Reload integration", er_logs: "Open logs ↗", er_copy: "📋 Copy message", er_copied: "✔ Copied",
@@ -2008,6 +2018,17 @@ class HaPercytaPanel extends HTMLElement {
     return s;
   }
 
+  // Wie _ti, aber der Wert von {hl} wird als eigener, grün hervorgehobener Knoten eingesetzt.
+  _tiNodes(key, vars, hl) {
+    const rest = Object.assign({}, vars);
+    delete rest[hl];
+    let s = this._t(key);
+    for (const k in rest) s = s.replace("{" + k + "}", rest[k]);
+    const [before, ...after] = s.split("{" + hl + "}");
+    if (!after.length) return [document.createTextNode(s)];
+    return [document.createTextNode(before), this._el("b", { class: "est-hl", text: String(vars[hl]) }), document.createTextNode(after.join("{" + hl + "}"))];
+  }
+
   // ---------- DOM-Helfer ----------
   _el(tag, opts = {}, children = []) {
     const node = document.createElement(tag);
@@ -2247,6 +2268,8 @@ class HaPercytaPanel extends HTMLElement {
           if (cols[ci] && cols[ci].cls) td.classList.add(cols[ci].cls);
           tr.appendChild(td);
         });
+        // Ziel der ganzen Zeile (Rechtsklick → Link-Menü), z. B. Integration oder App.
+        if (cells.link) { tr.dataset.link = cells.link; tr._lmCtx = cells.lmCtx; }
         tr.hidden = opts.noSearch ? false : !this._rowMatches(tr);
         tbody.appendChild(tr);
       }
@@ -3057,11 +3080,17 @@ class HaPercytaPanel extends HTMLElement {
       .er-msg { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; word-break:break-word; }
       .err-table table { table-layout:fixed; width:100%; }
       .err-table th:nth-child(1) { width:13%; } .err-table th:nth-child(2) { width:22%; } .err-table th:nth-child(3) { width:7%; }
-      .err-table th:nth-child(5) { width:17%; } .err-table th:nth-child(6) { width:48px; }
+      .err-table th:nth-child(5) { width:17%; } .err-table th:nth-child(6) { width:96px; }
       .err-table td { overflow:hidden; }
       .err-table td .mono { word-break:break-all; }
+      .err-table td:last-child { overflow:visible; text-align:right; padding-right:14px; }
+      .er-bar { padding:2px 12px 6px; }
       .er-kind { font-size:12px; word-break:break-word; }
       .er-go { padding:2px 10px; }
+      .est-hl { color:var(--success-color,#43a047); font-weight:600; font-style:normal; }
+      .er-btns { display:inline-flex; gap:6px; align-items:center; white-space:nowrap; }
+      .err-table tr:has(.er-acked) td:not(:last-child) { opacity:.5; }
+      .er-allacked { padding:8px 2px; }
       .er-message { padding:10px 12px; border-radius:10px; background:var(--secondary-background-color,#2b2b2b); margin-bottom:10px; word-break:break-word; }
       .er-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:6px 16px; margin-bottom:12px; font-size:13px; }
       .er-kv { display:flex; flex-direction:column; gap:1px; min-width:0; }
@@ -4358,7 +4387,7 @@ class HaPercytaPanel extends HTMLElement {
           badge: file ? this._fmtBytes(file.bytes) : null, lvl: db.orphans_total ? "warn" : "none" };
       }
       case "errors": {
-        const list = d.errors || [];
+        const list = (d.errors || []).filter((e) => !e.acked);
         const last = list.map((e) => e.timestamp).filter(Boolean).sort().pop();
         return { sub: last ? this._ti("sm_errors", { a: this._ago(new Date(last)) }) : "", badge: n(list.length), lvl: list.length ? "bad" : "ok" };
       }
@@ -4793,7 +4822,7 @@ class HaPercytaPanel extends HTMLElement {
         a.has_secrets ? this._chip(this._ti("chip_secret", { n: (a.secrets || []).length }), "warn") : null,
         i.is_custom ? this._chip(this._t("chip_custom")) : null,
       ]);
-      return [
+      const row = [
         this._riskCell(a),
         this._el("span", { class: "mono", text: i.domain }),
         i.title || "—",
@@ -4808,6 +4837,11 @@ class HaPercytaPanel extends HTMLElement {
           : { text: String(i.device_count || 0), sort: i.device_count || 0 },
         { node: this._overrideSelect(i), nosrch: true },
       ];
+      if (i.domain) {
+        row.link = `/config/integrations/integration/${i.domain}`;
+        row.lmCtx = { domain: i.domain, entry: i.entry_id, entities: i.entity_count, devices: i.device_count };
+      }
+      return row;
     });
     const body = rows.length
       ? this._table(
@@ -4967,14 +5001,18 @@ class HaPercytaPanel extends HTMLElement {
     const list = d.addons || [];
     let body;
     if (list.length) {
-      const rows = list.map((a) => [
-        { node: this._riskBadge(a.analysis.risk_level), sort: RISK_SEV[a.analysis.risk_level] || 0 },
-        this._cellWithNew(a.name, a),
-        this._el("span", { class: "mono", text: a.version || "—" }),
-        this._el("div", {}, (a.analysis.system_access || []).length
-          ? a.analysis.system_access.map((s) => this._chip(s, a.analysis.risk_level === "high" ? "danger" : "warn"))
-          : [this._el("span", { class: "muted", text: "—" })]),
-      ]);
+      const rows = list.map((a) => {
+        const row = [
+          { node: this._riskBadge(a.analysis.risk_level), sort: RISK_SEV[a.analysis.risk_level] || 0 },
+          this._cellWithNew(a.name, a),
+          this._el("span", { class: "mono", text: a.version || "—" }),
+          this._el("div", {}, (a.analysis.system_access || []).length
+            ? a.analysis.system_access.map((s) => this._chip(s, a.analysis.risk_level === "high" ? "danger" : "warn"))
+            : [this._el("span", { class: "muted", text: "—" })]),
+        ];
+        if (a.slug && /^[a-z0-9_-]+$/i.test(a.slug)) row.link = `/hassio/addon/${a.slug}`;
+        return row;
+      });
       body = this._table([this._t("th_risk"), this._t("th_app"), this._t("th_version"), this._t("th_access")], rows);
     } else {
       body = this._el("div", { class: "empty", text: d.is_supervisor ? this._t("empty_apps_sup") : this._t("empty_apps_core") });
@@ -6935,7 +6973,7 @@ class HaPercytaPanel extends HTMLElement {
       preview.appendChild(this._previewTable(lastInfo.info, lastInfo.list, est));
       if (est) {
         const total = lastInfo.list.reduce((a, id) => a + this._estRows(lastInfo.info.ids[id], est) * est.bpr, 0);
-        preview.appendChild(this._el("div", { class: "hint-line pv-est", text: this._ti(est.partial ? "pv_est_sum_max" : "pv_est_sum", { s: this._fmtBytes(total) }) }));
+        preview.appendChild(this._el("div", { class: "hint-line pv-est" }, this._tiNodes(est.partial ? "pv_est_sum_max" : "pv_est_sum", { s: this._fmtBytes(total) }, "s")));
       }
     };
     if (kind === "purge") [scopeStates, scopeShort, scopeStats].forEach((x) => x.cb.addEventListener("change", renderTable));
@@ -7198,7 +7236,7 @@ class HaPercytaPanel extends HTMLElement {
       line(this._t("clp_long"), 0, r.stats_long_total, true),
       this._el("div", { class: "clp-sum" }, [
         this._el("b", { text: del ? this._ti("clp_sum", { n: this._fmtInt(del) }) : this._t("clp_nothing") }),
-        est ? this._el("span", { class: "muted", text: " · " + this._ti("clp_est", { s: this._fmtBytes(est) }) }) : null,
+        est ? this._el("span", { class: "muted" }, [document.createTextNode(" · "), ...this._tiNodes("clp_est", { s: this._fmtBytes(est) }, "s")]) : null,
       ]),
       r.oldest ? this._el("div", { class: "muted small", text: this._ti("clp_oldest", { d: this._fmtDateTime(r.oldest) }) }) : null,
     ]);
@@ -7422,12 +7460,23 @@ class HaPercytaPanel extends HTMLElement {
     this._loadAudit(box, null);
   }
 
+  // Verwaiste Entitäten fürs Pflege-Center – wie der Befund: ohne Entitäten mit ausgenommenem Label
+  // und ohne Integrationen, deren Befund „Verwaist“ auf Erlaubt, Zurückgestellt oder Ausgeblendet steht.
+  _restoredIds(d) {
+    const states = (this._hass && this._hass.states) || {};
+    const ents = (this._hass && this._hass.entities) || {};
+    const hidden = new Set(((d.findings_meta || {}).hidden_unavailable) || []);
+    const closed = new Set((d.findings || []).filter((f) => f.type === "orphaned_entities" && f.status !== "open").map((f) => f.subject_ref));
+    return Object.keys(states).filter((k) => states[k].attributes && states[k].attributes.restored &&
+      !hidden.has(k) && !closed.has((ents[k] && ents[k].platform) || k.split(".")[0]));
+  }
+
   // ---------- Pflege-Center: Daten für Vorschau (Kopf) und eigene Seite ----------
   _careItems(d) {
     const c = d.counts || {};
     const db = d.database || {};
     const states = (this._hass && this._hass.states) || {};
-    const restored = Object.keys(states).filter((k) => states[k].attributes && states[k].attributes.restored);
+    const restored = this._restoredIds(d);
     const unavailable = { length: this._unavCount(d) };
     const fnd = (type) => (d.findings || []).find((f) => f.type === type && f.status !== "hidden");
     const fall = (type) => (d.findings || []).filter((f) => f.type === type && f.status !== "hidden");
@@ -7576,7 +7625,7 @@ class HaPercytaPanel extends HTMLElement {
     const ents = c.total_entities || Object.keys(states).length || 1;
     const devs = c.total_devices || 1;
     const open = (d.findings || []).filter((f) => f.status === "open");
-    const restored = Object.keys(states).filter((k) => states[k].attributes && states[k].attributes.restored).length;
+    const restored = this._restoredIds(d).length;
     const unavailable = this._unavCount(d);
     const failing = open.filter((f) => f.type === "integration_not_loaded").length;
     const integ = c.integrations || 1;
@@ -8245,29 +8294,68 @@ class HaPercytaPanel extends HTMLElement {
     ]);
   }
 
+  async _ackLog(keys, ack, btn) {
+    if (btn) btn.disabled = true;
+    const r = await this._ws({ type: "ha_percyta/log_ack", keys, ack });
+    if (r && !r.error) await this._loadReport();
+    else if (btn) { btn.disabled = false; btn.textContent = this._errText(r); }
+    return r;
+  }
+
   _sectionErrors(d) {
     const list = d.errors || [];
-    const rows = list.map((e, i) => {
+    const openList = list.filter((e) => !e.acked);
+    const ackedN = list.length - openList.length;
+    const showAcked = !!this._errShowAcked && ackedN > 0;
+    const rows = [];
+    list.forEach((e, i) => {
+      if (e.acked && !showAcked) return;
       const dg = this._errDiag(e, d);
-      return [
+      const ack = e.key ? this._el("button", {
+        class: "vb-btn small er-ack" + (e.acked ? " er-acked" : ""), text: e.acked ? "↺" : "✓",
+        attrs: { type: "button", title: e.acked ? this._t("er_unack_t") : this._t("er_ack_t"), "data-key": e.key, "data-ack": e.acked ? "0" : "1" },
+      }) : null;
+      rows.push([
         { text: e.timestamp ? new Date(e.timestamp).toLocaleString() : "", sort: e.timestamp || "" },
         this._el("span", { class: "mono", text: e.source || "" }),
         { text: (e.count || 1) + "×", sort: e.count || 1 },
         { node: this._el("span", { class: "er-msg", text: e.message || "", attrs: { "data-ei": String(i) } }), sort: e.message || "" },
         { node: this._el("span", { class: "er-kind", text: (dg.domain ? dg.domain + " · " : "") + this._t("dg_" + dg.key + "_k") }), sort: dg.key },
-        { node: this._el("button", { class: "vb-btn small er-go", text: "›", attrs: { type: "button", title: this._t("er_click"), "data-ei": String(i) } }), nosrch: true },
-      ];
+        { node: this._el("span", { class: "er-btns" }, [ack, this._el("button", { class: "vb-btn small er-go", text: "›", attrs: { type: "button", title: this._t("er_click"), "data-ei": String(i) } })]), nosrch: true },
+      ]);
     });
     const table = this._table([this._t("th_time"), this._t("th_source"), this._t("th_count"), this._t("th_message"), this._t("er_kind"), ""], rows,
       { memKey: "errors", cols: [{}, {}, {}, {}, { cls: "er-kind-col" }, { nosort: true }] });
     table.classList.add("err-table");
     table.addEventListener("click", (ev) => {
+      const ab = ev.target.closest(".er-ack");
+      if (ab) { ev.stopPropagation(); this._ackLog([ab.dataset.key], ab.dataset.ack === "1", ab); return; }
       const tr = ev.target.closest("tr");
       const n = tr && tr.querySelector("[data-ei]");
       if (n && tr.parentNode.tagName === "TBODY") this._errorDialog(list[parseInt(n.dataset.ei, 10)], d);
     });
-    const body = this._el("div", {}, [this._el("div", { class: "hint-line", text: this._t("er_click") }), table]);
-    return this._section(this._t("sec_errors"), list.length, body, true);
+    // Quittieren wie bei Befunden: Ein quittierter Fehler verschwindet, bis er erneut auftritt.
+    const tools = [];
+    const ackKeys = openList.map((e) => e.key).filter(Boolean);
+    if (ackKeys.length > 1) {
+      const all = this._el("button", { class: "vb-btn small", text: this._ti("er_ack_all", { n: ackKeys.length }), attrs: { type: "button" } });
+      let armed = false;
+      all.addEventListener("click", () => {
+        if (!armed) { armed = true; all.textContent = this._t("er_ack_all_sure"); all.classList.add("danger-btn"); return; }
+        this._ackLog(ackKeys, true, all);
+      });
+      tools.push(all);
+    }
+    if (ackedN) {
+      const tg = this._el("button", { class: "vb-btn small", text: showAcked ? this._t("er_hide_acked") : this._ti("er_show_acked", { n: ackedN }), attrs: { type: "button" } });
+      tg.addEventListener("click", () => { this._errShowAcked = !showAcked; this._render(); });
+      tools.push(tg);
+    }
+    const bar = this._el("div", { class: "log-bar er-bar" }, [this._el("span", { class: "muted small", text: this._t("er_click") + " " + this._t("er_ack_note") }), ...tools]);
+    const kids = [bar];
+    if (!openList.length && !showAcked) kids.push(this._el("div", { class: "muted small er-allacked", text: this._t("er_all_acked") }));
+    if (rows.length) kids.push(table);
+    return this._section(this._t("sec_errors"), openList.length, this._el("div", {}, kids), true);
   }
 
   // Einordnung eines Log-Fehlers: betroffene Integration + wahrscheinliche Ursache (Faustregeln).
@@ -8355,6 +8443,13 @@ class HaPercytaPanel extends HTMLElement {
       }))));
     }
     btns.push(this._linkBtn(this._t("er_logs"), "/config/logs", "vb-btn", () => this._closeModal()));
+    if (e.key) {
+      const ab = mk(e.acked ? this._t("er_unack") : this._t("er_ack"), async () => {
+        const r = await this._ackLog([e.key], !e.acked, ab);
+        if (r && !r.error) this._closeModal();
+      });
+      ab.title = e.acked ? this._t("er_unack_t") : this._t("er_ack_t");
+    }
     const close = mk(this._t("dlg_close"), () => this._closeModal());
     close.className = "vb-btn";
     this._openModal(this._t("er_title"), body, btns);

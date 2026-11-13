@@ -3,6 +3,20 @@
 All notable changes to **HA Percyta**. German version: [CHANGELOG_de.md](CHANGELOG_de.md).
 Older versions: see the [GitHub releases](https://github.com/jayjojayson/HA_Percyta/releases).
 
+## v1.2.6
+
+### ✨ New
+- **Acknowledge log errors like findings:** errors in **❗ Important errors** can now be acknowledged – with **✓** in the row, in the detail window or with *Acknowledge all*. An acknowledged error is hidden and no longer counts (care center tile, care score, report) **until it occurs again**: as soon as Home Assistant logs it again, it is open again. *Show acknowledged* lists them, **↺** reopens one. Only HA Percyta's own list – the Home Assistant log is not changed. (Idea from the community forum – thanks!)
+- **Freed space at a glance:** in the windows that delete data (*Delete data from the database*, *Remove orphaned entities* with data, *Clean up*), the estimated space that is freed is now shown in **green** in the summary below the list.
+- **Right-click menu for integrations and apps:** on the overview, a right-click on any row in **Installed integrations** or **Apps** opens the small link menu – open the integration or app, open it in a new tab or copy the link, plus its devices and entities or the app log (like the other link targets in the panel). Shift + right-click still shows the browser menu.
+
+### 🐞 Fixes
+- **Care center: orphaned entities respect labels too:** in v1.2.5 only the window *Unavailable entities* was fixed – the tile *Orphaned entities* still counted and pre-selected every orphaned entity, also those with an excluded label (e.g. media players or appliance entities that are only provided while the device is running). The tile, its window and the care score now leave out entities with an excluded label (on the entity, its device or its area) and integrations whose finding *Orphaned entities* is *Allowed*, *Snoozed* or *Hidden*. The *Orphaned entities* finding in the reports already respected labels.
+
+### ⚠️ Notes
+- **Restart Home Assistant after updating** and reload the browser window.
+- The tool *Remove orphaned entities* in the database tools still offers all orphaned entities when you search for them – it is a tool for deliberate clean-ups; only the pre-selection from the care center respects your labels.
+
 ## v1.2.5
 
 Fixes from user feedback (GitHub issues #3 and #4, community forum): fewer false and contradictory findings.

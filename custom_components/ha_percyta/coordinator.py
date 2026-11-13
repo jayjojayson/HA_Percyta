@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
@@ -41,6 +42,7 @@ from .const import (
     FINDINGS_STORAGE_KEY,
     FINDINGS_STORAGE_VERSION,
     HISTORY_NAMES,
+    LOG_ACK_KEEP_DAYS,
     MAX_HISTORY,
     MAX_RESOLVED,
     OVERRIDES_STORAGE_KEY,
@@ -91,6 +93,8 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             hass, FINDINGS_STORAGE_VERSION, FINDINGS_STORAGE_KEY
         )
         self.finding_states: dict[str, dict[str, Any]] = {}
+        # Quittierte Log-Fehler: Schlüssel → {"at": Zeitpunkt, "ts": letzter Zeitpunkt, "count": Anzahl}.
+        self.log_acks: dict[str, dict[str, Any]] = {}
         self.resolved_findings: list[dict[str, Any]] = []
 
         # Scan-Fortschritt fürs Panel: laufender Scan und Dauer je Schritt des letzten Scans.
@@ -316,11 +320,15 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         resolved = data.get("resolved")
         if isinstance(resolved, list):
             self.resolved_findings = [r for r in resolved if isinstance(r, dict)]
+        acks = data.get("log_acks")
+        if isinstance(acks, dict):
+            self.log_acks = {str(k): v for k, v in acks.items() if isinstance(v, dict)}
 
     async def _save_finding_states(self) -> None:
         try:
             await self._findings_store.async_save(
-                {"states": self.finding_states, "resolved": self.resolved_findings}
+                {"states": self.finding_states, "resolved": self.resolved_findings,
+                 "log_acks": getattr(self, "log_acks", {})}
             )
         except Exception as err:  # noqa: BLE001
             _LOGGER.debug("Befund-Status konnte nicht gespeichert werden: %s", err)
@@ -491,6 +499,72 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         counts["findings_by_category"] = by_cat
         return changed
 
+    # ------------------------------------------------------------------ #
+    # Log-Fehler quittieren (wie Befunde; kommt der Fehler wieder, ist er wieder offen)
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def log_key(err: dict[str, Any]) -> str:
+        raw = "|".join(str(err.get(k) or "") for k in ("name", "source", "message"))
+        return hashlib.sha1(raw.encode("utf-8", "replace")).hexdigest()[:16]
+
+    def _apply_log_acks(self, data: dict[str, Any]) -> bool:
+        """Markiert quittierte Fehler; ein erneutes Auftreten hebt die Quittung auf."""
+        changed = False
+        seen: set[str] = set()
+        open_n = 0
+        for err in data.get("errors") or []:
+            key = self.log_key(err)
+            err["key"] = key
+            seen.add(key)
+            ack = self.log_acks.get(key)
+            acked = False
+            if ack:
+                again = (str(err.get("timestamp") or "") > str(ack.get("ts") or "")
+                         or int(err.get("count") or 1) > int(ack.get("count") or 1))
+                if again:
+                    self.log_acks.pop(key, None)  # wieder aufgetreten → wieder offen
+                    changed = True
+                else:
+                    acked = True
+            err["acked"] = acked
+            if not acked:
+                open_n += 1
+        # Quittungen zu Fehlern, die nicht mehr im Log stehen (z. B. nach Neustart), nach einer Weile vergessen.
+        limit = datetime.now(timezone.utc) - timedelta(days=LOG_ACK_KEEP_DAYS)
+        for key in [k for k in self.log_acks if k not in seen]:
+            at = self._parse_dt(self.log_acks[key].get("at"))
+            if at is None or at < limit:
+                self.log_acks.pop(key, None)
+                changed = True
+        counts = data.get("counts")
+        if isinstance(counts, dict) and "errors" in counts:
+            counts["errors"] = open_n
+            counts["errors_acked"] = len(data.get("errors") or []) - open_n
+        return changed
+
+    async def async_ack_log(self, keys: list[str], ack: bool) -> dict:
+        """Log-Fehler quittieren (ack=True) oder wieder öffnen (ack=False)."""
+        data = self.data
+        if not data:
+            return {"error": "Noch kein Scan-Ergebnis vorhanden."}
+        by_key = {self.log_key(e): e for e in data.get("errors") or []}
+        now = datetime.now(timezone.utc).isoformat()
+        updated = 0
+        for key in keys:
+            err = by_key.get(str(key))
+            if err is None:
+                continue
+            if ack:
+                self.log_acks[str(key)] = {"at": now, "ts": str(err.get("timestamp") or ""),
+                                           "count": int(err.get("count") or 1)}
+            else:
+                self.log_acks.pop(str(key), None)
+            updated += 1
+        self._apply_log_acks(data)
+        await self._save_finding_states()
+        self.async_set_updated_data(data)
+        return {"success": True, "updated": updated}
+
     async def async_clear_resolved(self) -> dict:
         """Leert die Liste „Zuletzt behoben“ (nur Percytas eigene Liste)."""
         removed = len(self.resolved_findings)
@@ -659,7 +733,8 @@ class HAPercytaCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         await self._apply_new_since(data)
 
         # Befund-Status (bekannt/zurückgestellt/ausgeblendet) auflegen, Behobenes vermerken.
-        if self._apply_finding_states(data, track=True):
+        acks_changed = self._apply_log_acks(data)
+        if self._apply_finding_states(data, track=True) or acks_changed:
             await self._save_finding_states()
 
         if self._write_report:

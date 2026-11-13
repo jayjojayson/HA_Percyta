@@ -7,11 +7,11 @@ import os
 import time
 
 import voluptuous as vol
-
 from homeassistant.components import frontend, panel_custom, websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
+from .automation_test import async_test_automation
 from .const import (
     APP_NAME,
     CONF_ALLOW_REVEAL,
@@ -28,34 +28,34 @@ from .const import (
     REVEAL_RATE_WINDOW,
     SIGNAL_SCAN_PROGRESS,
     VERSION,
+    WS_TYPE_AUTOMATION_TEST,
+    WS_TYPE_CONFIG_DELETE,
     WS_TYPE_DB_BACKUP,
     WS_TYPE_DB_BACKUP_DELETE,
-    WS_TYPE_DB_INFO,
     WS_TYPE_DB_CLEANUP,
     WS_TYPE_DB_CLEANUP_PREVIEW,
+    WS_TYPE_DB_INFO,
+    WS_TYPE_DB_LIST,
+    WS_TYPE_DB_LOG,
+    WS_TYPE_DB_PURGE,
+    WS_TYPE_DB_RENAME,
+    WS_TYPE_DB_REPLACE,
     WS_TYPE_DEVICE_REMOVE,
     WS_TYPE_ENTITY_DISABLE,
     WS_TYPE_ENTRY_RELOAD,
     WS_TYPE_JOB_STATUS,
-    WS_TYPE_DB_LIST,
-    WS_TYPE_DB_LOG,
-    WS_TYPE_REGISTRY_REMOVE,
-    WS_TYPE_TOKEN_REVOKE,
-    WS_TYPE_DB_PURGE,
-    WS_TYPE_DB_RENAME,
-    WS_TYPE_DB_REPLACE,
-    WS_TYPE_REPORT,
-    WS_TYPE_REVEAL_SECRET,
-    WS_TYPE_SET_FINDING_STATE,
-    WS_TYPE_SET_OVERRIDE,
-    WS_TYPE_SET_IGNORE_LABELS,
-    WS_TYPE_CONFIG_DELETE,
+    WS_TYPE_LOG_ACK,
     WS_TYPE_PENDING_CLEANUP,
-    WS_TYPE_SCAN_SUBSCRIBE,
-    WS_TYPE_AUTOMATION_TEST,
+    WS_TYPE_REGISTRY_REMOVE,
+    WS_TYPE_REPORT,
     WS_TYPE_RESOLVED_CLEAR,
+    WS_TYPE_REVEAL_SECRET,
+    WS_TYPE_SCAN_SUBSCRIBE,
+    WS_TYPE_SET_FINDING_STATE,
+    WS_TYPE_SET_IGNORE_LABELS,
+    WS_TYPE_SET_OVERRIDE,
+    WS_TYPE_TOKEN_REVOKE,
 )
-from .automation_test import async_test_automation
 from .coordinator import HAPercytaCoordinator
 from .db_tools import DbToolError, DbTools
 from .report import generate_report
@@ -524,7 +524,24 @@ def _register_ws(hass: HomeAssistant) -> None:
             return
         connection.send_result(msg["id"], await coordinator.async_clear_resolved())
 
-    for handler in (ws_scan_subscribe, ws_automation_test, ws_resolved_clear):
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): WS_TYPE_LOG_ACK,
+            vol.Required("keys"): vol.All([vol.All(str, vol.Match(r"^[0-9a-f]{16}$"))], vol.Length(min=1, max=500)),
+            vol.Optional("ack", default=True): bool,
+        }
+    )
+    @websocket_api.require_admin
+    @websocket_api.async_response
+    async def ws_log_ack(hass, connection, msg):
+        """Fehler aus dem System-Log quittieren bzw. wieder öffnen (nur Percytas eigene Liste)."""
+        coordinator = _get_coordinator(hass)
+        if coordinator is None:
+            connection.send_error(msg["id"], "not_ready", "HA Percyta ist nicht eingerichtet.")
+            return
+        connection.send_result(msg["id"], await coordinator.async_ack_log(msg["keys"], msg["ack"]))
+
+    for handler in (ws_scan_subscribe, ws_automation_test, ws_resolved_clear, ws_log_ack):
         websocket_api.async_register_command(hass, handler)
 
     for handler in (ws_entity_disable, ws_entry_reload, ws_device_remove, ws_config_delete, ws_pending_cleanup):

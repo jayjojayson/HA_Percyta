@@ -606,9 +606,12 @@ def generate_report(data: dict[str, Any]) -> str:
         lines.append("*Keine Tokens gefunden.*")
 
     # Wichtige Fehler
-    errors = data.get("errors", [])
+    errors = [e for e in data.get("errors", []) if not e.get("acked")]
+    acked = len(data.get("errors", [])) - len(errors)
     if errors:
         lines.append("\n## ❗ Wichtige Fehler (aus dem HA-System-Log)\n")
+        if acked:
+            lines.append(f"*{acked} quittierte Fehler sind nicht aufgeführt.*\n")
         lines.append("| Zeit | Quelle | Anzahl | Meldung |")
         lines.append("|---|---|---|---|")
         for e in errors:
